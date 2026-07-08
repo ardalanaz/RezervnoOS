@@ -1,0 +1,77 @@
+{
+  "title": "رزرونو — داشبورد عملکرد و امنیت",
+  "uid": "rezervno-main",
+  "tags": ["rezervno"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "15s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "نرخ درخواست (req/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(rezervno_http_requests_total[1m]))", "legendFormat": "همه" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "نرخ خطا (۴xx/۵xx)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(rezervno_http_errors_total[1m]))", "legendFormat": "خطا/s" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "red" } } }
+    },
+    {
+      "id": 3,
+      "title": "latency درخواست (P50/P95/P99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum(rate(rezervno_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P50" },
+        { "expr": "histogram_quantile(0.95, sum(rate(rezervno_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P95" },
+        { "expr": "histogram_quantile(0.99, sum(rate(rezervno_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 4,
+      "title": "رزروهای ساخته‌شده vs تداخل‌های جلوگیری‌شده",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(rezervno_reservations_created_total[5m]))", "legendFormat": "ساخته‌شده" },
+        { "expr": "sum(rate(rezervno_reservation_conflicts_total[5m]))", "legendFormat": "تداخل رد‌شده" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "سیگنال امنیتی: شکست احراز هویت + rate-limit",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "sum(rate(rezervno_auth_failures_total[5m]))", "legendFormat": "شکست auth" },
+        { "expr": "sum(rate(rezervno_rate_limit_hits_total[5m]))", "legendFormat": "rate-limit" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } }
+    },
+    {
+      "id": 6,
+      "title": "طول صف SMS",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 16 },
+      "targets": [{ "expr": "rezervno_sms_queue_depth" }]
+    },
+    {
+      "id": 7,
+      "title": "درخواست‌های در حال پردازش",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 16 },
+      "targets": [{ "expr": "rezervno_active_requests" }]
+    }
+  ]
+}

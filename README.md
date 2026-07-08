@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/29782505/README.md)
 # رزرونو (RezervoNo) — سیستم کامل رزرو رستوران
 
 پلتفرم SaaS رزرو رستوران — سه اپلیکیشن + بک‌اند مشترک، آماده‌ی راه‌اندازی روی سرور.

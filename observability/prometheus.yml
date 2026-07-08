@@ -1,0 +1,37 @@
+# ═══════════════════════════════════════════════════════════
+#  Prometheus — پیکربندی scrape برای رزرونو
+#  Prometheus به‌صورت pull، endpoint /api/metrics را می‌خواند.
+# ═══════════════════════════════════════════════════════════
+global:
+  scrape_interval: 15s        # هر ۱۵ ثانیه متریک‌ها را بخوان
+  scrape_timeout: 10s
+  external_labels:
+    project: rezervno
+
+# قوانین alert (نرخ خطا، latency، امنیت، صف)
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # ── API رزرونو ──
+  - job_name: rezervno-api
+    metrics_path: /api/metrics
+    scheme: http
+    # اگر METRICS_TOKEN تنظیم شده باشد، اینجا هم باید بیاید:
+    # authorization:
+    #   credentials: "${METRICS_TOKEN}"
+    static_configs:
+      - targets: ['api:3000']      # نام سرویس در docker-compose
+        labels:
+          service: api
+
+  # ── خود Prometheus (سلامت خودش) ──
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+# ── نکته برای k8s/چند pod ──
+# در محیط چند-pod، به‌جای static_configs از kubernetes_sd_configs یا
+# dns_sd_configs استفاده کن تا Prometheus خودکار همه‌ی podها را کشف و
+# scrape کند. جمع‌بندی متریک‌ها (مثل مجموع نرخ خطا) سمت Prometheus
+# با PromQL انجام می‌شود.

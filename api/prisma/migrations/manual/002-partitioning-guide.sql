@@ -1,0 +1,54 @@
+-- ═══════════════════════════════════════════════════════════
+--  رزرونو — راهنمای پارتیشن‌بندی جدول reservations (برای ۱۰M+)
+--
+--  ⚠️ این یک تصمیم معماری بزرگ است — فقط وقتی اجرا کن که:
+--   • جدول reservations به چند میلیون ردیف رسیده باشد، و
+--   • کوئری‌های بازه‌ای (با وجود ایندکس) کند شده باشند.
+--
+--  پارتیشن‌بندی range روی slot_start، جدول را به بازه‌های ماهانه/فصلی
+--  می‌شکند. مزایا:
+--   • کوئری‌های بازه‌ای فقط پارتیشن مرتبط را اسکن می‌کنند (partition pruning)
+--   • حذف داده‌ی قدیمی = DROP partition (فوری، بدون VACUUM سنگین)
+--   • ایندکس‌های کوچک‌تر per partition
+--
+--  ⚠️ تبدیل جدول موجود به partitioned، نیازمند مهاجرت داده است
+--     (نمی‌توان یک جدول معمولی را in-place پارتیشن کرد).
+--     روش امن: ساخت جدول جدید partitioned + کپی داده + rename.
+--     این کار باید در پنجره‌ی maintenance و با بک‌آپ کامل انجام شود.
+-- ═══════════════════════════════════════════════════════════
+
+-- ── الگوی پیشنهادی (برای پیاده‌سازی آینده، نه اجرای فعلی) ──
+--
+-- 1) جدول partitioned جدید:
+--
+-- CREATE TABLE reservations_partitioned (
+--   LIKE reservations INCLUDING ALL
+-- ) PARTITION BY RANGE (slot_start);
+--
+-- 2) پارتیشن‌های ماهانه (نمونه):
+--
+-- CREATE TABLE reservations_2026_06 PARTITION OF reservations_partitioned
+--   FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+-- CREATE TABLE reservations_2026_07 PARTITION OF reservations_partitioned
+--   FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
+-- ... (یک پارتیشن برای هر ماه)
+--
+-- 3) کپی داده‌ی موجود:
+-- INSERT INTO reservations_partitioned SELECT * FROM reservations;
+--
+-- 4) تعویض (در maintenance window، با قفل کوتاه):
+-- ALTER TABLE reservations RENAME TO reservations_old;
+-- ALTER TABLE reservations_partitioned RENAME TO reservations;
+--
+-- 5) بعد از اطمینان: DROP TABLE reservations_old;
+--
+-- ── خودکارسازی ساخت پارتیشن ماه آینده ──
+-- از pg_partman (افزونه) یا یک cron job استفاده کن که هر ماه
+-- پارتیشن ماه بعد را از پیش بسازد.
+--
+-- ── نکته درباره‌ی EXCLUDE constraint ──
+-- روی جدول partitioned، constraint جلوگیری از تداخل باید
+-- per-partition تعریف شود (یا با INCLUDING ALL از LIKE به ارث می‌رسد).
+-- این را موقع پیاده‌سازی تست کن.
+--
+-- ━━ تا قبل از رسیدن به این مقیاس، ایندکس‌های فایل 001 کافی هستند. ━━

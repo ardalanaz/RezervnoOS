@@ -1,0 +1,118 @@
+name: CI
+
+# اجرای خودکار روی هر push و pull request به main/develop
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ── مرحله ۱: type-check + build ──
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # نکته: پس از اولین npm install و commit کردن package-lock.json، می‌توان به npm ci سوییچ کرد
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build (Next.js)
+        run: npm run build
+        env:
+          # متغیرهای ساختگی برای build (مقادیر واقعی در deploy می‌آیند)
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db
+          JWT_SECRET: ci-build-only-secret-not-used-in-prod
+          JWT_REFRESH_SECRET: ci-build-only-refresh-secret
+          REDIS_URL: redis://localhost:6379
+
+  # ── مرحله ۲: تست‌ها (با Postgres + Redis واقعی در CI) ──
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: rezervno_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # نکته: پس از اولین npm install و commit کردن package-lock.json، می‌توان به npm ci سوییچ کرد
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Run migrations
+        run: |
+          npx prisma migrate deploy
+          # اجرای migrationهای دستی (partitioning/extra constraints)
+          for f in prisma/migrations/manual/*.sql; do
+            PGPASSWORD=test psql -h localhost -U test -d rezervno_test -f "$f" || echo "skip $f"
+          done
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/rezervno_test
+          DATABASE_DIRECT_URL: postgresql://test:test@localhost:5432/rezervno_test
+
+      - name: Run tests
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/rezervno_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-test-secret
+          JWT_REFRESH_SECRET: ci-test-refresh-secret
+
+  # ── مرحله ۳: چک امنیتی پایه ──
+  security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          # نکته: پس از اولین npm install و commit کردن package-lock.json، می‌توان به npm ci سوییچ کرد
+      - name: Install dependencies
+        run: npm ci || npm install
+      - name: Audit dependencies
+        run: npm audit --audit-level=high || true   # هشدار می‌دهد ولی build را نمی‌شکند
