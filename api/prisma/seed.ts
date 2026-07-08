@@ -136,12 +136,3 @@ async function main() {
 }
 
 main().catch(e => { console.error(e); process.exit(1); }).finally(() => db.$disconnect());
-
----
-
-## پیامک واقعی کاوه‌نگار (تکه ۷ — جایگزین src/lib/sms.ts)
-
-همان امضای `enqueueSms` است (بقیه‌ی کد تغییر نمی‌کند). بدون `KAVENEGAR_API_KEY` فقط لاگ می‌کند (حالت dev).
-
-**تنظیمات لازم در .env:**
-

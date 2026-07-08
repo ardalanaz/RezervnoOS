@@ -1,0 +1,14 @@
+api
+deploy
+backup
+observability
+cron
+loadtest
+e2e
+docs
+design-preview
+apps
+.github
+docker-compose*.yml
+*.md
+.env.example
