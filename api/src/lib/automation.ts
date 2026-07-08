@@ -97,7 +97,9 @@ export async function runAutomation(automation: {
     const tokens = template === 'winback_offer'
       ? [t.firstName || 'مهمان', coupon?.code || 'WELCOME', restaurant?.name || '']
       : [t.firstName || 'مهمان', restaurant?.name || ''];
-    await enqueueSms({ to: t.phone, template, tokens });
+    // restaurantId لازم است تا worker از موجودی SMS رستوران کم کند (consumeSms) —
+    // اتوماسیون بازاریابی هم مثل کمپین دستی باید متر شود.
+    await enqueueSms({ to: t.phone, template, tokens, restaurantId: automation.restaurantId });
     sent++;
   }
   await db.marketingAutomation.update({
