@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>رزرونو · پنل شرکت</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* پایه — همان سیستم رستوران */
+  --bg:#F8FAFC;--white:#FFFFFF;
+  --s-50:#F8FAFC;--s-100:#F1F5F9;--s-200:#E2E8F0;--s-300:#CBD5E1;
+  --s-400:#94A3B8;--s-500:#64748B;--s-600:#475569;--s-700:#334155;--s-800:#1E293B;--s-900:#0F172A;
+  --green:#22C55E;--green-50:#F0FDF4;--green-600:#16A34A;
+  --amber:#F59E0B;--amber-50:#FFFBEB;--amber-600:#D97706;
+  --red:#EF4444;--red-50:#FEF2F2;--red-600:#DC2626;
+  --t1:#0F172A;--t2:#64748B;--t3:#94A3B8;--border:#E2E8F0;--border-strong:#CBD5E1;
+  /* لهجه‌ی شرکت: ایندیگو/بنفش — سطح کنترل مرکزی، متمایز از پنل رستوران (آبی/سبز) */
+  --ink:#4F46E5;--ink-600:#4338CA;--ink-700:#3730A3;--ink-50:#EEF2FF;--ink-100:#E0E7FF;
+  --violet:#7C3AED;--violet-50:#F5F3FF;
+  --ink-grad:linear-gradient(135deg,#4F46E5,#7C3AED);
+  --r-xs:8px;--r-sm:10px;--r:14px;--r-lg:18px;--r-xl:24px;
+  --sh-sm:0 1px 2px rgba(15,23,42,.06);
+  --sh:0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);
+  --sh-md:0 4px 12px rgba(15,23,42,.06),0 2px 4px rgba(15,23,42,.04);
+  --sh-lg:0 12px 32px rgba(15,23,42,.10);
+  --sh-ink:0 8px 24px rgba(79,70,229,.24);
+  --t-fast:130ms;--t:200ms;--ease:cubic-bezier(.4,0,.2,1);--spring:cubic-bezier(.34,1.56,.64,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--t1);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+::selection{background:var(--ink-100)}
+
+/* ===== Layout ===== */
+.app{display:flex;min-height:100vh}
+.sidebar{width:248px;background:var(--white);border-left:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;right:0;height:100vh;z-index:40;transition:transform var(--t) var(--ease)}
+.main{flex:1;margin-right:248px;min-width:0}
+.sb-brand{display:flex;align-items:center;gap:11px;padding:20px;border-bottom:1px solid var(--border)}
+.sb-logo{width:36px;height:36px;border-radius:10px;background:var(--ink-grad);display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:17px;box-shadow:var(--sh-ink)}
+.sb-brand-text{font-weight:800;font-size:16px;letter-spacing:-.03em}
+.sb-brand-text small{display:block;font-size:10px;font-weight:600;color:var(--ink);letter-spacing:.02em}
+.sb-nav{flex:1;padding:8px;overflow-y:auto}
+.sb-nav-label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;padding:14px 12px 6px}
+.sb-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;border:none;background:none;border-radius:var(--r-sm);
+  color:var(--t2);font-size:14px;font-weight:600;text-align:right;transition:all var(--t-fast);margin-bottom:2px}
+.sb-item svg{width:19px;height:19px;flex-shrink:0}
+.sb-item:hover{background:var(--s-50);color:var(--t1)}
+.sb-item.active{background:var(--ink-50);color:var(--ink-700)}
+.sb-foot{padding:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-foot-ava{width:36px;height:36px;border-radius:50%;background:var(--ink-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.sb-foot-info{flex:1;min-width:0}
+.sb-foot-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-foot-meta{font-size:11px;color:var(--t3)}
+
+/* ===== Topbar ===== */
+.topbar{height:64px;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:30}
+.tb-title{font-size:19px;font-weight:800;letter-spacing:-.03em}
+.tb-right{display:flex;align-items:center;gap:12px}
+.tb-search{position:relative;display:flex;align-items:center}
+.tb-search input{width:240px;padding:9px 36px 9px 14px;border:1.5px solid var(--border);border-radius:50px;outline:none;
+  font-size:13px;background:var(--s-50);transition:all var(--t-fast)}
+.tb-search input:focus{border-color:var(--ink);background:var(--white);width:280px}
+.tb-search .s-ic{position:absolute;right:13px;color:var(--t3);pointer-events:none;font-size:14px}
+.tb-burger{display:none;width:40px;height:40px;border:1px solid var(--border);background:var(--white);border-radius:var(--r-sm);font-size:18px}
+.content{padding:28px;max-width:1400px}
+
+/* ===== Components ===== */
+.panel{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;box-shadow:var(--sh-sm)}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+.panel-title{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.panel-sub{font-size:12.5px;color:var(--t2);margin-top:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border-radius:var(--r-sm);
+  border:none;font-size:13.5px;font-weight:700;transition:all var(--t-fast);white-space:nowrap}
+.btn-sm{padding:7px 13px;font-size:12.5px}
+.btn-lg{padding:13px 24px;font-size:15px}
+.btn:active{transform:scale(.97)}
+.btn-block{width:100%}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-primary:hover{background:var(--ink-600);box-shadow:var(--sh-ink)}
+.btn-ghost{background:var(--white);color:var(--t1);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--border-strong);background:var(--s-50)}
+.btn-danger{background:var(--red-50);color:var(--red-600)}
+.btn-danger:hover{background:#FEE2E2}
+
+/* ===== Hero KPIs ===== */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.kpi{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;right:0;width:100%;height:3px;background:var(--ink-grad);opacity:0;transition:opacity var(--t)}
+.kpi:hover::before{opacity:1}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.kpi-ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
+.kpi-ic.ink{background:var(--ink-50)}.kpi-ic.green{background:var(--green-50)}.kpi-ic.amber{background:var(--amber-50)}.kpi-ic.violet{background:var(--violet-50)}
+.kpi-delta{font-size:11px;font-weight:800;padding:3px 9px;border-radius:50px}
+.kpi-delta.up{background:var(--green-50);color:var(--green-600)}
+.kpi-delta.down{background:var(--red-50);color:var(--red-600)}
+.kpi-val{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.kpi-label{font-size:13px;color:var(--t2);font-weight:600;margin-top:5px}
+
+/* ===== Restaurant table ===== */
+.rest-controls{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.filter-chip{padding:8px 16px;border:1.5px solid var(--border);border-radius:50px;background:var(--white);
+  font-size:12.5px;font-weight:700;color:var(--t2);transition:all var(--t-fast)}
+.filter-chip:hover{border-color:var(--border-strong)}
+.filter-chip.active{background:var(--s-900);border-color:var(--s-900);color:#fff}
+.rest-list{display:flex;flex-direction:column;gap:0}
+.rest-row{display:grid;grid-template-columns:2.4fr 1fr 1fr 1.1fr 0.6fr;align-items:center;gap:16px;padding:16px 8px;
+  border-bottom:1px solid var(--border);transition:background var(--t-fast);cursor:pointer}
+.rest-row:hover{background:var(--s-50)}
+.rest-row:last-child{border-bottom:none}
+.rest-head{display:grid;grid-template-columns:2.4fr 1fr 1fr 1.1fr 0.6fr;gap:16px;padding:0 8px 10px;
+  font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.04em}
+.rest-name-cell{display:flex;align-items:center;gap:12px;min-width:0}
+.rest-logo{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden}
+.rest-logo img{width:100%;height:100%;object-fit:cover}
+.rest-name{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rest-loc{font-size:12px;color:var(--t2)}
+.rest-metric{font-size:14px;font-weight:700}
+.rest-metric small{display:block;font-size:11px;color:var(--t3);font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:50px;font-size:11.5px;font-weight:700}
+.badge .bdot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.active{background:var(--green-50);color:var(--green-600)}
+.badge.expiring{background:var(--amber-50);color:var(--amber-600)}
+.badge.expired{background:var(--red-50);color:var(--red-600)}
+.badge.trial{background:var(--ink-50);color:var(--ink-700)}
+.rest-arrow{color:var(--t3);font-size:18px;text-align:left}
+/* ── back button ── */
+.back-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border:1.5px solid var(--border);background:var(--white);
+  border-radius:50px;font-size:13px;font-weight:700;color:var(--t2);margin-bottom:18px;transition:all var(--t-fast)}
+.back-btn:hover{border-color:var(--border-strong);color:var(--t1)}
+/* ── detail header ── */
+.detail-hero{display:flex;align-items:center;gap:18px;padding:24px;background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);margin-bottom:20px;flex-wrap:wrap;box-shadow:var(--sh-sm)}
+.detail-logo{width:72px;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:34px;flex-shrink:0;box-shadow:var(--sh-sm)}
+.detail-info{flex:1;min-width:200px}
+.detail-name{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.detail-meta{font-size:13px;color:var(--t2);margin-top:3px}
+.detail-actions{display:flex;gap:8px;flex-wrap:wrap}
+/* ── inner tabs ── */
+.itabs{display:flex;gap:4px;background:var(--s-100);padding:4px;border-radius:var(--r);margin-bottom:20px;overflow-x:auto}
+.itab{flex:1;min-width:max-content;padding:10px 16px;border:none;background:none;cursor:pointer;border-radius:var(--r-sm);
+  font-size:13.5px;font-weight:700;color:var(--t2);transition:all var(--t-fast);white-space:nowrap}
+.itab:hover{color:var(--t1)}
+.itab.active{background:var(--white);color:var(--ink);box-shadow:var(--sh-sm)}
+.isub{display:none}.isub.active{display:block;animation:fadeUp .25s var(--ease)}
+/* ── member list ── */
+.mini-list{display:flex;flex-direction:column}
+.mini-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.mini-row:last-child{border:none}
+.mini-ava{width:38px;height:38px;border-radius:50%;background:var(--ink-50);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.mini-info{flex:1;min-width:0}
+.mini-name{font-size:13.5px;font-weight:700}
+.mini-sub{font-size:11.5px;color:var(--t2)}
+.mini-tag{font-size:10px;font-weight:800;padding:3px 9px;border-radius:50px;background:var(--ink-50);color:var(--ink-700)}
+/* ── donut ── */
+.donut-wrap{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.donut{width:120px;height:120px;border-radius:50%;flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center}
+.donut-hole{width:78px;height:78px;background:var(--white);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-hole .dv{font-size:22px;font-weight:800;line-height:1}
+.donut-hole .dl{font-size:10px;color:var(--t2)}
+.legend{flex:1;min-width:120px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:9px}
+.legend-dot{width:10px;height:10px;border-radius:3px}
+.legend-val{margin-right:auto;font-weight:700}
+/* ── billing card ── */
+.bill-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.bill-stat{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px;text-align:center;box-shadow:var(--sh-sm)}
+.bill-stat .bs-val{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.bill-stat .bs-label{font-size:12px;color:var(--t2);margin-top:4px}
+.plan-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:50px;font-size:11.5px;font-weight:700}
+.plan-badge.pro{background:var(--ink-50);color:var(--ink-700)}
+.plan-badge.basic{background:var(--s-100);color:var(--s-600)}
+.plan-badge.trial{background:var(--violet-50);color:var(--violet)}
+.progress-track{height:8px;background:var(--s-100);border-radius:4px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:4px;transition:width .8s var(--ease)}
+/* ── support tools ── */
+.support-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-bottom:20px}
+.support-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--sh-sm);transition:all var(--t)}
+.support-card:hover{box-shadow:var(--sh-md);transform:translateY(-2px)}
+.support-ic{width:46px;height:46px;border-radius:12px;background:var(--ink-50);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+.support-title{font-size:15px;font-weight:800;margin-bottom:5px}
+.support-desc{font-size:12.5px;color:var(--t2);line-height:1.5;margin-bottom:14px}
+.session-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
+.session-row:last-child{border:none}
+.session-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.session-dot.live{background:var(--green);box-shadow:0 0 0 3px var(--green-50);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── دیتای مشتریان (مرکز فرماندهی) ── */
+.click-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.click-stat{display:flex;align-items:center;gap:10px;background:var(--s-50);border-radius:var(--r);padding:13px}
+.click-ic{font-size:22px;flex-shrink:0}
+.click-count{font-size:19px;font-weight:800;color:var(--t1);line-height:1}
+.click-label{font-size:11px;color:var(--t2);margin-top:3px;line-height:1.4}
+.funnel-note{margin-top:14px;padding:11px 14px;background:var(--ink-50);border-radius:var(--r-sm);font-size:12.5px;color:var(--ink-700);font-weight:600;text-align:center}
+.cust-controls{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.cust-search{flex:1;min-width:220px;padding:11px 15px;border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:14px;background:var(--white)}
+.cust-search:focus{outline:none;border-color:var(--ink-700)}
+.cust-filters{display:flex;gap:7px}
+.cust-fbtn{padding:9px 16px;border:1px solid var(--border);background:var(--white);border-radius:50px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;font-family:inherit;transition:all .15s}
+.cust-fbtn.active{background:var(--ink-700);color:#fff;border-color:var(--ink-700)}
+.cust-table{display:flex;flex-direction:column}
+.cust-row{display:flex;align-items:center;gap:14px;padding:13px 8px;border-bottom:1px solid var(--s-100);cursor:pointer;transition:background .15s}
+.cust-row:hover{background:var(--s-50)}.cust-row:last-child{border-bottom:none}
+.cust-ava{font-size:30px;flex-shrink:0}
+.cust-main{flex:1;min-width:0}
+.cust-name{font-size:14.5px;font-weight:700;color:var(--t1);display:flex;align-items:center;gap:7px}
+.cust-vip{font-size:9px;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800}
+.cust-new{font-size:9px;background:var(--green);color:#fff;padding:2px 8px;border-radius:50px;font-weight:800}
+.cust-phone{font-size:12.5px;color:var(--t2);margin-top:2px;font-variant-numeric:tabular-nums}
+.cust-stats-mini{display:flex;gap:18px}
+.csm{font-size:11px;color:var(--t3);text-align:center;display:flex;flex-direction:column;gap:1px}
+.csm span{font-size:14px;font-weight:700;color:var(--t1)}
+.csm-bday span{font-size:12px;color:var(--ink-700)}
+.cust-arrow{font-size:22px;color:var(--t3)}
+/* جزئیات مشتری */
+.cd-head{display:flex;gap:14px;align-items:center;margin-bottom:18px}
+.cd-ava{font-size:46px}
+.cd-name{font-size:19px;font-weight:800;display:flex;align-items:center;gap:8px}
+.cd-sub{font-size:13px;color:var(--t2);margin-top:3px}
+.cd-section{font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;margin:18px 0 10px;letter-spacing:.04em}
+.cd-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cd-info{background:var(--s-50);border-radius:var(--r-sm);padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+.cd-il{font-size:11px;color:var(--t3)}.cd-iv{font-size:14px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums}
+.cd-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cd-stat{background:var(--s-50);border-radius:var(--r-sm);padding:13px;text-align:center}
+.cd-sv{font-size:18px;font-weight:800;color:var(--t1)}.cd-sl{font-size:11px;color:var(--t3);margin-top:3px}
+.cd-bars{display:flex;flex-direction:column;gap:12px}
+.cd-bar-row{display:flex;align-items:center;gap:10px}
+.cd-bl{font-size:12.5px;color:var(--t2);width:80px;flex-shrink:0}
+.cd-bar{flex:1;height:8px;background:var(--s-100);border-radius:50px;overflow:hidden}
+.cd-bf{height:100%;border-radius:50px}.cd-bf.green{background:var(--green)}.cd-bf.amber{background:var(--amber)}.cd-bf.red{background:var(--red)}
+.cd-bv{font-size:13px;font-weight:700;width:42px;text-align:left;flex-shrink:0}
+.cd-alert{margin-top:14px;padding:12px 15px;background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--r-sm);font-size:13px;color:#991B1B;font-weight:600}
+@media(max-width:768px){.click-grid{grid-template-columns:repeat(2,1fr)}.cust-stats-mini{display:none}.cd-info-grid{grid-template-columns:1fr}}
+
+/* ── modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);z-index:60;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.show{display:flex;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--white);border-radius:var(--r-xl);padding:26px;max-width:440px;width:100%;box-shadow:var(--sh-lg);animation:modalUp .3s var(--spring);max-height:90vh;overflow-y:auto}
+@keyframes modalUp{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+.modal-title{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.modal-sub{font-size:13px;color:var(--t2);margin-top:3px;margin-bottom:18px}
+.field-label{font-size:12.5px;font-weight:700;color:var(--t1);margin:14px 0 7px}
+.inp{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);outline:none;font-family:inherit;font-size:14px;transition:border-color var(--t-fast)}
+.inp:focus{border-color:var(--ink)}
+.opt-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.opt{padding:10px 16px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:var(--white);cursor:pointer;font-size:13px;font-weight:600;color:var(--t2);transition:all var(--t-fast)}
+.opt:hover{border-color:var(--border-strong)}
+.opt.sel{border-color:var(--ink);background:var(--ink-50);color:var(--ink-700)}
+.summary-box{background:var(--s-50);border-radius:var(--r);padding:14px 16px;margin:14px 0}
+.sum-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0}
+.sum-row .k{color:var(--t2)}
+.sum-row .v{font-weight:700}
+
+/* ===== Charts ===== */
+.row-2{display:grid;grid-template-columns:1.5fr 1fr;gap:20px;margin-bottom:20px}
+.chart{display:flex;align-items:flex-end;gap:10px;height:180px;padding-top:20px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%}
+.bar{width:100%;max-width:42px;background:var(--ink-grad);border-radius:8px 8px 0 0;position:relative;transition:height .8s var(--ease);min-height:4px;margin-top:auto}
+.bar-val{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;color:var(--t2);white-space:nowrap}
+.bar-label{font-size:11px;color:var(--t3);font-weight:600}
+.list-stat{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.list-stat:last-child{border:none}
+.ls-rank{width:26px;height:26px;border-radius:8px;background:var(--ink-50);color:var(--ink-700);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.ls-info{flex:1;min-width:0}
+.ls-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ls-meta{font-size:11.5px;color:var(--t2)}
+.ls-val{font-size:14px;font-weight:800;color:var(--ink)}
+
+/* ===== Alerts box ===== */
+.alert-box{background:var(--white);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;box-shadow:var(--sh-sm)}
+.alert-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.6}
+.alert-item:last-child{border:none}
+.alert-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.alert-ic.warn{background:var(--amber-50)}.alert-ic.danger{background:var(--red-50)}.alert-ic.info{background:var(--ink-50)}
+
+/* ===== View switching ===== */
+.view{display:none}.view.active{display:block;animation:fadeUp .3s var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ===== Toast ===== */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--s-900);color:#fff;
+  padding:13px 22px;border-radius:50px;font-size:13.5px;font-weight:600;box-shadow:var(--sh-lg);z-index:100;
+  display:flex;align-items:center;gap:9px;opacity:0;transition:all var(--t) var(--spring);pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:35}
+.sb-overlay.show{display:block}
+
+/* ===== Responsive ===== */
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.row-2{grid-template-columns:1fr}}
+@media(max-width:900px){
+  .sidebar{transform:translateX(100%)}.sidebar.open{transform:translateX(0)}
+  .main{margin-right:0}.tb-burger{display:flex;align-items:center;justify-content:center}
+  .tb-search input{width:160px}.tb-search input:focus{width:180px}
+  .content{padding:18px}
+  .rest-row,.rest-head{grid-template-columns:2fr 1fr 1.1fr;}
+  .rest-col-hide{display:none}
+}
+@media(max-width:560px){
+  .rest-row,.rest-head{grid-template-columns:1.6fr 1fr}
+  .tb-search{display:none}
+}
+/* ─── صفحه‌ی ورود admin ─── */
+.login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#F8FAFC,#EEF2FF);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-overlay.hidden{display:none}
+.login-card{background:#fff;border-radius:24px;padding:36px 30px;max-width:400px;width:100%;box-shadow:0 20px 50px rgba(15,23,42,.12);text-align:center;animation:loginUp .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes loginUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.login-logo{width:68px;height:68px;border-radius:18px;background:var(--ink-grad);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 18px;color:#fff;font-weight:800;box-shadow:0 8px 24px rgba(79,70,229,.28)}
+.login-title{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.login-sub{font-size:14px;color:var(--t2);margin-bottom:24px;line-height:1.6}
+.login-field-label{font-size:12.5px;font-weight:700;color:var(--t1);text-align:right;margin-bottom:8px;display:block}
+.login-inp{width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;outline:none;font-family:inherit;font-size:18px;text-align:center;letter-spacing:.1em;transition:border-color .15s;direction:ltr}
+.login-inp:focus{border-color:var(--ink)}
+.login-inp.code{font-size:24px;letter-spacing:.5em}
+.login-btn{width:100%;padding:14px;border:none;border-radius:12px;background:var(--ink);color:#fff;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:18px;transition:all .15s}
+.login-btn:hover{background:var(--ink-600)}
+.login-btn:disabled{opacity:.6;cursor:default}
+.login-back{background:none;border:none;color:var(--ink);font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;margin-top:16px}
+.login-hint{background:var(--amber-50);border:1px solid #FDE68A;border-radius:10px;padding:10px 13px;font-size:12px;color:#92400E;margin-top:14px;line-height:1.5}
+.login-foot{font-size:11.5px;color:var(--t3);margin-top:18px;line-height:1.6}
+</style>
+</head>
+<body>
+<!-- صفحه‌ی ورود مدیر پلتفرم -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card" id="loginCard"></div>
+</div>
+<div class="app">
+  <div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">R</div>
+      <div class="sb-brand-text">رزرونو<small>پنل شرکت · کنترل مرکزی</small></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-nav-label">مرور کلی</div>
+      <button class="sb-item active" data-v="overview" onclick="nav('overview')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        داشبورد
+      </button>
+      <button class="sb-item" data-v="restaurants" onclick="nav('restaurants')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/><path d="M9 9v0M9 13v0M9 17v0"/></svg>
+        رستوران‌ها
+      </button>
+      <div class="sb-nav-label">مدیریت</div>
+      <button class="sb-item" data-v="analytics" onclick="nav('analytics')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        آنالیز و رفتار مشتری
+      </button>
+      <button class="sb-item" data-v="customers" onclick="nav('customers')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        دیتای مشتریان
+      </button>
+      <button class="sb-item" data-v="billing" onclick="nav('billing')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+        اشتراک و پیامک
+      </button>
+      <button class="sb-item" data-v="support" onclick="nav('support')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.6 5.6l-6 6a2 2 0 0 0 2.8 2.8l6-6a4 4 0 0 0 5.6-5.6l-2.1 2.1-2.1-2.1z"/></svg>
+        پشتیبانی از راه دور
+      </button>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-foot-ava">ش</div>
+      <div class="sb-foot-info"><div class="sb-foot-name">شرکت رزرونو</div><div class="sb-foot-meta">مدیر کل</div></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:14px">
+        <button class="tb-burger" onclick="toggleSidebar()">☰</button>
+        <div class="tb-title" id="pageTitle">داشبورد</div>
+      </div>
+      <div class="tb-right">
+        <div class="tb-search">
+          <span class="s-ic">🔍</span>
+          <input placeholder="جستجوی رستوران..." id="globalSearch" onfocus="nav('restaurants')">
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div id="v-overview" class="view active"></div>
+      <div id="v-restaurants" class="view"></div>
+      <div id="v-detail" class="view"></div>
+      <div id="v-analytics" class="view"></div>
+      <div id="v-customers" class="view"></div>
+      <div id="v-billing" class="view"></div>
+      <div id="v-support" class="view"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastIcon">✓</span><span id="toastMsg"></span></div>
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()"><div class="modal" id="modalBody"></div></div>
+
+<script>
+function fa(n){return n.toLocaleString('fa-IR')}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+let tt;
+function toast(icon,msg){const t=document.getElementById('toast');document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMsg').textContent=msg;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2600)}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sbOverlay').classList.toggle('show')}
+
+// ═══════════════════════════════════════════════════════════
+//  لایه‌ی اتصال API (فاز ۳) — پنل شرکت به endpointهای admin
+//  با بک‌اند → داده‌ی واقعی · بدون بک‌اند → نمونه (پنل نمی‌شکند)
+// ═══════════════════════════════════════════════════════════
+const API = {
+  base: '',
+  timeout: 8000,
+  _token: null,
+  online: true,
+  setToken(t){ this._token = t; },
+  getToken(){ return this._token; },
+  async request(path, opts = {}){
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), this.timeout);
+    try {
+      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (this._token) headers['Authorization'] = `Bearer ${this._token}`;
+      const res = await fetch(this.base + '/api/v1' + path, { ...opts, headers, signal: ctrl.signal });
+      clearTimeout(timer);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, status: res.status, error: data?.error || { message: `خطای ${res.status}` } };
+      return { ok: true, status: res.status, data };
+    } catch (e) {
+      clearTimeout(timer);
+      return { ok: false, offline: true, error: { message: 'اتصال به سرور برقرار نشد' } };
+    }
+  },
+  get(path){ return this.request(path); },
+  post(path, body){ return this.request(path, { method:'POST', body: JSON.stringify(body||{}) }); },
+  patch(path, body){ return this.request(path, { method:'PATCH', body: JSON.stringify(body||{}) }); },
+  async requestAdminOtp(phone){ return this.request('/auth/staff/request', { method:'POST', body: JSON.stringify({ phone }) }); },
+  async verifyAdminOtp(phone, code){
+    const res = await this.request('/auth/staff/verify', { method:'POST', body: JSON.stringify({ phone, code }) });
+    if (res.ok && res.data?.access) this.setToken(res.data.access);
+    return res;
+  },
+};
+
+// نگاشت رستوران API به ساختار پنل (فیلدهای اشتراک از نمونه پر می‌شوند چون در فاز ۲ بک‌اند نیستند)
+function mapAdminRestaurant(apiR, fallback){
+  return {
+    id: apiR.id,
+    name: apiR.name,
+    logo: fallback?.logo || '🍽️',
+    grad: fallback?.grad || 'linear-gradient(135deg,#818CF8,#4F46E5)',
+    city: fallback?.city || apiR.cuisine || '—',
+    plan: apiR.plan || fallback?.plan || 'basic',
+    // وضعیت اشتراک و پیامک هنوز در بک‌اند نیست → از نمونه
+    status: fallback?.status || (apiR.is_open ? 'active' : 'expired'),
+    daysLeft: fallback?.daysLeft ?? 90,
+    members: apiR.members ?? fallback?.members ?? 0,
+    reservations: apiR.reservations ?? fallback?.reservations ?? 0,
+    sms: apiR.sms_total_sent ?? fallback?.sms ?? 0,
+    smsBalance: apiR.sms_balance ?? 0,
+    rating: fallback?.rating ?? 0,
+    joined: apiR.joined_at ? new Date(apiR.joined_at).toLocaleDateString('fa-IR') : (fallback?.joined || '—'),
+  };
+}
+
+// بارگذاری رستوران‌ها از API admin (با fallback به نمونه)
+async function loadAdminRestaurants(){
+  const res = await API.get('/admin/restaurants');
+  if (res.ok && Array.isArray(res.data?.restaurants) && res.data.restaurants.length) {
+    API.online = true;
+    return res.data.restaurants.map(apiR => {
+      const fb = RESTAURANTS_SAMPLE.find(s => s.id === apiR.id) || RESTAURANTS_SAMPLE[0];
+      return mapAdminRestaurant(apiR, fb);
+    });
+  }
+  API.online = false;
+  return RESTAURANTS_SAMPLE;
+}
+
+// ════════ داده‌ی رستوران‌ها (شبیه‌سازی — در محصول واقعی از API) ════════
+const RESTAURANTS_SAMPLE=[
+  {id:1,name:'کافه‌رستوران ویستا',logo:'🌿',grad:'linear-gradient(135deg,#34D399,#059669)',city:'تهران، ولنجک',plan:'pro',status:'active',daysLeft:218,members:1240,reservations:3420,sms:8600,rating:4.8,joined:'۱۴۰۳/۰۸'},
+  {id:2,name:'سفره‌خانه سنتی گرام',logo:'🍵',grad:'linear-gradient(135deg,#F59E0B,#D97706)',city:'اصفهان، چهارباغ',plan:'pro',status:'active',daysLeft:142,members:890,reservations:2180,sms:5400,rating:4.6,joined:'۱۴۰۳/۰۹'},
+  {id:3,name:'رستوران دریایی سارا',logo:'🦞',grad:'linear-gradient(135deg,#0EA5E9,#0369A1)',city:'بندرعباس، ساحل',plan:'basic',status:'expiring',daysLeft:8,members:430,reservations:920,sms:1900,rating:4.4,joined:'۱۴۰۴/۰۱'},
+  {id:4,name:'کافه هانا',logo:'☕',grad:'linear-gradient(135deg,#8B5CF6,#6D28D9)',city:'تهران، فرشته',plan:'pro',status:'active',daysLeft:95,members:670,reservations:1540,sms:3200,rating:4.7,joined:'۱۴۰۳/۱۱'},
+  {id:5,name:'پیتزا ایتالیا',logo:'🍕',grad:'linear-gradient(135deg,#EF4444,#B91C1C)',city:'شیراز، معالی‌آباد',plan:'basic',status:'expired',daysLeft:-12,members:310,reservations:760,sms:1200,rating:4.2,joined:'۱۴۰۳/۱۲'},
+  {id:6,name:'رستوران آوا',logo:'🍽️',grad:'linear-gradient(135deg,#EC4899,#BE185D)',city:'تهران، سعادت‌آباد',plan:'trial',status:'trial',daysLeft:5,members:48,reservations:62,sms:140,rating:4.5,joined:'۱۴۰۴/۰۳'},
+  {id:7,name:'کبابسرای البرز',logo:'🔥',grad:'linear-gradient(135deg,#F97316,#C2410C)',city:'کرج، گوهردشت',plan:'pro',status:'active',daysLeft:174,members:1020,reservations:2650,sms:6100,rating:4.5,joined:'۱۴۰۳/۰۷'},
+  {id:8,name:'سوشی توکیو',logo:'🍣',grad:'linear-gradient(135deg,#14B8A6,#0F766E)',city:'تهران، زعفرانیه',plan:'basic',status:'active',daysLeft:56,members:520,reservations:1180,sms:2400,rating:4.6,joined:'۱۴۰۳/۱۰'},
+];
+// RESTAURANTS متغیر زنده: اول نمونه، بعد از API به‌روز می‌شود
+let RESTAURANTS = RESTAURANTS_SAMPLE;
+const PLAN_LABEL={pro:'حرفه‌ای',basic:'پایه',trial:'آزمایشی'};
+const STATUS_LABEL={active:'فعال',expiring:'رو به اتمام',expired:'منقضی',trial:'دوره آزمایشی'};
+
+const TITLES={overview:'داشبورد',restaurants:'رستوران‌ها',detail:'جزئیات رستوران',analytics:'آنالیز و رفتار مشتری',customers:'دیتای مشتریان',billing:'اشتراک و پیامک',support:'پشتیبانی از راه دور'};
+let restFilter='all';
+let currentRest=null; // رستوران انتخاب‌شده برای صفحه‌ی جزئیات
+
+function nav(v){
+  document.querySelectorAll('.sb-item[data-v]').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('v-'+v).classList.add('active');
+  document.getElementById('pageTitle').textContent=TITLES[v]||'';
+  ({overview:rOverview,restaurants:rRestaurants,detail:rDetail,analytics:rAnalytics,customers:rCustomers,billing:rBilling,support:rSupport})[v]();
+  if(window.innerWidth<=900){document.getElementById('sidebar').classList.remove('open');document.getElementById('sbOverlay').classList.remove('show')}
+}
+
+// ════════ داشبورد کلی ════════
+function rOverview(){
+  const total=RESTAURANTS.length;
+  const active=RESTAURANTS.filter(r=>r.status==='active').length;
+  const expiring=RESTAURANTS.filter(r=>r.status==='expiring'||r.status==='trial').length;
+  const expired=RESTAURANTS.filter(r=>r.status==='expired').length;
+  const totalMembers=RESTAURANTS.reduce((s,r)=>s+r.members,0);
+  const totalRes=RESTAURANTS.reduce((s,r)=>s+r.reservations,0);
+  const totalSms=RESTAURANTS.reduce((s,r)=>s+r.sms,0);
+  const totalSmsBalance=RESTAURANTS.reduce((s,r)=>s+(r.smsBalance||0),0);
+  const lowBalanceCount=RESTAURANTS.filter(r=>(r.smsBalance||0)<100).length;
+  // رشد ماهانه (شبیه‌سازی)
+  const growth=[['دی',3],['بهمن',4],['اسفند',5],['فروردین',6],['اردیبهشت',7],['خرداد',8]];
+  const mx=8;
+  // برترین رستوران‌ها بر اساس رزرو
+  const top=[...RESTAURANTS].sort((a,b)=>b.reservations-a.reservations).slice(0,5);
+  // هشدارها
+  const alerts=RESTAURANTS.filter(r=>r.status==='expiring'||r.status==='expired'||r.status==='trial');
+
+  document.getElementById('v-overview').innerHTML=`
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">🏪</div><span class="kpi-delta up">↑ ۲</span></div><div class="kpi-val">${fa(total)}</div><div class="kpi-label">رستوران فعال در پلتفرم</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">👥</div><span class="kpi-delta up">↑ ۱۴٪</span></div><div class="kpi-val">${fa(totalMembers)}</div><div class="kpi-label">کل اعضای باشگاه (همه)</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">📅</div><span class="kpi-delta up">↑ ۹٪</span></div><div class="kpi-val">${fa(totalRes)}</div><div class="kpi-label">کل رزروها (تجمعی)</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">✉️</div></div><div class="kpi-val">${fa(totalSms)}</div><div class="kpi-label">کل پیامک ارسالی</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ${lowBalanceCount>0?'red':'green'}">📲</div>${lowBalanceCount>0?`<span class="kpi-delta" style="background:var(--red-50);color:var(--red-600)">${fa(lowBalanceCount)} کم‌موجودی</span>`:''}</div><div class="kpi-val">${fa(totalSmsBalance)}</div><div class="kpi-label">موجودی پیامک (باقی‌مانده)</div></div>
+    </div>
+
+    <div class="row-2">
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">رشد رستوران‌ها</div><div class="panel-sub">تعداد رستوران فعال در هر ماه</div></div></div>
+        <div class="chart">${growth.map(([m,v])=>`<div class="bar-col"><div class="bar" style="height:0" data-h="${v/mx*100}"><span class="bar-val">${fa(v)}</span></div><div class="bar-label">${m}</div></div>`).join('')}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">وضعیت اشتراک‌ها</div></div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          ${[['فعال',active,'var(--green)'],['رو به اتمام / آزمایشی',expiring,'var(--amber)'],['منقضی',expired,'var(--red)']].map(([l,c,col])=>`
+            <div style="display:flex;align-items:center;gap:12px"><span style="width:130px;font-size:13px;font-weight:600">${l}</span><div style="flex:1;height:10px;background:var(--s-100);border-radius:5px;overflow:hidden"><div style="height:100%;width:${total?c/total*100:0}%;background:${col};border-radius:5px;transition:width .8s"></div></div><span style="font-weight:800;font-size:14px;width:24px;text-align:left">${fa(c)}</span></div>`).join('')}
+        </div>
+        <button class="btn btn-ghost btn-block" style="margin-top:20px" onclick="nav('restaurants')">دیدن همه‌ی رستوران‌ها ←</button>
+      </div>
+    </div>
+
+    <div class="row-2">
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">پرکارترین رستوران‌ها</div><div class="panel-sub">بر اساس تعداد رزرو</div></div></div>
+        ${top.map((r,i)=>`<div class="list-stat">
+          <div class="ls-rank">${fa(i+1)}</div>
+          <div class="rest-logo" style="background:${r.grad};width:36px;height:36px;font-size:16px">${r.logo}</div>
+          <div class="ls-info"><div class="ls-name">${esc(r.name)}</div><div class="ls-meta">${esc(r.city)} · ${fa(r.members)} عضو</div></div>
+          <div class="ls-val">${fa(r.reservations)}</div>
+        </div>`).join('')}
+      </div>
+      <div class="alert-box">
+        <div class="panel-head"><div><div class="panel-title">نیازمند توجه</div><div class="panel-sub">${fa(alerts.length)} رستوران</div></div></div>
+        ${alerts.length?alerts.map(r=>{
+          const isExpired=r.status==='expired';const isTrial=r.status==='trial';
+          return `<div class="alert-item">
+            <div class="alert-ic ${isExpired?'danger':isTrial?'info':'warn'}">${isExpired?'🚫':isTrial?'🎁':'⏰'}</div>
+            <div><b>${esc(r.name)}</b> ${isExpired?`اشتراکش ${fa(Math.abs(r.daysLeft))} روزه منقضی شده`:isTrial?`${fa(r.daysLeft)} روز تا پایان دوره آزمایشی`:`${fa(r.daysLeft)} روز تا انقضای اشتراک`}<div style="margin-top:6px"><button class="btn btn-sm ${isExpired?'btn-primary':'btn-ghost'}" onclick="event.stopPropagation();toast('🔄','مدیریت اشتراک در مرحله‌ی بعد')">${isExpired?'تمدید فوری':isTrial?'تبدیل به اشتراک':'یادآوری تمدید'}</button></div></div>
+          </div>`;
+        }).join(''):'<div style="text-align:center;color:var(--t2);padding:24px">همه‌ی اشتراک‌ها فعالن 🎉</div>'}
+      </div>
+    </div>`;
+  // انیمیشن بارها
+  setTimeout(()=>document.querySelectorAll('#v-overview .bar').forEach(b=>b.style.height=b.dataset.h+'%'),100);
+}
+
+// ════════ لیست رستوران‌ها ════════
+function rRestaurants(){
+  document.getElementById('v-restaurants').innerHTML=`
+    <div class="panel">
+      <div class="panel-head"><div><div class="panel-title">همه‌ی رستوران‌ها</div><div class="panel-sub">${fa(RESTAURANTS.length)} رستوران در پلتفرم</div></div></div>
+      <div class="rest-controls">
+        <button class="filter-chip ${restFilter==='all'?'active':''}" onclick="setRestFilter('all')">همه (${fa(RESTAURANTS.length)})</button>
+        <button class="filter-chip ${restFilter==='active'?'active':''}" onclick="setRestFilter('active')">✅ فعال (${fa(RESTAURANTS.filter(r=>r.status==='active').length)})</button>
+        <button class="filter-chip ${restFilter==='expiring'?'active':''}" onclick="setRestFilter('expiring')">⏰ رو به اتمام (${fa(RESTAURANTS.filter(r=>r.status==='expiring').length)})</button>
+        <button class="filter-chip ${restFilter==='expired'?'active':''}" onclick="setRestFilter('expired')">🚫 منقضی (${fa(RESTAURANTS.filter(r=>r.status==='expired').length)})</button>
+        <button class="filter-chip ${restFilter==='trial'?'active':''}" onclick="setRestFilter('trial')">🎁 آزمایشی (${fa(RESTAURANTS.filter(r=>r.status==='trial').length)})</button>
+      </div>
+      <div class="rest-head">
+        <div>رستوران</div>
+        <div class="rest-col-hide">اعضای باشگاه</div>
+        <div class="rest-col-hide">رزروها</div>
+        <div>وضعیت اشتراک</div>
+        <div></div>
+      </div>
+      <div class="rest-list" id="restList"></div>
+    </div>`;
+  renderRestList();
+}
+function setRestFilter(f){restFilter=f;rRestaurants()}
+function renderRestList(){
+  const el=document.getElementById('restList');if(!el)return;
+  let list=RESTAURANTS;
+  if(restFilter!=='all')list=RESTAURANTS.filter(r=>r.status===restFilter);
+  if(!list.length){el.innerHTML='<div style="text-align:center;color:var(--t2);padding:40px">رستورانی در این دسته نیست</div>';return}
+  el.innerHTML=list.map(r=>{
+    const statusCls=r.status;
+    const planBadge=PLAN_LABEL[r.plan];
+    let statusText=STATUS_LABEL[r.status];
+    if(r.status==='active')statusText=`فعال · ${fa(r.daysLeft)} روز`;
+    else if(r.status==='expiring')statusText=`${fa(r.daysLeft)} روز مونده`;
+    else if(r.status==='expired')statusText=`${fa(Math.abs(r.daysLeft))} روز منقضی`;
+    else if(r.status==='trial')statusText=`آزمایشی · ${fa(r.daysLeft)} روز`;
+    return `<div class="rest-row" onclick="openRest(${r.id})">
+      <div class="rest-name-cell">
+        <div class="rest-logo" style="background:${r.grad}">${r.logo}</div>
+        <div style="min-width:0"><div class="rest-name">${esc(r.name)}</div><div class="rest-loc">${esc(r.city)} · پلن ${planBadge}</div></div>
+      </div>
+      <div class="rest-metric rest-col-hide">${fa(r.members)}<small>عضو</small></div>
+      <div class="rest-metric rest-col-hide">${fa(r.reservations)}<small>رزرو</small></div>
+      <div><span class="badge ${statusCls}"><span class="bdot"></span>${statusText}</span></div>
+      <div class="rest-arrow">←</div>
+    </div>`;
+  }).join('');
+}
+
+// ════════ مودال ════════
+function openModal(html){document.getElementById('modalBody').innerHTML=html;document.getElementById('modalBg').classList.add('show')}
+function closeModal(){document.getElementById('modalBg').classList.remove('show')}
+
+// ════════ باز کردن جزئیات رستوران ════════
+function openRest(id){currentRest=RESTAURANTS.find(r=>r.id===id);if(!currentRest)return;detailTab='members';nav('detail')}
+
+// ════════ صفحه‌ی جزئیات رستوران (باشگاه + آنالیز + رفتار) ════════
+let detailTab='members';
+function rDetail(){
+  const r=currentRest;
+  if(!r){nav('restaurants');return}
+  const statusBadge={active:'active',expiring:'expiring',expired:'expired',trial:'trial'}[r.status];
+  let statusText=STATUS_LABEL[r.status];
+  if(r.status==='active')statusText=`فعال · ${fa(r.daysLeft)} روز مونده`;
+  else if(r.status==='expired')statusText=`${fa(Math.abs(r.daysLeft))} روز منقضی`;
+  else if(r.status==='expiring')statusText=`${fa(r.daysLeft)} روز تا انقضا`;
+  else statusText=`آزمایشی · ${fa(r.daysLeft)} روز`;
+  document.getElementById('v-detail').innerHTML=`
+    <button class="back-btn" onclick="nav('restaurants')">→ بازگشت به لیست</button>
+    <div class="detail-hero">
+      <div class="detail-logo" style="background:${r.grad}">${r.logo}</div>
+      <div class="detail-info">
+        <div class="detail-name">${esc(r.name)}</div>
+        <div class="detail-meta">${esc(r.city)} · عضو از ${r.joined} · <span class="plan-badge ${r.plan}">${PLAN_LABEL[r.plan]}</span></div>
+      </div>
+      <div class="detail-actions">
+        <span class="badge ${statusBadge}" style="align-self:center"><span class="bdot"></span>${statusText}</span>
+        <button class="btn btn-ghost btn-sm" onclick="openSupportFor(${r.id})">🛠 پشتیبانی</button>
+        <button class="btn btn-primary btn-sm" onclick="openRenew(${r.id})">🔄 مدیریت اشتراک</button>
+      </div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">👥</div></div><div class="kpi-val">${fa(r.members)}</div><div class="kpi-label">عضو باشگاه</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">📅</div></div><div class="kpi-val">${fa(r.reservations)}</div><div class="kpi-label">کل رزروها</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">✉️</div></div><div class="kpi-val">${fa(r.sms)}</div><div class="kpi-label">پیامک ارسالی</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">⭐</div></div><div class="kpi-val">${fa(r.rating)}</div><div class="kpi-label">امتیاز مشتری‌ها</div></div>
+    </div>
+    <div class="itabs">
+      <button class="itab ${detailTab==='members'?'active':''}" onclick="setDetailTab('members')">👥 باشگاه مشتریان</button>
+      <button class="itab ${detailTab==='behavior'?'active':''}" onclick="setDetailTab('behavior')">📊 رفتار مشتری</button>
+      <button class="itab ${detailTab==='activity'?'active':''}" onclick="setDetailTab('activity')">📈 فعالیت</button>
+    </div>
+    <div id="dt-members" class="isub ${detailTab==='members'?'active':''}"></div>
+    <div id="dt-behavior" class="isub ${detailTab==='behavior'?'active':''}"></div>
+    <div id="dt-activity" class="isub ${detailTab==='activity'?'active':''}"></div>`;
+  detailMembers();detailBehavior();detailActivity();
+}
+function setDetailTab(t){
+  detailTab=t;
+  document.querySelectorAll('#v-detail .itab').forEach((b,i)=>b.classList.toggle('active',['members','behavior','activity'][i]===t));
+  document.querySelectorAll('#v-detail .isub').forEach(s=>s.classList.toggle('active',s.id==='dt-'+t));
+}
+// نمونه اعضای باشگاه (بر اساس رستوران)
+function sampleMembers(r){
+  const names=[['کیان موسوی','VIS-۱۰۰۱','طلایی',1240],['نیلوفر رضایی','VIS-۱۰۰۲','نقره‌ای',680],['امیر حسینی','VIS-۱۰۰۳','برنزی',210],['مریم احمدی','VIS-۱۰۰۴','نقره‌ای',540],['سامان عباسی','VIS-۱۰۰۵','برنزی',150]];
+  return names.map(([n,c,t,p])=>({n,c,t,p}));
+}
+function detailMembers(){
+  const r=currentRest;const members=sampleMembers(r);
+  const tierIcon={'طلایی':'🥇','نقره‌ای':'🥈','برنزی':'🥉'};
+  document.getElementById('dt-members').innerHTML=`
+    <div class="panel">
+      <div class="panel-head"><div><div class="panel-title">اعضای باشگاه ${esc(r.name)}</div><div class="panel-sub">${fa(r.members)} عضو · نمونه‌ی جدیدترین‌ها</div></div></div>
+      <div class="mini-list">
+        ${members.map(m=>`<div class="mini-row">
+          <div class="mini-ava">${tierIcon[m.t]||'👤'}</div>
+          <div class="mini-info"><div class="mini-name">${esc(m.n)}</div><div class="mini-sub">کد ${m.c} · ${fa(m.p)} امتیاز · سطح ${m.t}</div></div>
+          <span class="mini-tag">${m.t}</span>
+        </div>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--t2);margin-top:16px;text-align:center;padding-top:12px;border-top:1px solid var(--border)">نمایش ۵ عضو از ${fa(r.members)} · در نسخه‌ی کامل با جستجو و صفحه‌بندی</div>
+    </div>`;
+}
+function detailBehavior(){
+  const r=currentRest;
+  const newPct=34,retPct=66;
+  document.getElementById('dt-behavior').innerHTML=`
+    <div class="row-2">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">مشتری جدید و قدیمی</div></div>
+        <div class="donut-wrap">
+          <div class="donut" style="background:conic-gradient(var(--ink) 0 ${newPct}%,var(--green) ${newPct}% 100%)"><div class="donut-hole"><div class="dv">${fa(r.members)}</div><div class="dl">مشتری</div></div></div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-dot" style="background:var(--ink)"></span>جدید<span class="legend-val">${fa(newPct)}٪</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>بازگشتی<span class="legend-val">${fa(retPct)}٪</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">دفعات مراجعه</div></div>
+        ${[['۱ بار',38,'var(--ink)'],['۲-۴ بار',42,'var(--green)'],['۵+ بار (وفادار)',20,'var(--amber)']].map(([l,p,c])=>`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span style="width:110px;font-size:12.5px;font-weight:600">${l}</span><div style="flex:1;height:8px;background:var(--s-100);border-radius:4px;overflow:hidden"><div style="height:100%;width:${p}%;background:${c};border-radius:4px;transition:width .8s"></div></div><span style="font-weight:700;font-size:12px;width:32px;text-align:left">${fa(p)}٪</span></div>`).join('')}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><div class="panel-title">فاصله‌ی بازگشت مشتری</div><div class="panel-sub">هر چند وقت یه‌بار برمی‌گردن</div></div></div>
+      ${[['کمتر از ۱ هفته',22,'var(--green)'],['۱-۲ هفته',35,'var(--ink)'],['۲-۴ هفته',28,'var(--amber)'],['بیشتر از ۱ ماه',15,'var(--red)']].map(([l,p,c])=>`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span style="width:130px;font-size:12.5px;font-weight:600">${l}</span><div style="flex:1;height:8px;background:var(--s-100);border-radius:4px;overflow:hidden"><div style="height:100%;width:${p}%;background:${c};border-radius:4px;transition:width .8s"></div></div><span style="font-weight:700;font-size:12px;width:32px;text-align:left">${fa(p)}٪</span></div>`).join('')}
+    </div>`;
+}
+function detailActivity(){
+  const r=currentRest;
+  const weeks=[['هفته ۱',Math.round(r.reservations*0.02)],['هفته ۲',Math.round(r.reservations*0.024)],['هفته ۳',Math.round(r.reservations*0.028)],['هفته ۴',Math.round(r.reservations*0.03)]];
+  const mx=Math.max(...weeks.map(w=>w[1]))||1;
+  document.getElementById('dt-activity').innerHTML=`
+    <div class="panel">
+      <div class="panel-head"><div><div class="panel-title">روند رزرو (۴ هفته اخیر)</div><div class="panel-sub">تعداد رزرو هفتگی</div></div></div>
+      <div class="chart">${weeks.map(([m,v])=>`<div class="bar-col"><div class="bar" style="height:0" data-h="${v/mx*100}"><span class="bar-val">${fa(v)}</span></div><div class="bar-label">${m}</div></div>`).join('')}</div>
+    </div>`;
+  setTimeout(()=>document.querySelectorAll('#dt-activity .bar').forEach(b=>b.style.height=b.dataset.h+'%'),100);
+}
+
+// ════════ آنالیز سراسری (همه‌ی رستوران‌ها) ════════
+function rAnalytics(){
+  const totalMembers=RESTAURANTS.reduce((s,r)=>s+r.members,0);
+  const totalRes=RESTAURANTS.reduce((s,r)=>s+r.reservations,0);
+  const avgRating=(RESTAURANTS.reduce((s,r)=>s+r.rating,0)/RESTAURANTS.length).toFixed(1);
+  const topByMembers=[...RESTAURANTS].sort((a,b)=>b.members-a.members).slice(0,5);
+  const topByRating=[...RESTAURANTS].sort((a,b)=>b.rating-a.rating).slice(0,5);
+  // توزیع رزرو بین شهرها (تجمیع)
+  const cityRes={};RESTAURANTS.forEach(r=>{const c=r.city.split('،')[0];cityRes[c]=(cityRes[c]||0)+r.reservations});
+  const cities=Object.entries(cityRes).sort((a,b)=>b[1]-a[1]);
+  const cityMx=Math.max(...cities.map(c=>c[1]))||1;
+  document.getElementById('v-analytics').innerHTML=`
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">👥</div></div><div class="kpi-val">${fa(totalMembers)}</div><div class="kpi-label">کل اعضای باشگاه</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">📅</div></div><div class="kpi-val">${fa(totalRes)}</div><div class="kpi-label">کل رزروها</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">⭐</div></div><div class="kpi-val">${fa(avgRating)}</div><div class="kpi-label">میانگین امتیاز کل</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">🔄</div></div><div class="kpi-val">۶۶٪</div><div class="kpi-label">میانگین نرخ بازگشت</div></div>
+    </div>
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-head"><div><div class="panel-title">رزرو بر اساس شهر</div><div class="panel-sub">تجمیع همه‌ی رستوران‌ها</div></div></div>
+      <div class="chart">${cities.map(([c,v])=>`<div class="bar-col"><div class="bar" style="height:0" data-h="${v/cityMx*100}"><span class="bar-val">${fa(v)}</span></div><div class="bar-label">${esc(c)}</div></div>`).join('')}</div>
+    </div>
+    <div class="row-2">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">برترین بر اساس باشگاه</div></div>
+        ${topByMembers.map((r,i)=>`<div class="list-stat"><div class="ls-rank">${fa(i+1)}</div><div class="rest-logo" style="background:${r.grad};width:34px;height:34px;font-size:15px">${r.logo}</div><div class="ls-info"><div class="ls-name">${esc(r.name)}</div><div class="ls-meta">${esc(r.city)}</div></div><div class="ls-val">${fa(r.members)}</div></div>`).join('')}
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">برترین بر اساس امتیاز</div></div>
+        ${topByRating.map((r,i)=>`<div class="list-stat"><div class="ls-rank">${fa(i+1)}</div><div class="rest-logo" style="background:${r.grad};width:34px;height:34px;font-size:15px">${r.logo}</div><div class="ls-info"><div class="ls-name">${esc(r.name)}</div><div class="ls-meta">${esc(r.city)}</div></div><div class="ls-val">⭐ ${fa(r.rating)}</div></div>`).join('')}
+      </div>
+    </div>`;
+  setTimeout(()=>document.querySelectorAll('#v-analytics .bar').forEach(b=>b.style.height=b.dataset.h+'%'),100);
+}
+
+// ════════ دیتای مشتریان — مرکز فرماندهی دیتا ════════
+// کمپانی (صاحب پلتفرم) دید کامل به همه‌ی مشتریان همه‌ی رستوران‌ها دارد:
+// رفتار، شماره تماس، تولد/سالگرد، امتیاز وفاداری، و رویداد کلیک‌ها.
+const PLATFORM_CUSTOMERS=[
+  {id:1,name:'کیان موسوی',phone:'۰۹۱۲۵۵۵۶۶۷۷',ava:'👨‍💼',seg:'vip',city:'تهران',restaurant:'کافه‌رستوران ویستا',visits:18,spent:6200000,points:3400,birthday:'۱۵ خرداد',anniversary:'۲۰ مهر',joined:'۱۴۰۲',lastActive:'۳ روز پیش',ret:92,churn:8,referrals:4,channel:'app'},
+  {id:2,name:'نیلوفر رضایی',phone:'۰۹۱۲۳۳۳۴۴۵۵',ava:'👩',seg:'regular',city:'تهران',restaurant:'بیسترو لانه',visits:12,spent:3800000,points:1900,birthday:'۲ آبان',anniversary:null,joined:'۱۴۰۲',lastActive:'امروز',ret:78,churn:20,referrals:1,channel:'app'},
+  {id:3,name:'آرش کریمی',phone:'۰۹۱۲۷۷۷۸۸۹۹',ava:'🧔',seg:'vip',city:'اصفهان',restaurant:'سفره‌خانه سنتی',visits:24,spent:8900000,points:5100,birthday:'۸ دی',anniversary:'۱۲ فروردین',joined:'۱۴۰۱',lastActive:'دیروز',ret:95,churn:5,referrals:7,channel:'web'},
+  {id:4,name:'سارا محمدی',phone:'۰۹۱۲۱۱۱۲۲۳۳',ava:'👩‍🦰',seg:'new',city:'تهران',restaurant:'کافه‌رستوران ویستا',visits:2,spent:540000,points:300,birthday:'۲۵ مرداد',anniversary:null,joined:'۱۴۰۳',lastActive:'امروز',ret:40,churn:55,referrals:0,channel:'app'},
+  {id:5,name:'محمد حسینی',phone:'۰۹۱۲۹۹۹۰۰۱۱',ava:'👨',seg:'regular',city:'شیراز',restaurant:'رستوران دریا',visits:9,spent:2700000,points:1400,birthday:'۳۰ بهمن',anniversary:'۵ خرداد',joined:'۱۴۰۲',lastActive:'۱ هفته پیش',ret:65,churn:30,referrals:2,channel:'web'},
+  {id:6,name:'الهام نوری',phone:'۰۹۱۲۴۴۴۵۵۶۶',ava:'👩‍🦱',seg:'vip',city:'تهران',restaurant:'آوا روف‌تاپ',visits:21,spent:7300000,points:4200,birthday:'۱۸ تیر',anniversary:'۲۲ آذر',joined:'۱۴۰۱',lastActive:'۲ روز پیش',ret:88,churn:12,referrals:5,channel:'app'},
+];
+// رویداد کلیک‌ها (هر تعاملی که مشتری می‌کند — کمپانی همه را می‌بیند)
+const CLICK_EVENTS=[
+  {type:'search',label:'جستجوی «رستوران ایتالیایی»',icon:'🔍',count:1240},
+  {type:'view',label:'بازدید صفحه‌ی رستوران',icon:'👁️',count:8900},
+  {type:'book',label:'شروع فرایند رزرو',icon:'📅',count:3200},
+  {type:'complete',label:'تکمیل رزرو',icon:'✅',count:2740},
+  {type:'favorite',label:'افزودن به علاقه‌مندی',icon:'❤️',count:1560},
+  {type:'waitlist',label:'پیوستن به لیست انتظار',icon:'📋',count:680},
+  {type:'review',label:'ثبت نظر',icon:'⭐',count:920},
+  {type:'referral',label:'دعوت دوست',icon:'🎁',count:340},
+];
+let custFilter='all',custSearch='';
+function rCustomers(){
+  const totalCust=PLATFORM_CUSTOMERS.length;
+  const vips=PLATFORM_CUSTOMERS.filter(c=>c.seg==='vip').length;
+  const totalSpent=PLATFORM_CUSTOMERS.reduce((s,c)=>s+c.spent,0);
+  const totalPoints=PLATFORM_CUSTOMERS.reduce((s,c)=>s+c.points,0);
+  // تولدهای این ماه (برای کمپین)
+  const bdays=PLATFORM_CUSTOMERS.filter(c=>c.birthday).length;
+  // فیلتر + جستجو
+  let list=PLATFORM_CUSTOMERS;
+  if(custFilter==='vip')list=list.filter(c=>c.seg==='vip');
+  else if(custFilter==='new')list=list.filter(c=>c.seg==='new');
+  else if(custFilter==='churn')list=list.filter(c=>c.churn>=30);
+  if(custSearch)list=list.filter(c=>c.name.includes(custSearch)||c.phone.includes(custSearch));
+  const fnl=n=>n>=1000000?fa(+(n/1000000).toFixed(1))+'م':n>=1000?fa(Math.round(n/1000))+'ک':fa(n);
+
+  document.getElementById('v-customers').innerHTML=`
+    <!-- KPIهای دیتای مشتری -->
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">👥</div></div><div class="kpi-val">${fa(totalCust)}</div><div class="kpi-label">کل مشتریان پلتفرم</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">⭐</div></div><div class="kpi-val">${fa(vips)}</div><div class="kpi-label">مشتریان VIP</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">💰</div></div><div class="kpi-val">${fnl(totalSpent)}</div><div class="kpi-label">کل خرید (تومان)</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">🎂</div></div><div class="kpi-val">${fa(bdays)}</div><div class="kpi-label">تولد ثبت‌شده</div></div>
+    </div>
+
+    <!-- رویداد کلیک‌ها — کمپانی هر تعامل را می‌بیند -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-head"><div><div class="panel-title">📊 رویداد تعاملات (کلیک‌ها)</div><div class="panel-sub">هر کاری که کاربران در کل پلتفرم می‌کنند</div></div></div>
+      <div class="click-grid">${CLICK_EVENTS.map(e=>`
+        <div class="click-stat"><div class="click-ic">${e.icon}</div><div class="click-body"><div class="click-count">${fa(e.count)}</div><div class="click-label">${esc(e.label)}</div></div></div>`).join('')}</div>
+      <div class="funnel-note">قیف تبدیل: ${fa(8900)} بازدید → ${fa(3200)} شروع رزرو → ${fa(2740)} تکمیل (نرخ ${fa(Math.round(2740/8900*100))}٪)</div>
+    </div>
+
+    <!-- جستجو و فیلتر -->
+    <div class="cust-controls">
+      <input class="cust-search" id="custSearchInp" placeholder="🔍 جستجوی نام یا شماره تماس..." value="${esc(custSearch)}" oninput="custSearchUpd(this.value)">
+      <div class="cust-filters">
+        ${[['all','همه'],['vip','VIP'],['new','جدید'],['churn','در خطر ریزش']].map(([k,l])=>`<button class="cust-fbtn ${custFilter===k?'active':''}" onclick="custFilterSet('${k}')">${l}</button>`).join('')}
+      </div>
+    </div>
+
+    <!-- جدول دیتای مشتریان -->
+    <div class="panel">
+      <div class="panel-head"><div><div class="panel-title">دیتای کامل مشتریان</div><div class="panel-sub">${fa(list.length)} مشتری</div></div></div>
+      <div class="cust-table">
+        ${list.map(c=>`
+          <div class="cust-row" onclick="viewCustomerData(${c.id})">
+            <div class="cust-ava">${c.ava}</div>
+            <div class="cust-main">
+              <div class="cust-name">${esc(c.name)} ${c.seg==='vip'?'<span class="cust-vip">VIP</span>':c.seg==='new'?'<span class="cust-new">جدید</span>':''}</div>
+              <div class="cust-phone">📱 ${esc(c.phone)}</div>
+            </div>
+            <div class="cust-stats-mini">
+              <div class="csm"><span>${fa(c.visits)}</span>بازدید</div>
+              <div class="csm"><span>${fa(c.points)}</span>امتیاز</div>
+              <div class="csm csm-bday"><span>🎂 ${esc(c.birthday)}</span>تولد</div>
+            </div>
+            <span class="cust-arrow">›</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+function custSearchUpd(v){custSearch=v;const l=PLATFORM_CUSTOMERS;rCustomers();const el=document.getElementById('custSearchInp');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length)}}
+function custFilterSet(f){custFilter=f;rCustomers();}
+// نمای کامل دیتای یک مشتری (هر چیزی که کمپانی دارد)
+function viewCustomerData(id){
+  const c=PLATFORM_CUSTOMERS.find(x=>x.id===id);if(!c)return;
+  const fnl=n=>n>=1000000?fa(+(n/1000000).toFixed(1))+'م':fa(n);
+  openModal(`
+    <div class="cd-head">
+      <span class="cd-ava">${c.ava}</span>
+      <div><div class="cd-name">${esc(c.name)} ${c.seg==='vip'?'<span class="cust-vip">VIP</span>':''}</div>
+        <div class="cd-sub">عضو از ${esc(c.joined)} · ${esc(c.restaurant)}</div></div>
+    </div>
+    <!-- اطلاعات تماس و تاریخ‌ها -->
+    <div class="cd-section">اطلاعات تماس و تاریخ‌های خاص</div>
+    <div class="cd-info-grid">
+      <div class="cd-info"><span class="cd-il">📱 شماره تماس</span><span class="cd-iv">${esc(c.phone)}</span></div>
+      <div class="cd-info"><span class="cd-il">🎂 تولد</span><span class="cd-iv">${esc(c.birthday||'—')}</span></div>
+      <div class="cd-info"><span class="cd-il">💍 سالگرد</span><span class="cd-iv">${esc(c.anniversary||'—')}</span></div>
+      <div class="cd-info"><span class="cd-il">🏙️ شهر</span><span class="cd-iv">${esc(c.city)}</span></div>
+      <div class="cd-info"><span class="cd-il">📲 کانال</span><span class="cd-iv">${c.channel==='app'?'اپ موبایل':'وب'}</span></div>
+      <div class="cd-info"><span class="cd-il">🕐 آخرین فعالیت</span><span class="cd-iv">${esc(c.lastActive)}</span></div>
+    </div>
+    <!-- رفتار و وفاداری -->
+    <div class="cd-section">رفتار و وفاداری</div>
+    <div class="cd-stats">
+      <div class="cd-stat"><div class="cd-sv">${fa(c.visits)}</div><div class="cd-sl">بازدید</div></div>
+      <div class="cd-stat"><div class="cd-sv">${fnl(c.spent)}</div><div class="cd-sl">خرید (ت)</div></div>
+      <div class="cd-stat"><div class="cd-sv">${fa(c.points)}</div><div class="cd-sl">امتیاز</div></div>
+      <div class="cd-stat"><div class="cd-sv">${fa(c.referrals)}</div><div class="cd-sl">دعوت</div></div>
+    </div>
+    <!-- شاخص‌های پیش‌بینی -->
+    <div class="cd-section">شاخص‌های پیش‌بینی رفتار</div>
+    <div class="cd-bars">
+      <div class="cd-bar-row"><span class="cd-bl">نرخ بازگشت</span><div class="cd-bar"><div class="cd-bf green" style="width:${c.ret}%"></div></div><span class="cd-bv">${fa(c.ret)}٪</span></div>
+      <div class="cd-bar-row"><span class="cd-bl">احتمال ریزش</span><div class="cd-bar"><div class="cd-bf ${c.churn>=30?'red':'amber'}" style="width:${c.churn}%"></div></div><span class="cd-bv">${fa(c.churn)}٪</span></div>
+    </div>
+    ${c.churn>=30?'<div class="cd-alert">⚠️ این مشتری در خطر ریزش است — پیشنهاد کمپین بازگشت</div>':''}
+    <button class="btn btn-primary btn-block" style="margin-top:16px" onclick="closeModal()">بستن</button>`);
+}
+
+// ════════ اشتراک و پیامک ════════
+function rBilling(){
+  const totalSms=RESTAURANTS.reduce((s,r)=>s+r.sms,0);
+  const activeSubsc=RESTAURANTS.filter(r=>r.status==='active').length;
+  const mrr=RESTAURANTS.filter(r=>r.status==='active'||r.status==='expiring').reduce((s,r)=>s+(r.plan==='pro'?890:r.plan==='basic'?390:0),0);
+  document.getElementById('v-billing').innerHTML=`
+    <div class="bill-summary">
+      <div class="bill-stat"><div class="bs-val" style="color:var(--ink)">${fa(activeSubsc)}</div><div class="bs-label">اشتراک فعال</div></div>
+      <div class="bill-stat"><div class="bs-val" style="color:var(--green-600)">${fa(mrr)}<span style="font-size:14px"> هزارتومان</span></div><div class="bs-label">درآمد ماهانه (تخمینی)</div></div>
+      <div class="bill-stat"><div class="bs-val" style="color:var(--amber-600)">${fa(totalSms)}</div><div class="bs-label">کل پیامک ارسالی</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><div class="panel-title">اشتراک و مصرف پیامک رستوران‌ها</div><div class="panel-sub">مدیریت تمدید، لغو و سهمیه‌ی پیامک</div></div></div>
+      <div class="mini-list">
+        ${RESTAURANTS.map(r=>{
+          const smsQuota=r.plan==='pro'?10000:r.plan==='basic'?3000:500;
+          const smsUsedPct=Math.min(100,Math.round(r.sms/smsQuota*100));
+          const statusBadge=r.status;
+          let st=STATUS_LABEL[r.status];
+          if(r.status==='active')st=`فعال · ${fa(r.daysLeft)} روز`;
+          else if(r.status==='expired')st=`${fa(Math.abs(r.daysLeft))} روز منقضی`;
+          else if(r.status==='expiring')st=`${fa(r.daysLeft)} روز مونده`;
+          else st=`آزمایشی · ${fa(r.daysLeft)} روز`;
+          return `<div class="mini-row" style="flex-wrap:wrap">
+            <div class="rest-logo" style="background:${r.grad};width:38px;height:38px;font-size:16px">${r.logo}</div>
+            <div class="mini-info" style="min-width:140px"><div class="mini-name">${esc(r.name)}</div><div class="mini-sub"><span class="plan-badge ${r.plan}">${PLAN_LABEL[r.plan]}</span> · موجودی: ${fa(r.smsBalance||0)} پیامک</div>
+              <div class="progress-track" style="max-width:200px"><div class="progress-fill" style="width:${smsUsedPct}%;background:${smsUsedPct>85?'var(--red)':smsUsedPct>60?'var(--amber)':'var(--ink)'}"></div></div>
+            </div>
+            <span class="badge ${statusBadge}" style="align-self:flex-start"><span class="bdot"></span>${st}</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-primary btn-sm" onclick="openSmsTopup('${r.id}')">📲 شارژ پیامک</button>
+              <button class="btn btn-ghost btn-sm" onclick="openRenew('${r.id}')">مدیریت</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+// ════════ شارژ موجودی پیامک (وصل به API واقعی) ════════
+let _topupRestId=null;
+function openSmsTopup(id){
+  const r=RESTAURANTS.find(x=>String(x.id)===String(id));if(!r)return;
+  _topupRestId=id;
+  openModal(`
+    <div class="modal-title">📲 شارژ موجودی پیامک</div>
+    <div class="modal-sub">${esc(r.name)} · موجودی فعلی: ${fa(r.smsBalance||0)} پیامک</div>
+    <div class="field-label">تعداد پیامک برای افزودن</div>
+    <div class="opt-row" id="smsAmountOpts">
+      ${[[1000,'۱۰۰۰'],[5000,'۵۰۰۰'],[10000,'۱۰٬۰۰۰'],[50000,'۵۰٬۰۰۰']].map(([v,l],i)=>`<div class="opt ${i===0?'sel':''}" data-amt="${v}" onclick="pickSmsAmount(${v},this)">${l}</div>`).join('')}
+    </div>
+    <div class="field-label">یا مقدار دلخواه</div>
+    <input class="inp" id="smsCustomAmount" type="number" min="1" placeholder="مثلاً ۲۵۰۰" oninput="document.querySelectorAll('#smsAmountOpts .opt').forEach(o=>o.classList.remove('sel'))">
+    <div style="font-size:12px;color:var(--t2);margin:14px 0;line-height:1.6;background:var(--ink-50);padding:12px 14px;border-radius:var(--r)">💡 رستوران پس از پرداخت به شما، موجودی‌اش را اینجا شارژ کنید. هر شارژ ثبت و قابل‌پیگیری است.</div>
+    <button class="btn btn-primary btn-block btn-lg" onclick="submitSmsTopup()">تأیید و شارژ</button>
+  `);
+}
+let _topupAmount=1000;
+function pickSmsAmount(v,el){_topupAmount=v;document.querySelectorAll('#smsAmountOpts .opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');document.getElementById('smsCustomAmount').value='';}
+async function submitSmsTopup(){
+  const custom=parseInt(document.getElementById('smsCustomAmount')?.value||'');
+  const amount=Number.isInteger(custom)&&custom>0?custom:_topupAmount;
+  if(!amount||amount<=0){toast('⚠️','تعداد نامعتبر');return;}
+  const res=await API.post(`/admin/restaurants/${_topupRestId}/sms`,{amount});
+  if(res.ok){
+    closeModal();
+    toast('✅',`${fa(amount)} پیامک شارژ شد · موجودی جدید: ${fa(res.data.balance)}`);
+    // به‌روزرسانی محلی + رفرش نما
+    const r=RESTAURANTS.find(x=>String(x.id)===String(_topupRestId));
+    if(r)r.smsBalance=res.data.balance;
+    if(typeof rBilling==='function'&&document.getElementById('v-billing'))rBilling();
+  } else {
+    toast('⚠️',res.error?.message||'شارژ ناموفق بود');
+  }
+}
+
+// مدیریت اشتراک (تمدید / لغو)
+function openRenew(id){
+  const r=RESTAURANTS.find(x=>String(x.id)===String(id));if(!r)return;
+  renewPlan=r.plan;renewMonths=12;
+  openModal(`
+    <div class="modal-title">مدیریت اشتراک</div>
+    <div class="modal-sub">${esc(r.name)} · وضعیت فعلی: ${STATUS_LABEL[r.status]}</div>
+    <div class="field-label">پلن</div>
+    <div class="opt-row" id="planOpts">
+      ${[['pro','حرفه‌ای'],['basic','پایه'],['trial','آزمایشی']].map(([v,l])=>`<div class="opt ${v===r.plan?'sel':''}" data-plan="${v}" onclick="pickPlan('${v}',this)">${l}</div>`).join('')}
+    </div>
+    <div class="field-label">مدت تمدید</div>
+    <div class="opt-row" id="monthOpts">
+      ${[[1,'۱ ماه'],[3,'۳ ماه'],[6,'۶ ماه'],[12,'۱ سال']].map(([v,l])=>`<div class="opt ${v===12?'sel':''}" data-m="${v}" onclick="pickMonths(${v},this)">${l}</div>`).join('')}
+    </div>
+    <div class="summary-box">
+      <div class="sum-row"><span class="k">رستوران</span><span class="v">${esc(r.name)}</span></div>
+      <div class="sum-row"><span class="k">پلن جدید</span><span class="v" id="sumPlan">${PLAN_LABEL[r.plan]}</span></div>
+      <div class="sum-row"><span class="k">مدت</span><span class="v" id="sumMonths">۱ سال</span></div>
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" onclick="doRenew(${id})">✓ تمدید اشتراک</button>
+    <button class="btn btn-danger btn-block" style="margin-top:8px" onclick="confirmCancel(${id})">لغو اشتراک</button>
+  `);
+}
+let renewPlan='pro',renewMonths=12;
+function pickPlan(v,el){renewPlan=v;document.querySelectorAll('#planOpts .opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');document.getElementById('sumPlan').textContent=PLAN_LABEL[v]}
+function pickMonths(v,el){renewMonths=v;document.querySelectorAll('#monthOpts .opt').forEach(o=>o.classList.remove('sel'));el.classList.add('sel');document.getElementById('sumMonths').textContent={1:'۱ ماه',3:'۳ ماه',6:'۶ ماه',12:'۱ سال'}[v]}
+function doRenew(id){
+  const r=RESTAURANTS.find(x=>x.id===id);if(!r)return;
+  r.plan=renewPlan;
+  r.daysLeft=renewMonths*30;
+  r.status='active';
+  closeModal();
+  // رفرش هر صفحه‌ای که فعاله
+  refreshActive();
+  toast('✅',`اشتراک ${r.name} تمدید شد (${renewMonths===12?'۱ سال':fa(renewMonths)+' ماه'})`);
+}
+function confirmCancel(id){
+  const r=RESTAURANTS.find(x=>x.id===id);if(!r)return;
+  openModal(`
+    <div style="text-align:center">
+      <div style="width:54px;height:54px;border-radius:14px;background:var(--red-50);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px">⚠️</div>
+      <div class="modal-title" style="text-align:center">لغو اشتراک ${esc(r.name)}؟</div>
+      <div class="modal-sub" style="text-align:center">دسترسی رستوران به اپ قطع می‌شه. این کار قابل بازگشته (با تمدید مجدد).</div>
+      <button class="btn btn-danger btn-block btn-lg" onclick="doCancel(${id})">بله، لغو کن</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">انصراف</button>
+    </div>`);
+}
+function doCancel(id){
+  const r=RESTAURANTS.find(x=>x.id===id);if(!r)return;
+  r.status='expired';r.daysLeft=0;
+  closeModal();refreshActive();
+  toast('🚫',`اشتراک ${r.name} لغو شد`);
+}
+function refreshActive(){
+  const active=document.querySelector('.view.active');if(!active)return;
+  const id=active.id.replace('v-','');
+  ({overview:rOverview,restaurants:rRestaurants,detail:rDetail,analytics:rAnalytics,billing:rBilling,support:rSupport})[id]?.();
+}
+
+// ════════ پشتیبانی از راه دور ════════
+function rSupport(){
+  const activeSessions=RESTAURANTS.filter(r=>r.status==='active').slice(0,2);
+  document.getElementById('v-support').innerHTML=`
+    <div class="support-grid">
+      <div class="support-card">
+        <div class="support-ic">🖥️</div>
+        <div class="support-title">اتصال از راه دور</div>
+        <div class="support-desc">به پنل رستوران وصل شو و مستقیم کمکش کن — مثل اینکه کنارش نشستی.</div>
+        <button class="btn btn-primary btn-block btn-sm" onclick="openRemoteConnect()">شروع اتصال</button>
+      </div>
+      <div class="support-card">
+        <div class="support-ic">✏️</div>
+        <div class="support-title">ویرایش تنظیمات</div>
+        <div class="support-desc">منو، میزها، کش‌بک یا اطلاعات رستوران رو از طرفش ویرایش کن.</div>
+        <button class="btn btn-ghost btn-block btn-sm" onclick="openEditSettings()">انتخاب رستوران</button>
+      </div>
+      <div class="support-card">
+        <div class="support-ic">💬</div>
+        <div class="support-title">تیکت‌های پشتیبانی</div>
+        <div class="support-desc">درخواست‌های باز رستوران‌ها رو ببین و پاسخ بده.</div>
+        <button class="btn btn-ghost btn-block btn-sm" onclick="toast('💬','۳ تیکت باز — در نسخه‌ی کامل')">دیدن تیکت‌ها (۳)</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><div class="panel-title">نشست‌های پشتیبانی اخیر</div><div class="panel-sub">آخرین اتصال‌ها به رستوران‌ها</div></div></div>
+      <div class="mini-list">
+        ${activeSessions.map((r,i)=>`<div class="session-row">
+          <span class="session-dot ${i===0?'live':''}" style="${i!==0?'background:var(--s-300)':''}"></span>
+          <div class="rest-logo" style="background:${r.grad};width:36px;height:36px;font-size:15px">${r.logo}</div>
+          <div class="mini-info"><div class="mini-name">${esc(r.name)}</div><div class="mini-sub">${i===0?'در حال اتصال — همین الان':'آخرین اتصال: دیروز'}</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="openRemoteFor(${r.id})">${i===0?'ادامه':'اتصال مجدد'}</button>
+        </div>`).join('')}
+        <div class="session-row">
+          <span class="session-dot" style="background:var(--s-300)"></span>
+          <div class="rest-logo" style="background:${RESTAURANTS[2].grad};width:36px;height:36px;font-size:15px">${RESTAURANTS[2].logo}</div>
+          <div class="mini-info"><div class="mini-name">${esc(RESTAURANTS[2].name)}</div><div class="mini-sub">آخرین اتصال: ۳ روز پیش · مشکل پیامک</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="openRemoteFor(${RESTAURANTS[2].id})">اتصال مجدد</button>
+        </div>
+      </div>
+    </div>`;
+}
+function openRemoteConnect(){
+  openModal(`
+    <div class="modal-title">🖥️ اتصال از راه دور</div>
+    <div class="modal-sub">رستورانی که می‌خوای بهش وصل شی رو انتخاب کن</div>
+    <div class="field-label">رستوران</div>
+    <select class="inp" id="remoteRest">${RESTAURANTS.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
+    <div style="font-size:12px;color:var(--t2);margin:14px 0;line-height:1.6;background:var(--ink-50);padding:12px 14px;border-radius:var(--r)">🔒 با اجازه‌ی رستوران، به پنلش دسترسی می‌گیری. همه‌ی اقدامات ثبت می‌شن.</div>
+    <button class="btn btn-primary btn-block btn-lg" onclick="startRemote()">اتصال امن</button>
+  `);
+}
+function startRemote(){
+  const id=+document.getElementById('remoteRest').value;
+  const r=RESTAURANTS.find(x=>x.id===id);
+  closeModal();
+  toast('🖥️',`در حال اتصال به پنل ${r.name}...`);
+}
+function openRemoteFor(id){const r=RESTAURANTS.find(x=>x.id===id);toast('🖥️',`اتصال به ${r.name}...`)}
+function openEditSettings(){
+  openModal(`
+    <div class="modal-title">✏️ ویرایش تنظیمات رستوران</div>
+    <div class="modal-sub">رستوران و بخش مورد نظر رو انتخاب کن</div>
+    <div class="field-label">رستوران</div>
+    <select class="inp" id="editRest">${RESTAURANTS.map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</select>
+    <div class="field-label">بخش</div>
+    <div class="opt-row">
+      <div class="opt sel">منو</div><div class="opt">میزها</div><div class="opt">کش‌بک</div><div class="opt">اطلاعات</div>
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" style="margin-top:8px" onclick="closeModal();toast('✏️','باز کردن ویرایشگر...')">باز کردن ویرایشگر</button>
+  `);
+}
+function openSupportFor(id){currentRest=RESTAURANTS.find(r=>r.id===id);nav('support')}
+
+// ═══════════ ورود مدیر پلتفرم (فاز ۳ تکه ۷) ═══════════
+let _adminPhone = '';
+function faD(s){ return String(s).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]); }
+function showAdminLoginPhone(){
+  document.getElementById('loginCard').innerHTML = `
+    <div class="login-logo">R</div>
+    <div class="login-title">پنل شرکت رزرونو</div>
+    <div class="login-sub">ورود مدیر پلتفرم — شماره موبایل خود را وارد کنید</div>
+    <label class="login-field-label">شماره موبایل</label>
+    <input class="login-inp" id="adminPhone" inputmode="tel" placeholder="۰۹۱۲۳۴۵۶۷۸۹" onkeydown="if(event.key==='Enter')adminSendOtp()">
+    <button class="login-btn" id="adminSendBtn" onclick="adminSendOtp()">ارسال کد ورود</button>
+    <div class="login-foot">فقط مدیران پلتفرم به این پنل دسترسی دارند</div>`;
+  setTimeout(()=>document.getElementById('adminPhone')?.focus(),200);
+}
+async function adminSendOtp(){
+  const el = document.getElementById('adminPhone');
+  const phone = (el?.value||'').trim();
+  const normalized = phone.replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\D/g,'');
+  if (!/^09\d{9}$/.test(normalized)) { toast('⚠️','شماره موبایل معتبر وارد کن'); return; }
+  _adminPhone = normalized;
+  const btn = document.getElementById('adminSendBtn');
+  if (btn){ btn.disabled = true; btn.textContent = 'در حال ارسال...'; }
+  const res = await API.requestAdminOtp(normalized);
+  if (!res.ok && !res.offline){
+    toast('⚠️', res.error?.message || 'این شماره دسترسی ندارد');
+    if (btn){ btn.disabled = false; btn.textContent = 'ارسال کد ورود'; }
+    return;
+  }
+  const devCode = res.data?.devCode || (res.offline ? '۱۲۳۴' : null);
+  showAdminLoginCode(devCode, res.offline);
+}
+function showAdminLoginCode(devCode, offline){
+  document.getElementById('loginCard').innerHTML = `
+    <div class="login-logo">✉️</div>
+    <div class="login-title">کد ورود را وارد کنید</div>
+    <div class="login-sub">کد ۴ رقمی به شماره‌ی ${faD(_adminPhone)} ارسال شد</div>
+    <label class="login-field-label">کد ورود</label>
+    <input class="login-inp code" id="adminCode" inputmode="numeric" maxlength="4" placeholder="····" onkeydown="if(event.key==='Enter')adminConfirmOtp()">
+    <button class="login-btn" id="adminVerifyBtn" onclick="adminConfirmOtp()">ورود به پنل</button>
+    <button class="login-back" onclick="showAdminLoginPhone()">تغییر شماره</button>
+    ${devCode ? `<div class="login-hint">${offline?'🔌 حالت دمو (بک‌اند متصل نیست):':'🔑 حالت توسعه:'} کد ورود <b>${faD(devCode)}</b> است</div>` : ''}`;
+  setTimeout(()=>document.getElementById('adminCode')?.focus(),200);
+}
+async function adminConfirmOtp(){
+  const el = document.getElementById('adminCode');
+  const code = (el?.value||'').trim().replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+  if (!/^\d{4}$/.test(code)) { toast('⚠️','کد ۴ رقمی را کامل وارد کن'); return; }
+  const btn = document.getElementById('adminVerifyBtn');
+  if (btn){ btn.disabled = true; btn.textContent = 'در حال بررسی...'; }
+  const res = await API.verifyAdminOtp(_adminPhone, code);
+  if (res.ok && res.data?.access){
+    await enterAdminPanel();
+  } else if (res.offline){
+    if (code === '1234'){ await enterAdminPanel(true); }
+    else { toast('⚠️','در حالت دمو، کد ۱۲۳۴ است'); if (btn){ btn.disabled=false; btn.textContent='ورود به پنل'; } }
+  } else {
+    toast('⚠️', res.error?.message || 'کد اشتباه است');
+    if (btn){ btn.disabled=false; btn.textContent='ورود به پنل'; }
+  }
+}
+async function enterAdminPanel(demo){
+  document.getElementById('loginOverlay').classList.add('hidden');
+  // اگر توکن واقعی داریم، داده‌ی واقعی بارگذاری کن
+  if (API.getToken() && !demo){
+    const fresh = await loadAdminRestaurants();
+    RESTAURANTS = fresh;
+  }
+  rOverview();
+  toast('✅','خوش آمدید · پنل شرکت');
+}
+function adminLogout(){
+  API.setToken(null);
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  showAdminLoginPhone();
+  toast('👋','از پنل خارج شدید');
+}
+
+// شروع — اول ورود را چک کن
+if (API.getToken()) {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  rOverview();
+  (async () => {
+    const fresh = await loadAdminRestaurants();
+    RESTAURANTS = fresh;
+    const active = document.querySelector('.view.active');
+    if (active) {
+      const id = active.id.replace('v-', '');
+      ({overview:rOverview, restaurants:rRestaurants, detail:rDetail, analytics:rAnalytics, billing:rBilling, support:rSupport})[id]?.();
+    }
+  })();
+} else {
+  showAdminLoginPhone();
+}
+</script>
+</body>
+</html>

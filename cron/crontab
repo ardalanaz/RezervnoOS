@@ -1,0 +1,19 @@
+# ═══════════════════════════════════════════════════════════
+#  Background Jobs رزرونو — انتقال‌های خودکار چرخه‌ی حیات و لیست انتظار
+# ═══════════════════════════════════════════════════════════
+# هر ۲ دقیقه: انقضای آفرهای لیست انتظار + ارتقای صف (حساس به زمان)
+*/2 * * * * /run.sh waitlist
+# هر دقیقه: worker صف Job (SMS/Email/Push/Report/Image) — با retry/DLQ/priority
+* * * * * /run.sh jobs-drain
+# هر ۵ دقیقه: انتقال‌های چرخه‌ی حیات (running_late/no_show/complete)
+*/5 * * * * /run.sh lifecycle
+# هر ۵ دقیقه: انقضای هولدهای رزرو
+*/5 * * * * /run.sh expire
+# هر روز ساعت ۹ صبح: پاداش تولد و سالگرد
+0 9 * * * /run.sh rewards
+# هر روز ساعت ۳ بامداد: بازمحاسبه‌ی CLV/no-show/سگمنت + اجرای کمپین خودکار (فاز v2)
+0 3 * * * /run.sh customer-insights
+# روزانه ساعت ۴ صبح: پاک‌سازی retention (jobs/idempotency/audit قدیمی)
+0 4 * * * /run.sh retention
+# اول هر ماه ساعت ۲ بامداد: تضمین پارتیشن ماه آینده‌ی reservations (حیاتی)
+0 2 1 * * /run.sh ensure-partitions

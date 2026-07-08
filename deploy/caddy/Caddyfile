@@ -1,0 +1,85 @@
+# ═══════════════════════════════════════════════════════════
+#  رزرونو — Caddy: HTTPS خودکار + دفاع امنیتی محکم
+#  دامنه در .env: DOMAIN=rezervno.ir
+# ═══════════════════════════════════════════════════════════
+{
+	# ریت‌لیمیت سراسری (plugin)
+	order rate_limit before basicauth
+}
+
+{$DOMAIN} {
+	encode gzip zstd
+
+	# ── هدرهای امنیتی کامل ──
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+		-Server
+	}
+
+	# ── بلاک فایل‌های حساس ──
+	@sensitive path *.env *.git* *.sql *.sh *.bak *.yml *.yaml
+	respond @sensitive 404
+
+	# ── بلاک اسکنرهای بد ──
+	@badbots header User-Agent *sqlmap* *nikto* *nmap* *masscan* *nessus* *acunetix* *havij*
+	respond @badbots 403
+
+	# ── ریت‌لیمیت سخت‌گیرانه برای ورود/OTP ──
+	@auth path /api/v1/auth/*
+	rate_limit @auth {
+		zone auth_zone {
+			key {remote_host}
+			events 5
+			window 1m
+		}
+	}
+
+	# ── ریت‌لیمیت عمومی API ──
+	@api path /api/*
+	rate_limit @api {
+		zone api_zone {
+			key {remote_host}
+			events 100
+			window 10s
+		}
+	}
+
+	# ── API → بک‌اند ──
+	handle /api/* {
+		reverse_proxy api:3000 {
+			header_up X-Real-IP {remote_host}
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	# ── پنل رستوران ──
+	handle_path /business* {
+		root * /srv/business
+		try_files {path} /index.html
+		file_server
+	}
+
+	# ── پنل شرکت ──
+	handle_path /company* {
+		root * /srv/company
+		try_files {path} /index.html
+		file_server
+	}
+
+	# ── اپ مشتری ──
+	handle {
+		root * /srv/customer
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

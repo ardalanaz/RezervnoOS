@@ -1,0 +1,38 @@
+# ═══════════════════════════════════════════════════════════
+#  رزرونو — override تولید (HTTPS با Caddy)
+#
+#  استفاده:
+#    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+#  پیش‌نیاز:
+#    1. در .env بگذار:  DOMAIN=دامنه‌ی‌تو.ir
+#    2. دامنه به آی‌پی سرور اشاره کند (رکورد A در DNS)
+#    3. پورت‌های 80 و 443 سرور باز باشند
+#
+#  Caddy خودکار گواهی SSL از Let's Encrypt می‌گیرد و تمدید می‌کند.
+#  این override سرویس nginx را با caddy جایگزین می‌کند.
+# ═══════════════════════════════════════════════════════════
+services:
+  caddy:
+    build:
+      context: ./deploy/caddy
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?دامنه را در .env بگذار، مثلاً DOMAIN=rezervno.ir}
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./apps/customer:/srv/customer:ro
+      - ./apps/business:/srv/business:ro
+      - ./apps/company:/srv/company:ro
+      - caddy_data:/data       # گواهی‌های SSL اینجا ذخیره می‌شوند (مهم — حذف نکن)
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

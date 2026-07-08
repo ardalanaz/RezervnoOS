@@ -1,0 +1,74 @@
+# ═══════════════════════════════════════════════════════════
+#  قوانین Alert رزرونو (Prometheus Alertmanager)
+#  این فایل را در prometheus.yml تحت rule_files اضافه کن:
+#    rule_files:
+#      - /etc/prometheus/alerts.yml
+# ═══════════════════════════════════════════════════════════
+groups:
+  - name: rezervno_availability
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(rezervno_http_errors_total[5m]))
+          / sum(rate(rezervno_http_requests_total[5m])) > 0.01
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "نرخ خطای HTTP بالای ۱٪"
+          description: "بیش از ۱٪ درخواست‌ها در ۵ دقیقه‌ی گذشته خطا داده‌اند."
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, sum(rate(rezervno_http_request_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "P95 latency بالای ۵۰۰ms"
+          description: "۵٪ کندترین درخواست‌ها بیش از ۵۰۰ms طول می‌کشند (هدف: <۲۵۰ms)."
+
+  - name: rezervno_security
+    rules:
+      - alert: AuthFailureSpike
+        expr: sum(rate(rezervno_auth_failures_total[5m])) * 60 > 100
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "جهش شکست احراز هویت (brute-force احتمالی)"
+          description: "بیش از ۱۰۰ شکست احراز هویت در دقیقه — احتمال حمله‌ی brute-force."
+
+      - alert: RateLimitSpike
+        expr: sum(rate(rezervno_rate_limit_hits_total[5m])) * 60 > 500
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "جهش rate-limit (ترافیک مخرب احتمالی)"
+
+  - name: rezervno_queue
+    rules:
+      - alert: SmsQueueBacklog
+        expr: rezervno_jobs_pending > 5000
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "انباشت صف Job (worker از کار افتاده؟)"
+          description: "بیش از ۵۰۰۰ job در انتظار — احتمالاً worker اجرا نمی‌شود."
+
+      - alert: DeadLetterGrowth
+        expr: increase(rezervno_jobs_dead[1h]) > 50
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "رشد صف dead-letter"
+          description: "بیش از ۵۰ job در ساعت گذشته به DLQ رفته‌اند — مشکل سیستمی محتمل."
+
+  - name: rezervno_business
+    rules:
+      - alert: ReservationConflictSpike
+        expr: |
+          sum(rate(rezervno_reservation_conflicts_total[10m]))
+          / clamp_min(sum(rate(rezervno_reservations_created_total[10m])), 0.001) > 0.3
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "نرخ بالای تداخل رزرو"
+          description: "بیش از ۳۰٪ تلاش‌های رزرو با تداخل رد می‌شوند — احتمال مشکل ظرفیت یا UX."

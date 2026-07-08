@@ -1,0 +1,155 @@
+# ═══════════════════════════════════════════════════════════
+#  رزرونو — راه‌اندازی کامل با یک دستور
+#  postgres + redis + api + nginx (سرو سه فرانت‌اند)
+#
+#  راه‌اندازی:  docker compose up -d --build
+#  داده اولیه: docker compose exec api npx prisma db seed
+#  توقف:       docker compose down
+# ═══════════════════════════════════════════════════════════
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rezervno}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?رمز دیتابیس را در .env تنظیم کن}
+      POSTGRES_DB: ${POSTGRES_DB:-rezervno}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rezervno}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # پورت فقط داخل شبکه‌ی داکر (امن). برای دیباگ: ports: ["5432:5432"]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rezervno}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rezervno}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?کلید JWT را در .env تنظیم کن}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?کلید refresh را در .env تنظیم کن}
+      NODE_ENV: production
+      OTP_DEV_MODE: ${OTP_DEV_MODE:-false}
+      # شناسه‌ی tenant مدیر پلتفرم (از خروجی seed) — برای دسترسی پنل شرکت
+      PLATFORM_ADMIN_TENANT_ID: ${PLATFORM_ADMIN_TENANT_ID:-}
+      # پیامک کاوه‌نگار (اختیاری — بدون آن فقط لاگ می‌شود)
+      KAVENEGAR_API_KEY: ${KAVENEGAR_API_KEY:-}
+      KAVENEGAR_TPL_OTP: ${KAVENEGAR_TPL_OTP:-rezervno-otp}
+      KAVENEGAR_TPL_BOOKING: ${KAVENEGAR_TPL_BOOKING:-rezervno-booking}
+      KAVENEGAR_TPL_REMINDER: ${KAVENEGAR_TPL_REMINDER:-rezervno-reminder}
+      KAVENEGAR_TPL_WELCOME: ${KAVENEGAR_TPL_WELCOME:-rezervno-welcome}
+      KAVENEGAR_TPL_CAMPAIGN: ${KAVENEGAR_TPL_CAMPAIGN:-rezervno-campaign}
+      KAVENEGAR_TPL_WINBACK: ${KAVENEGAR_TPL_WINBACK:-rezervno-winback}
+      # برای اولین راه‌اندازی RUN_SEED=true بگذار تا داده‌ی اولیه ساخته شود
+      RUN_SEED: ${RUN_SEED:-false}
+      # امنیت: منشأهای مجاز (CSRF) و کلید نگهداری (cron)
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      MAINTENANCE_KEY: ${MAINTENANCE_KEY:-}
+      # سطح لاگ (production: info، توسعه: debug)
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # اعلان (اختیاری)
+      FCM_SERVER_KEY: ${FCM_SERVER_KEY:-}
+      EMAIL_API_KEY: ${EMAIL_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@rezervno.ir}
+    expose:
+      - "3000"
+    # ── بررسی سلامت واقعی (DB + Redis) — ارکستریتور pod ناسالم را خارج می‌کند ──
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    # ── محدودیت منابع — جلوگیری از noisy neighbor (یک سرویس کل سرور را نخورد) ──
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    # profile «http»: برای تست محلی بدون SSL.
+    # تولید (HTTPS) از docker-compose.prod.yml با Caddy استفاده می‌کند.
+    profiles: ["http"]
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      # برای HTTPS بعد از تنظیم SSL: - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./apps/customer:/usr/share/nginx/html/customer:ro
+      - ./apps/business:/usr/share/nginx/html/business:ro
+      - ./apps/company:/usr/share/nginx/html/company:ro
+
+  backup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rezervno}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?رمز دیتابیس را در .env تنظیم کن}
+      POSTGRES_DB: ${POSTGRES_DB:-rezervno}
+      PGHOST: postgres
+      # زمان‌بندی cron (پیش‌فرض: هر روز ۳ بامداد)
+      BACKUP_CRON: ${BACKUP_CRON:-0 3 * * *}
+      # تعداد بک‌آپ برای نگه‌داشتن
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      # بک‌آپ فوری هنگام استارت
+      BACKUP_ON_START: ${BACKUP_ON_START:-true}
+      # ── آپلود اختیاری به آبجکت‌استوریج (S3-compatible) ──
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+    volumes:
+      - ./backup/data:/backups       # بک‌آپ‌ها اینجا روی هاست ذخیره می‌شوند
+
+  # ── سرویس Background Jobs: انتقال‌های خودکار چرخه‌ی حیات و لیست انتظار ──
+  cron:
+    build:
+      context: ./cron
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      API_URL: http://api:3000
+      MAINTENANCE_KEY: ${MAINTENANCE_KEY:?کلید نگهداری را در .env تنظیم کن}
+
+volumes:
+  pgdata:
+  redisdata:

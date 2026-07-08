@@ -1,0 +1,47 @@
+# ═══════════════════════════════════════════════════════════
+#  استک Observability رزرونو — Prometheus + Grafana
+#
+#  این یک overlay جداست (نه در docker-compose اصلی) تا opt-in باشد.
+#  اجرا با هر دو فایل:
+#    docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#
+#  دسترسی:
+#    • Prometheus: http://localhost:9090
+#    • Grafana:    http://localhost:3001  (admin / مقدار GRAFANA_PASSWORD)
+#      داشبورد «رزرونو — عملکرد و امنیت» از قبل provision شده.
+# ═══════════════════════════════════════════════════════════
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    user: "nobody"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'   # نگه‌داری ۱۵ روزه‌ی متریک‌ها
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+volumes:
+  promdata:
+  grafanadata:
