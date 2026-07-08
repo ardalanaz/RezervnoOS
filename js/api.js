@@ -18,7 +18,7 @@ import { go } from './data/discover.js';
 import { R_SAMPLE } from './data/seed.js';
 import { R } from './init.js';
 export const API = {
-  base: '',                          // مثلاً 'https://api.your-domain.com' یا '' برای same-origin
+  base: (typeof window !== 'undefined' && window.__API_BASE__) || '',  // آدرس بک‌اند؛ در index.html با window.__API_BASE__ ست می‌شود ('' = same-origin)
   timeout: 8000,                     // سقف انتظار هر درخواست (ms)
   _token: null,                      // توکن دسترسی (بعد از ورود)
   _refresh: null,                    // توکن تمدید (۳۰ روزه)
