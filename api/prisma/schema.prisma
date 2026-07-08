@@ -248,6 +248,7 @@ model Reservation {
   mergedTableNumbers Int[]       @default([]) @map("merged_table_numbers") @db.SmallInt
   // ── مدت واقعی این رزرو (دقیقه) — از پیکربندی رستوران یا override ──
   durationMinutes Int?          @map("duration_minutes") @db.SmallInt
+  blockBufferMinutes Int        @default(0) @map("block_buffer_minutes") @db.SmallInt
   // ── ریسک no-show (فاز v2 — هوش مشتری) ──
   noShowRiskScore  Int?         @map("no_show_risk_score") @db.SmallInt
   noShowRiskTier   String?      @map("no_show_risk_tier")
