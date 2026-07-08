@@ -1,5 +1,6 @@
 import { db } from './db';
 import { enqueue } from './queue';
+import { assertPublicHttpUrl } from './security';
 import { createLogger } from './logger';
 
 const log = createLogger('events');
@@ -91,6 +92,8 @@ export async function deliverWebhook(payload: {
     headers['X-Rezervno-Signature'] = `sha256=${sig}`;
   }
 
+  // گارد SSRF: قبل از fetch مطمئن شو URL به شبکه‌ی داخلی/metadata اشاره نمی‌کند.
+  await assertPublicHttpUrl(payload.url);
   const res = await fetch(payload.url, { method: 'POST', headers, body, signal: AbortSignal.timeout(10_000) });
   if (!res.ok) {
     throw new Error(`webhook ${payload.url} پاسخ ${res.status} داد`); // worker retry می‌کند

@@ -204,18 +204,24 @@ export async function promoteNext(restaurantId: string): Promise<{ promoted: boo
   if (!chosen) return { promoted: false }; // میزی آزاد نیست، در صف می‌ماند
 
   // آفر: وضعیت offered + تایمر انقضا + رزرو میز موقت (با علامت‌گذاری میز)
+  // ⚠️ همزمانی: گاردِ status='waiting' داخل updateMany تا اگر دو فراخوانی همزمان
+  // (cron + declineOffer) همین نفر را برداشتند، فقط یکی واقعاً آفر بدهد (count=1)
+  // و میز دوبار reserve/notify نشود. (declineOffer/leaveWaitlist هم همین الگو را دارند.)
   const offerExpiresAt = new Date(+now + OFFER_TTL_MINUTES * 60_000);
-  await db.$transaction(async (tx) => {
-    await tx.waitlistEntry.update({
-      where: { id: next.id },
+  const won = await db.$transaction(async (tx) => {
+    const claimed = await tx.waitlistEntry.updateMany({
+      where: { id: next.id, status: 'waiting' },
       data: {
         status: 'offered', offeredAt: now, offerExpiresAt,
         offeredTableId: chosen!.id, offeredTableNumber: chosen!.number,
       },
     });
+    if (claimed.count === 0) return false; // رقیب همزمان زودتر این نفر را آفر داد
     // میز را reserved کن تا به کس دیگری آفر نشود
     await tx.table.update({ where: { id: chosen!.id }, data: { state: 'reserved' } });
+    return true;
   });
+  if (!won) return { promoted: false };
 
   await notifyEntry(next.id, 'offered', { table: chosen.number, ttl: OFFER_TTL_MINUTES });
   await redis.del(`waitlist:${restaurantId}`).catch(() => {});
