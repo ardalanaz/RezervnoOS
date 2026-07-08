@@ -103,6 +103,10 @@ const API = {
       const res = await fetch(this.base + '/api/v1' + path, { ...opts, headers, signal: ctrl.signal });
       clearTimeout(timer);
       const data = await res.json().catch(() => ({}));
+      if (res.status === 404 && !data?.error) {
+        // میزبانِ استاتیک (بک‌اند دیپلوی‌نشده) → حالتِ دمو؛ 404 واقعیِ بک‌اند همیشه error دارد
+        return { ok: false, offline: true, status: 404, error: { message: 'بک‌اند در دسترس نیست — حالت دمو' } };
+      }
       if (!res.ok) {
         // ۴۰۱ روی توکن منقضی → یک‌بار refresh و تکرار درخواست
         if (res.status === 401 && this._refresh && !_retried && !path.startsWith('/auth/')) {
