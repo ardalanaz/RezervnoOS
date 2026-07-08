@@ -829,3 +829,15 @@ model CampaignLog {
   @@index([restaurantId, createdAt(sort: Desc)])
   @@map("campaign_logs")
 }
+
+// ── تعطیلاتِ خاصِ رستوران (بستنِ دستیِ روزهای مشخص) ──
+// فقط از طریق SQL خام در hours/availability/reservations استفاده می‌شود؛ اینجا
+// تعریف می‌شود تا db push / migrate diff هم جدول را بسازد (قبلاً هیچ مایگریشنی
+// آن را نمی‌ساخت و PUT /restaurant/hours با «relation does not exist» می‌شکست).
+model RestaurantClosure {
+  restaurantId String   @map("restaurant_id") @db.Uuid
+  closureDate  DateTime @map("closure_date") @db.Date
+  reason       String?
+  @@id([restaurantId, closureDate])
+  @@map("restaurant_closures")
+}
