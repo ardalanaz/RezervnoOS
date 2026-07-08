@@ -26,8 +26,25 @@ function blocked(message: string, status = 429, retryAfter?: number) {
   return NextResponse.json({ ok: false, error: { code: 'BLOCKED', message } }, { status, headers });
 }
 
-// ── هدرهای امنیتی روی همه‌ی پاسخ‌های API (دفاع در عمق) ──
-function applySecurityHeaders(res: NextResponse) {
+// ── CORS: فقط برای originهای مجاز (ALLOWED_ORIGINS) ──
+// معماری جداست (فرانتِ استاتیک روی یک دامنه، بک‌اند روی دامنه‌ی دیگر)، پس مرورگر
+// برای fetchِ cross-origin به این هدرها نیاز دارد؛ بدون آن‌ها پاسخ بلاک می‌شود.
+// چون auth با Bearer token است (نه کوکی)، credentials لازم نیست.
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
+  if (!origin || !allowed.includes(origin)) return {};
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, Idempotency-Key, x-trace-id, x-maintenance-key',
+    'Access-Control-Max-Age': '86400',
+  };
+}
+
+// ── هدرهای امنیتی روی همه‌ی پاسخ‌های API (دفاع در عمق) + CORS ──
+function applySecurityHeaders(res: NextResponse, origin: string | null = null) {
+  for (const [k, v] of Object.entries(corsHeaders(origin))) res.headers.set(k, v);
   res.headers.set('X-Content-Type-Options', 'nosniff');           // جلوگیری از MIME sniffing
   res.headers.set('X-Frame-Options', 'DENY');                     // ضد clickjacking
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -44,11 +61,17 @@ function applySecurityHeaders(res: NextResponse) {
 
 export async function middleware(req: NextRequest) {
   const ip = clientIp(req);
+  const origin = req.headers.get('origin');
+
+  // ── CORS preflight: قبل از هر منطقِ دیگر، به OPTIONS پاسخ بده ──
+  if (req.method === 'OPTIONS') {
+    return applySecurityHeaders(new NextResponse(null, { status: 204 }), origin);
+  }
 
   // ── لایه ۱: آیا IP بن شده؟ (سریع‌ترین چک) — fail-open در صورت خطای Redis ──
   try {
     if (await isBanned(ip)) {
-      return applySecurityHeaders(blocked('دسترسی شما موقتاً مسدود شده است.', 403));
+      return applySecurityHeaders(blocked('دسترسی شما موقتاً مسدود شده است.', 403), origin);
     }
   } catch { /* Redis در دسترس نبود → ادامه بده، nginx/route لایه‌ی بعدی‌اند */ }
 
@@ -57,14 +80,13 @@ export async function middleware(req: NextRequest) {
   // اما چک Origin یک لایه‌ی دفاعی اضافه برای درخواست‌های mutating است.
   const method = req.method;
   if (method === 'POST' || method === 'PATCH' || method === 'PUT' || method === 'DELETE') {
-    const origin = req.headers.get('origin');
     const allowed = process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
     // اگر لیست مجاز تعریف شده و Origin وجود دارد ولی مجاز نیست → رد.
     // نکته‌ی امنیتی: وقتی ALLOWED_ORIGINS تنظیم نشده، این چک skip می‌شود؛ در
     // production حتماً باید ALLOWED_ORIGINS ست شود (به docker-compose رجوع کن).
     if (allowed.length > 0 && origin && !allowed.includes(origin)) {
       await recordViolation(ip).catch(() => {});
-      return applySecurityHeaders(blocked('منشأ درخواست مجاز نیست.', 403));
+      return applySecurityHeaders(blocked('منشأ درخواست مجاز نیست.', 403), origin);
     }
   }
 
@@ -78,10 +100,10 @@ export async function middleware(req: NextRequest) {
   }
   if (result && !result.allowed) {
     await recordViolation(ip).catch(() => {});
-    return applySecurityHeaders(blocked('تعداد درخواست بیش از حد مجاز. کمی صبر کن.', 429, result.retryAfterSec));
+    return applySecurityHeaders(blocked('تعداد درخواست بیش از حد مجاز. کمی صبر کن.', 429, result.retryAfterSec), origin);
   }
 
-  const res = applySecurityHeaders(NextResponse.next());
+  const res = applySecurityHeaders(NextResponse.next(), origin);
   if (result) {
     for (const [k, v] of Object.entries(rateLimitHeaders(result, RULES.globalPerIp))) {
       res.headers.set(k, v);

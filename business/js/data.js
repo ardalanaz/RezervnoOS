@@ -83,7 +83,7 @@ async function viewHistory(i){
 //  با توکن staff کار می‌کند. مثل اپ مشتری: تلاش API، fallback به نمونه.
 // ═══════════════════════════════════════════════════════════
 const API = {
-  base: '',
+  base: (typeof window !== 'undefined' && window.__API_BASE__) || '',  // آدرس بک‌اند (index.html: window.__API_BASE__؛ '' = same-origin)
   timeout: 8000,
   _token: null,                      // توکن staff (بعد از ورود مدیر/کارمند)
   _refresh: null,                    // توکن تمدید staff
