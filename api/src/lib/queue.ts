@@ -20,12 +20,13 @@ const log = createLogger('queue');
 //   • Worker Monitoring — getQueueStats() برای داشبورد
 // ═══════════════════════════════════════════════════════════════════════
 
-export type JobKind = 'sms' | 'email' | 'push' | 'report' | 'image';
+export type JobKind = 'sms' | 'email' | 'push' | 'report' | 'image' | 'webhook';
 
 // اولویت پیش‌فرض هر نوع (قابل override هنگام enqueue)
 const DEFAULT_PRIORITY: Record<JobKind, number> = {
   sms: 2,       // اعلان‌های حساس به زمان (یادآوری رزرو، آفر لیست انتظار)
   push: 3,
+  webhook: 4,   // ادغام شخص ثالث (POS/حسابداری) — نسبتاً به‌موقع
   email: 5,
   image: 6,
   report: 8,    // سنگین ولی غیرفوری

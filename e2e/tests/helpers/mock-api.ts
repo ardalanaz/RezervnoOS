@@ -1,0 +1,123 @@
+import { Page, Route } from '@playwright/test';
+
+// ═══════════════════════════════════════════════════════════
+//  Mock کردنِ API — پاسخ‌های قطعی برای تستِ E2E بدونِ بک‌اندِ زنده
+//
+//  shapeها دقیقاً همان چیزی است که در ممیزیِ تطابق API تأیید شد:
+//    • رزرو → { code, status, table_number, ... }   (code در سطحِ بالا)
+//    • availability → { date, party, slots: [{time, status}] }
+//    • waitlist → { id, position, estimated_wait_minutes, ... }
+//
+//  با این، تست‌ها در CI بدونِ دیتابیس/شبکه اجرا می‌شوند و قطعی‌اند.
+//  برای تستِ یکپارچه با بک‌اندِ واقعی، این mock را اعمال نکن.
+// ═══════════════════════════════════════════════════════════
+
+export interface MockOptions {
+  /** آیا اسلات‌ها پر باشند (برای تستِ مسیرِ لیست انتظار)؟ */
+  slotsFull?: boolean;
+  /** آیا کاربر از قبل وارد باشد؟ */
+  loggedIn?: boolean;
+}
+
+const DEMO_RESTAURANTS = [
+  { id: 1, slug: 'demo-cafe-golha', name: '[DEMO] کافه گل‌ها', cuisine: 'ایرانی', rating: 4.7, price: '$$', cashback: 10, cover_emoji: '🌸' },
+  { id: 2, slug: 'demo-sushi-bar', name: '[DEMO] سوشی بار', cuisine: 'ژاپنی', rating: 4.5, price: '$$$', cashback: 8, cover_emoji: '🍣' },
+  { id: 3, slug: 'demo-burger-lab', name: '[DEMO] برگر لب', cuisine: 'فست‌فود', rating: 4.6, price: '$$', cashback: 12, cover_emoji: '🍔' },
+];
+
+function openSlots() {
+  return {
+    date: '2026-07-10', party: 2,
+    slots: [
+      { time: '19:00', free_tables: ['T1', 'T2'], status: 'open' },
+      { time: '20:00', free_tables: ['T3'], status: 'open' },
+      { time: '21:00', free_tables: [], status: 'full' },
+    ],
+  };
+}
+
+function fullSlots() {
+  return {
+    date: '2026-07-10', party: 2,
+    slots: [
+      { time: '19:00', free_tables: [], status: 'full' },
+      { time: '20:00', free_tables: [], status: 'full' },
+      { time: '21:00', free_tables: [], status: 'full' },
+    ],
+  };
+}
+
+/** اعمالِ mock روی همه‌ی درخواست‌های /api/v1/* یک صفحه. */
+export async function mockApi(page: Page, opts: MockOptions = {}) {
+  await page.route('**/api/v1/**', async (route: Route) => {
+    const url = new URL(route.request().url());
+    const path = url.pathname.replace(/.*\/api\/v1/, '');
+    const method = route.request().method();
+
+    const json = (body: unknown, status = 200) =>
+      route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+
+    // ── لیستِ رستوران‌ها ──
+    if (path === '/restaurants' && method === 'GET') {
+      return json({ restaurants: DEMO_RESTAURANTS, next_cursor: null });
+    }
+
+    // ── availability ──
+    if (/^\/restaurants\/[^/]+\/availability/.test(path) && method === 'GET') {
+      return json(opts.slotsFull ? fullSlots() : openSlots());
+    }
+
+    // ── ساختِ رزرو (مسیرِ حیاتی) — code در سطحِ بالا (طبقِ قرارداد) ──
+    if (path === '/reservations' && method === 'POST') {
+      return json({
+        code: 'RZDEMO12',
+        status: 'confirmed',
+        table_number: 'T1',
+        merged_tables: [],
+        slot_start: '2026-07-10T19:00:00',
+        slot_end: '2026-07-10T20:30:00',
+        hold_expires_at: null,
+        club: null,
+        checkout: null,
+      }, 201);
+    }
+
+    // ── لیست انتظار ──
+    if (path === '/waitlist' && method === 'POST') {
+      return json({ id: 'wl-demo-1', position: 2, estimated_wait_minutes: 25, is_vip: false, status: 'waiting' });
+    }
+    if (/^\/waitlist\/[^/]+$/.test(path) && method === 'GET') {
+      return json({ id: 'wl-demo-1', position: 1, estimated_wait_minutes: 12, is_vip: false, status: 'waiting' });
+    }
+    if (/^\/waitlist\/[^/]+\/(accept|decline)$/.test(path) && method === 'POST') {
+      return json({ ok: true, reservation_code: 'RZWLDEMO' });
+    }
+
+    // ── احراز هویت (OTP) ──
+    if (path === '/auth/otp/request' && method === 'POST') {
+      return json({ ok: true, dev_code: '123456' });   // در dev کد را برمی‌گرداند
+    }
+    if (path === '/auth/otp/verify' && method === 'POST') {
+      return json({
+        access_token: 'demo-access-token',
+        refresh_token: 'demo-refresh-token',
+        user: { id: 'user-demo', phone: '+989123456789', first_name: 'کاربر', last_name: 'دمو' },
+      });
+    }
+
+    // ── پروفایل / me ──
+    if (path === '/me' && method === 'GET') {
+      return opts.loggedIn
+        ? json({ user: { id: 'user-demo', phone: '+989123456789', first_name: 'کاربر', last_name: 'دمو' } })
+        : json({ error: 'unauthorized' }, 401);
+    }
+    if (path === '/me/points' && method === 'GET') return json({ balance: 340, history: [] });
+    if (path === '/me/reservations' && method === 'GET') return json({ reservations: [] });
+    if (path === '/me/profile' && method === 'GET') return json({ profile: {} });
+    if (path === '/me/referral' && method === 'GET') return json({ code: 'REFDEMO', invited: 0 });
+    if (path === '/events' && method === 'GET') return json({ events: [] });
+
+    // پیش‌فرض: پاسخِ خالیِ موفق (تا تست به‌خاطرِ endpointِ فرعی نشکند)
+    return json({ ok: true });
+  });
+}

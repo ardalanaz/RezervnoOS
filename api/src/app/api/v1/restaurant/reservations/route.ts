@@ -21,16 +21,25 @@ export const GET = withRestaurantAuth(
     else if (filter === 'upcoming') slotWhere = { slotStart: { gte: endTomorrow } };
     else if (filter === 'past') slotWhere = { slotStart: { lt: startToday } };
 
-    const list = await db.reservation.findMany({
+    // ── صفحه‌بندیِ Cursor (نه Offset) — برای مقیاسِ ۱۰k+ رزرو ──
+    // cursor = code آخرین رزروِ صفحه‌ی قبل. limit+1 می‌گیریم تا بفهمیم صفحه‌ی بعدی هست.
+    const limit = Math.min(Number(url.searchParams.get('limit')) || 100, 200);
+    const cursor = url.searchParams.get('cursor');
+
+    const rows = await db.reservation.findMany({
       where: { restaurantId: restaurant.id, ...slotWhere },
-      orderBy: { slotStart: filter === 'past' ? 'desc' : 'asc' },
-      take: 100,
+      orderBy: [{ slotStart: filter === 'past' ? 'desc' : 'asc' }, { code: 'asc' }],
+      take: limit + 1,
+      ...(cursor ? { skip: 1, cursor: { code: cursor } } : {}),
       include: {
         table: { select: { number: true } },
         user: { select: { firstName: true, lastName: true, phone: true } },
         items: { include: { menuItem: { select: { name: true } } } },
       },
     });
+
+    const hasMore = rows.length > limit;
+    const list = hasMore ? rows.slice(0, limit) : rows;
 
     return NextResponse.json({
       reservations: list.map(r => ({
@@ -42,6 +51,7 @@ export const GET = withRestaurantAuth(
         preorder: r.items.map(i => i.menuItem.name),
         note: r.preferences.join('، '),
       })),
+      next_cursor: hasMore ? list[list.length - 1].code : null,
     });
   },
 );

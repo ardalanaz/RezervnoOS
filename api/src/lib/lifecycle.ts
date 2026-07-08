@@ -1,6 +1,5 @@
-import { Prisma } from '@prisma/client';
 import { db } from './db';
-import { redis } from './redis';
+import { invalidateAvailability } from './availability-cache';
 import { Err } from './errors';
 import { enqueueSms, type SmsJob } from './sms';
 
@@ -117,12 +116,13 @@ export async function transitionReservation(opts: {
         to: result.resv.guestPhone,
         template: n.template,
         tokens: [result.resv.guestName ?? 'مهمان', result.resv.code, n.label],
+        restaurantId: result.resv.restaurantId,  // C6: کسر از موجودی SMS رستوران
       }).catch(() => { /* اعلان نباید جریان اصلی را بشکند */ });
     }
-    // باطل‌کردن کش availability اگر وضعیت روی ظرفیت اثر دارد
+    // باطل‌کردن کش availability اگر وضعیت روی ظرفیت اثر دارد (H3: pattern-based)
     if (['cancelled', 'auto_cancelled', 'rejected', 'expired', 'no_show', 'completed'].includes(to)) {
       const dateKey = result.resv.slotStart.toISOString().slice(0, 10);
-      await redis.del(`avail:${result.resv.restaurantId}:${dateKey}`).catch(() => {});
+      await invalidateAvailability(result.resv.restaurantId, dateKey).catch(() => {});
     }
   }
 

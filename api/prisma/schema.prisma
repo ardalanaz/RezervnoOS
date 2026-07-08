@@ -1,22 +1,39 @@
-generator client { provider = "prisma-client-js" }
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Tenant {
-  id          String       @id @default(uuid()) @db.Uuid
-  name        String
-  plan        String       @default("free")
-  createdAt   DateTime     @default(now()) @map("created_at")
-  restaurants Restaurant[]
-  staff       Staff[]
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String
+  plan          SubscriptionPlan @default(free)
+  planExpiresAt DateTime?    @map("plan_expires_at")
+  trialEndsAt   DateTime?    @map("trial_ends_at")
+  version       Int          @default(1)   // Optimistic Lock — جلوگیری از Lost Update در ویرایشِ همزمان
+  createdAt     DateTime     @default(now()) @map("created_at")
+  restaurants   Restaurant[]
+  staff         Staff[]
   @@map("tenants")
+}
+
+// پلنِ اشتراک — enum به‌جای String: از ورودِ 'Pro'/'PRO'/فاصله جلوگیری می‌کند
+enum SubscriptionPlan {
+  free
+  starter
+  pro
+  enterprise
+
+  @@map("subscription_plan")
 }
 
 model User {
   id           String        @id @default(uuid()) @db.Uuid
   phone        String        @unique
+  email        String?       @unique                            // اختیاری؛ برای آینده: ورود ایمیلی، رسید، مارکتینگ
   firstName    String?       @map("first_name")
   lastName     String?       @map("last_name")
   birthDate    DateTime?     @map("birth_date") @db.Date
@@ -32,6 +49,7 @@ model User {
   referrals    Referral[]    @relation("Referrer")
   giftCardsPurchased GiftCard[] @relation("GiftBuyer")
   customerInsights CustomerInsight[]
+  reviews      Review[]
   @@index([createdAt])
   @@map("users")
 }
@@ -41,7 +59,8 @@ model Staff {
   tenantId String @map("tenant_id") @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id])
   phone    String
-  role     String @default("staff")
+  role     StaffRole @default(staff)
+  isActive Boolean @default(true) @map("is_active")  // غیرفعال‌سازی کارمند (اخراج) — توکن refreshش رد می‌شود
   permission StaffPermission?
   @@unique([tenantId, phone])
   @@map("staff")
@@ -57,6 +76,12 @@ model Restaurant {
   vibes         String[]         @default([])
   priceBand     Int              @default(2) @map("price_band") @db.SmallInt
   isOpen        Boolean          @default(true) @map("is_open")
+  openingHours  Json?            @map("opening_hours")  // ساعت کاری هفتگی؛ null=همیشه باز طبق isOpen (سازگاری با گذشته)
+  pricingRules  Json?            @map("pricing_rules")  // قواعدِ حداقل مبلغ رزرو بر اساس شلوغی (AI Pricing)
+  baseMinSpendToman Int          @default(0) @map("base_min_spend_toman") // حداقل مبلغِ پایه
+  // ── اتصال (heartbeat): برای پنهان‌کردن خودکار رستوران آفلاین از اپ مشتری ──
+  lastSeenAt    DateTime?        @map("last_seen_at")   // آخرین heartbeat از پنل بیزنس
+  onlineGating  Boolean          @default(true) @map("online_gating") // آیا رزرو آنلاین وابسته به آنلاین‌بودن است
   // ── پیکربندی زمان‌بندی رزرو (با پیش‌فرض امن — API نمی‌شکند) ──
   slotMinutes      Int @default(90) @map("slot_minutes") @db.SmallInt   // مدت پیش‌فرض هر رزرو
   bufferMinutes    Int @default(0)  @map("buffer_minutes") @db.SmallInt  // فاصله‌ی ایمنی بین رزروهای یک میز
@@ -76,6 +101,10 @@ model Restaurant {
   menuItems     MenuItem[]
   reservations  Reservation[]
   members       ClubMember[]
+  reviews       Review[]
+  photos        RestaurantPhoto[]
+  staffNotes    StaffNote[]
+  campaignLogs  CampaignLog[]
   waitlist      WaitlistEntry[]
   specialEvents SpecialEvent[]
   codeCounter   ClubCodeCounter?
@@ -226,6 +255,7 @@ model Reservation {
   createdAt    DateTime          @default(now()) @map("created_at")
   items        ReservationItem[]
   events       ReservationEvent[]
+  reviews      Review[]
   // ── ایندکس‌های بهینه برای ۱۰M+ رزرو (بر اساس الگوی واقعی کوئری) ──
   // داشبورد رستوران: رزروهای یک رستوران در بازه‌ی زمانی با وضعیت
   @@index([restaurantId, status, slotStart])
@@ -644,13 +674,23 @@ enum JobStatus {
   @@map("job_status")
 }
 
+// نقشِ پرسنل — enum به‌جای String: از ورودِ 'Admin'/'ADMIN' نامعتبر جلوگیری می‌کند
+enum StaffRole {
+  owner
+  manager
+  staff
+  admin
+
+  @@map("staff_role")
+}
+
 model Job {
   id             String    @id @default(uuid()) @db.Uuid
   kind           String                                    // 'sms'|'email'|'push'|'report'|'image'
   payload        Json      @default("{}")
   priority       Int       @default(5) @db.SmallInt        // 1=بالاترین ... 9=پایین‌ترین
   status         JobStatus @default(pending)
-  idempotencyKey String?   @map("idempotency_key")         // جلوگیری از کار تکراری
+  idempotencyKey String?   @unique @map("idempotency_key")  // جلوگیری از کار تکراری (dedup به این وابسته است)
   attempts       Int       @default(0) @db.SmallInt
   maxAttempts    Int       @default(5) @map("max_attempts") @db.SmallInt
   runAfter       DateTime  @default(now()) @map("run_after") // برای backoff
@@ -723,4 +763,68 @@ model SmsTransaction {
   createdAt    DateTime @default(now()) @map("created_at")
   @@index([restaurantId, createdAt(sort: Desc)])
   @@map("sms_transactions")
+}
+
+// ── نظرات مشتری درباره‌ی رستوران (به رزرو واقعی وصل، هر رزرو یک نظر) ──
+model Review {
+  id               String       @id @default(uuid()) @db.Uuid
+  restaurantId     String       @map("restaurant_id") @db.Uuid
+  restaurant       Restaurant   @relation(fields: [restaurantId], references: [id])
+  userId           String?      @map("user_id") @db.Uuid
+  user             User?        @relation(fields: [userId], references: [id])
+  reservationId    String?      @map("reservation_id") @db.Uuid
+  reservation      Reservation? @relation(fields: [reservationId], references: [id])
+  rating           Int          @db.SmallInt
+  foodRating       Int?         @map("food_rating") @db.SmallInt
+  serviceRating    Int?         @map("service_rating") @db.SmallInt
+  atmosphereRating Int?         @map("atmosphere_rating") @db.SmallInt
+  body             String?
+  reply            String?
+  repliedAt        DateTime?    @map("replied_at")
+  isPublished      Boolean      @default(true) @map("is_published")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  @@index([restaurantId, createdAt(sort: Desc)])
+  @@map("reviews")
+}
+
+// ── گالری عکس رستوران ──
+model RestaurantPhoto {
+  id           String     @id @default(uuid()) @db.Uuid
+  restaurantId String     @map("restaurant_id") @db.Uuid
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
+  url          String
+  caption      String?
+  category     String     @default("food")
+  sortOrder    Int        @default(0) @map("sort_order")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  @@index([restaurantId, sortOrder])
+  @@map("restaurant_photos")
+}
+
+// ── یادداشت‌های داخلی تیم رستوران ──
+model StaffNote {
+  id            String     @id @default(uuid()) @db.Uuid
+  restaurantId  String     @map("restaurant_id") @db.Uuid
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
+  authorStaffId String?    @map("author_staff_id") @db.Uuid
+  authorName    String?    @map("author_name")
+  body          String
+  pinned        Boolean    @default(false)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  @@index([restaurantId, pinned(sort: Desc), createdAt(sort: Desc)])
+  @@map("staff_notes")
+}
+
+// ── تاریخچه‌ی کمپین پیامکی ──
+model CampaignLog {
+  id              String     @id @default(uuid()) @db.Uuid
+  restaurantId    String     @map("restaurant_id") @db.Uuid
+  restaurant      Restaurant @relation(fields: [restaurantId], references: [id])
+  segment         String
+  message         String
+  recipientsCount Int        @default(0) @map("recipients_count")
+  sentByStaffId   String?    @map("sent_by_staff_id") @db.Uuid
+  createdAt       DateTime   @default(now()) @map("created_at")
+  @@index([restaurantId, createdAt(sort: Desc)])
+  @@map("campaign_logs")
 }

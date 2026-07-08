@@ -93,6 +93,11 @@ export const metrics = {
   reservationConflicts: new Counter('rezervno_reservation_conflicts_total', 'تعداد رد رزرو به‌خاطر تداخل (double-booking جلوگیری‌شده)'),
   smsQueueDepth: new Gauge('rezervno_sms_queue_depth', 'تعداد پیام‌های در صف SMS'),
   smsSent: new Counter('rezervno_sms_sent_total', 'تعداد پیامک‌های ارسال‌شده'),
+  smsFailed: new Counter('rezervno_sms_failed_total', 'تعداد پیامک‌های ناموفق (به دست مشتری نرسید)'),
+  dbDuration: new Histogram('rezervno_db_query_duration_seconds', 'مدت زمان کوئری دیتابیس بر حسب ثانیه'),
+  cacheHits: new Counter('rezervno_cache_hits_total', 'تعداد اصابت کش (cache hit)'),
+  cacheMisses: new Counter('rezervno_cache_misses_total', 'تعداد عدم‌اصابت کش (cache miss)'),
+  waitlistPromoted: new Counter('rezervno_waitlist_promoted_total', 'تعداد ارتقاء از لیست انتظار به رزرو (وقتی جا باز می‌شود)'),
   rateLimitHits: new Counter('rezervno_rate_limit_hits_total', 'تعداد دفعات فعال‌شدن rate-limit'),
   authFailures: new Counter('rezervno_auth_failures_total', 'تعداد شکست احراز هویت (سیگنال امنیتی)'),
   activeRequests: new Gauge('rezervno_active_requests', 'تعداد درخواست‌های در حال پردازش'),
@@ -107,9 +112,35 @@ export function renderMetrics(): string {
 }
 
 /** اندازه‌گیری یک درخواست HTTP — در middleware/wrapper صدا زده می‌شود. */
+/**
+ * نرمال‌سازی مسیر برای برچسب متریک (باگ H12).
+ *
+ * مشکل: قبلاً برچسب route همان pathname خام بود که شامل بخش‌های پویا (کد رزرو،
+ * UUID، شناسه‌ی عددی) می‌شد. هر مقدار یکتا یک label-set جدید در مپ‌های in-memory
+ * متریک می‌ساخت که هرگز پاک نمی‌شد → رشد بی‌حد حافظه (memory leak) و کندی /metrics.
+ *
+ * راه‌حل: بخش‌های پویا به placeholder ثابت (:id / :code) تبدیل می‌شوند تا کاردینالیتی
+ * برچسب محدود و متناسب با تعداد الگوهای مسیر بماند، نه تعداد رکوردها.
+ */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const RESV_CODE_RE = /^[A-Z0-9]{6,12}$/;   // کد رزرو مثل RZ7K2N9
+const NUMERIC_RE = /^\d+$/;
+
+export function normalizeRoute(pathname: string): string {
+  const parts = pathname.split('/').map((seg) => {
+    if (!seg) return seg;
+    if (UUID_RE.test(seg)) return ':id';
+    if (NUMERIC_RE.test(seg)) return ':id';
+    if (RESV_CODE_RE.test(seg)) return ':code';
+    return seg;
+  });
+  return parts.join('/') || '/';
+}
+
 export function recordHttp(method: string, route: string, status: number, durationSec: number) {
-  const labels = { method, route, status: String(status) };
+  const normalized = normalizeRoute(route);
+  const labels = { method, route: normalized, status: String(status) };
   metrics.httpRequests.inc(labels);
-  metrics.httpDuration.observe(durationSec, { method, route });
+  metrics.httpDuration.observe(durationSec, { method, route: normalized });
   if (status >= 400) metrics.httpErrors.inc(labels);
 }

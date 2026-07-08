@@ -25,7 +25,7 @@ export async function requirePermission(auth: AccessPayload, key: PermissionKey)
   if (auth.role === 'owner' || auth.role === 'manager') return; // دسترسی کامل، بدون تغییر رفتار قبلی
 
   // خودِ کارمندِ لاگین‌کرده (auth.sub = staff.id) — نه یک کارمندِ دلخواه از همان تنانت.
-  // باگ قبلی: findFirst فقط با tenantId «اولین» staff را می‌گرفت، پس مجوزهای یک نفر
+  // باگ: findFirst فقط با tenantId «اولین» staff را می‌گرفت، پس مجوزهای یک نفر
   // به‌اشتباه به همه‌ی کارکنانِ تنانت اعمال می‌شد (privilege escalation یا denial اشتباه).
   const staff = await db.staff.findFirst({ where: { id: auth.sub, tenantId: auth.tenantId }, select: { id: true } });
   if (!staff) throw Err.forbidden();

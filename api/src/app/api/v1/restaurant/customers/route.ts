@@ -22,7 +22,11 @@ export const GET = withRestaurantAuth({ permission: 'canViewAnalytics' }, async 
 
   const data = await cached(cacheKey('customers', ctx.restaurant.id, segment, sort, cursor), 60, async () => {
     const rows = await db.customerInsight.findMany({
-      where: { restaurantId: ctx.restaurant.id, ...(segment ? { segment: segment as any } : {}) },
+      where: {
+        restaurantId: ctx.restaurant.id,
+        // M11: segment=vip از flag بولی isVip فیلتر می‌شود (نه مقدار segment).
+        ...(segment === 'vip' ? { isVip: true } : segment ? { segment: segment as any } : {}),
+      },
       orderBy,
       take: limit + 1,
       ...(cursor ? { skip: 1, cursor: { restaurantId_userId: { restaurantId: ctx.restaurant.id, userId: cursor } } } : {}),

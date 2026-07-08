@@ -37,7 +37,10 @@ export async function setTableState(
   if (!t || t.restaurantId !== restaurantId) throw Err.tableNotFound(0);
   const current = t.state as TableState;
   if (current === next) return { id: t.id, number: t.number, state: next };
-  if (!ALLOWED_TRANSITIONS[current].includes(next)) {
+  // M3: اگر وضعیت فعلی در نقشه‌ی انتقال نباشد (داده‌ی قدیمی/ناشناخته)، به‌جای
+  // TypeError یک خطای اعتبارسنجی تمیز بده.
+  const allowed = ALLOWED_TRANSITIONS[current] ?? [];
+  if (!allowed.includes(next)) {
     throw Err.invalidTransition(current, next);
   }
   const updated = await db.table.update({
@@ -80,7 +83,7 @@ export async function qrCheckIn(qrCode: string): Promise<{
   const resv = await db.reservation.findFirst({
     where: {
       tableId: table.id,
-      status: { in: ['confirmed', 'arrived'] },
+      status: { in: ['confirmed', 'auto_confirmed', 'checked_in', 'running_late', 'arrived'] },
       slotStart: { lte: new Date(+now + 30 * 60_000) }, // تا ۳۰ دقیقه قبل از شروع
       slotEnd: { gte: now },
     },
@@ -92,11 +95,26 @@ export async function qrCheckIn(qrCode: string): Promise<{
     return { table_number: table.number, reservation_code: null, status: table.state };
   }
 
-  // رزرو را seated و میز را occupied کن (اتمیک)
-  await db.$transaction(async (tx) => {
-    await tx.reservation.update({ where: { id: resv.id }, data: { status: 'seated' } });
-    await tx.table.update({ where: { id: table.id }, data: { state: 'occupied' } });
-  });
+  // ⚠️ باگ M4: قبلاً وضعیت رزرو مستقیم seated نوشته می‌شد و state machine را دور
+  // می‌زد (نه audit، نه اعلان، و پرش confirmed→seated بدون checked_in). حالا از
+  // مسیر lifecycle عبور می‌کند: ابتدا checked_in، سپس seated (انتقال‌های معتبر)،
+  // بعد میز occupied می‌شود. اگر رزرو در وضعیتی باشد که این انتقال نامعتبر است،
+  // امن رد می‌شویم و فقط وضعیت فعلی را برمی‌گردانیم.
+  const { transitionReservation } = await import('./lifecycle');
+  try {
+    // اگر هنوز confirmed/auto_confirmed است، اول checked_in کن.
+    if (resv.status === 'confirmed' || resv.status === 'auto_confirmed' || resv.status === 'running_late') {
+      await transitionReservation({ reservationId: resv.id, to: 'checked_in', actor: 'system', isAutomatic: true });
+    }
+    // سپس seated.
+    await transitionReservation({ reservationId: resv.id, to: 'seated', actor: 'system', isAutomatic: true });
+  } catch {
+    // انتقال نامعتبر (مثلاً قبلاً seated/dining شده) — وضعیت فعلی را برگردان.
+    const fresh = await db.reservation.findUnique({ where: { id: resv.id }, select: { status: true } });
+    return { table_number: table.number, reservation_code: resv.code, status: fresh?.status ?? resv.status };
+  }
+  // میز را occupied کن (بعد از seated موفق).
+  await db.table.update({ where: { id: table.id }, data: { state: 'occupied' } }).catch(() => {});
 
   return { table_number: table.number, reservation_code: resv.code, status: 'seated' };
 }

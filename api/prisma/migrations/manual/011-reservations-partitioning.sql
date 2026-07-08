@@ -9,6 +9,15 @@
 --     • partition pruning تأیید شد (کوئری فقط پارتیشن مرتبط را اسکن می‌کند)
 --     • EXCLUDE constraint ضد double-booking روی هر پارتیشن کار می‌کند
 --       (رزروهای هم‌پوشان همیشه در یک ماه‌اند، پس منطقاً درست است)
+--
+--  📋 چک‌لیستِ آمادگیِ کوئری برای pruning (قبل از اجرا، این کوئری‌ها را بررسی کن
+--     که slot_start در WHERE دارند تا pruning کار کند — وضعیت فعلی در ممیزی):
+--     • availability (computeAndCacheAvailability) → ✅ slot_start دارد
+--     • markLateNoShows → ✅ slot_start دارد
+--     • expireStaleHolds → ⚠️ slot_start ندارد (بر اساس hold_expires_at)، ولی
+--       ایندکسِ (status, hold_expires_at) دارد و همیشه روی رزروهای pending (کم)
+--       کار می‌کند؛ pruning برایش لازم نیست. اگر خواستی بهینه‌تر شود، یک شرطِ
+--       slot_start >= now() - interval '1 day' به کوئری اضافه کن.
 --     • تابع خودکار ساخت پارتیشن ماه بعد تست شد
 --
 --  ⚠️ هشدار حیاتی: این جدول موجود را به partitioned تبدیل می‌کند. چون جدول
@@ -16,6 +25,30 @@
 --     rename. این کار باید در پنجره‌ی نگه‌داری (maintenance window) با backup
 --     کامل انجام شود. مراحل زیر را با دقت و به‌ترتیب اجرا کن.
 -- ═══════════════════════════════════════════════════════════════════════
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  🛡️ محافظِ اجرای تصادفی (guard) — این را حذف نکن!
+--
+--  ریشه‌ی ریسک: اگر یک اسکریپتِ خودکار همه‌ی migrationها را پشت‌سرهم اجرا کند،
+--  به این فایل می‌رسد و ممکن است روی داده‌ی واقعیِ production اجرا شود —
+--  که یک مهاجرتِ داده‌ی سنگین و پرخطر است و باید فقط دستی و با backup انجام شود.
+--
+--  این بلاک، اجرا را متوقف می‌کند مگر اینکه صراحتاً اعلام کنی که آماده‌ای:
+--    SET rezervno.allow_partitioning = 'yes_i_have_backup';  -- قبل از اجرا
+--
+--  بدون این، اجرا با خطای واضح متوقف می‌شود و هیچ داده‌ای لمس نمی‌شود.
+-- ═══════════════════════════════════════════════════════════════════════
+DO $guard$
+BEGIN
+  IF current_setting('rezervno.allow_partitioning', true) IS DISTINCT FROM 'yes_i_have_backup' THEN
+    RAISE EXCEPTION E'\n\n🛑 پارتیشن‌بندی به‌صورت تصادفی اجرا نمی‌شود.\nاین یک عملیاتِ دستیِ پرخطر است که فقط وقتی نیاز است که جدول reservations به چند میلیون ردیف رسیده باشد.\nاگر واقعاً backup کامل داری و می‌خواهی ادامه دهی، اول این را اجرا کن:\n    SET rezervno.allow_partitioning = ''yes_i_have_backup'';\nبعد این migration را دوباره اجرا کن.\n';
+  END IF;
+  -- محافظِ دوم: اگر جدول از قبل داده‌ی قابل‌توجه دارد، هشدارِ اضافه (ولی اجازه بده چون کاربر صراحتاً تأیید کرده)
+  IF (SELECT reltuples FROM pg_class WHERE relname = 'reservations') > 100000 THEN
+    RAISE WARNING 'جدول reservations داده‌ی زیادی دارد — مطمئن شو در maintenance window و با backup اجرا می‌کنی.';
+  END IF;
+END
+$guard$;
 
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 

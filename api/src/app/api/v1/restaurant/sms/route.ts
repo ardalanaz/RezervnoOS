@@ -40,11 +40,21 @@ export const POST = withRestaurantAuth(
       const tokens = kind === 'winback'
         ? [t.name || 'مهمان', discount || 'WELCOME', restaurant.name]
         : [t.name || 'مهمان', restaurant.name];
-      // restaurantId لازم است تا worker از موجودی SMS این رستوران کم کند (consumeSms).
-      // بدون آن، پیامک کمپین بدون مصرف موجودی ارسال می‌شد و سیستم متر کردن بی‌اثر بود.
       await enqueueSms({ to: t.phone, template: template as 'welcome_visit', tokens, restaurantId: restaurant.id });
       queued++;
     }
+
+    // ثبت در تاریخچه‌ی کمپین (تا در پنل قابل‌مشاهده باشد) — شکست لاگ نباید ارسال را خراب کند
+    try {
+      await db.campaignLog.create({
+        data: {
+          restaurantId: restaurant.id,
+          segment: (b.segment || (Array.isArray(b.phones) ? 'custom' : 'all')).toString().slice(0, 40),
+          message: (b.message || b.discount_code || kind).toString().slice(0, 500),
+          recipientsCount: queued,
+        },
+      });
+    } catch { /* لاگ‌نشدن تاریخچه نباید جلوی ارسال را بگیرد */ }
 
     return NextResponse.json({ queued, kind });
   },

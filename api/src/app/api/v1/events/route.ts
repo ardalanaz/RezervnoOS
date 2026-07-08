@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { dbRead as db } from '@/lib/db';
 import { cached } from '@/lib/cache';
 import { errorResponse } from '@/lib/errors';
 

@@ -68,9 +68,8 @@ export const Validate = {
 // ── گارد SSRF برای URLهای کاربر (webhook خروجی) ──
 // یک تنانت می‌تواند URL دلخواه ثبت کند؛ بدون این گارد، worker می‌تواند وادار به
 // درخواست به شبکه‌ی داخلی/metadata (169.254.169.254) شود (SSRF, OWASP A10).
+// events.ts علاوه بر این با redirect:'manual' جلوی دور زدن از طریق ریدایرکت را می‌گیرد.
 // self-hosted که عمداً webhook داخلی می‌خواهد: ALLOW_PRIVATE_WEBHOOKS=true.
-// ⚠️ محدودیت: این گارد در زمان تحویل DNS را resolve و چک می‌کند؛ در برابر
-// DNS-rebinding کاملاً مقاوم نیست (نیازمند اتصال به همان IP resolve‌شده است).
 function isPrivateIp(ip: string): boolean {
   const m = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (m) {

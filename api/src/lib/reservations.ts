@@ -1,5 +1,4 @@
 import { Prisma } from '@prisma/client';
-import { randomBytes } from 'crypto';
 import { db } from './db';
 import { withSlotLock } from './redis';
 import { redis } from './redis';
@@ -10,6 +9,17 @@ import { metrics } from './metrics';
 import { validateCoupon, calcDiscount, redeemCouponAtomicTx } from './coupons';
 import { redeemGiftCardTx } from './loyalty';
 import { computeNoShowRisk as defaultNoShowPredictor } from './customer-insights';
+import { type OpeningHours } from './hours';
+import { computeRanges, genReservationCode, isConflictError, isSerializationError } from './reservation-helpers';
+import { ACTIVE_RESERVATION_STATUSES } from './reservation-status';
+import { invalidateAvailability } from './availability-cache';
+
+// مجموعه‌ی وضعیت‌های فعال به‌صورت Prisma.sql — برای درج امن و پارامتری در $queryRaw.
+// یک‌بار ساخته می‌شود و در همه‌ی کوئری‌های raw تداخل/اشغال استفاده می‌شود (به‌جای
+// لیست رشته‌ای دستی که قبلاً ناقص بود و باعث C1 می‌شد).
+const ACTIVE_STATUSES_FRAGMENT = Prisma.join(
+  ACTIVE_RESERVATION_STATUSES.map((s) => Prisma.sql`${s}`),
+);
 
 /**
  * فاز v2 — Dependency Inversion: موتور رزرو (core domain) به یک «port» انتزاعی
@@ -63,6 +73,7 @@ export type CreateReservationInput = {
   couponCode?: string;
   giftCardCode?: string;
   giftCardAmount?: number;  // مبلغ دلخواه استفاده از کارت هدیه
+  ip?: string | null;       // IP درخواست‌کننده (برای تشخیص سوءاستفاده‌ی کوپن — M1)
 };
 
 type TimingConfig = {
@@ -71,50 +82,6 @@ type TimingConfig = {
   cleaningMinutes: number;
   holdMinutes: number;
 };
-
-// ── محاسبه‌ی بازه‌ی رزرو + بازه‌ی بلاک (شامل نظافت/بافر) ──
-function computeRanges(date: string, time: string, cfg: TimingConfig, durationOverride?: number) {
-  const start = new Date(`${date}T${time}:00+03:30`); // Asia/Tehran
-  if (isNaN(+start)) throw Err.validation('تاریخ یا ساعت نامعتبر است');
-  const duration = durationOverride ?? cfg.slotMinutes;
-  const end = new Date(+start + duration * 60_000);
-  // بازه‌ی بلاک = مدت رزرو + زمان نظافت + بافر ایمنی
-  const blockBufferMin = cfg.cleaningMinutes + cfg.bufferMinutes;
-  const blockEnd = new Date(+end + blockBufferMin * 60_000);
-  return { start, end, blockEnd, duration, blockBufferMin };
-}
-
-// ── کد رزرو امن و غیرقابل‌حدس (نیاز امنیتی) ──
-// 8 کاراکتر Base32 از منبع تصادفی امن رمزنگاری — نه Math.random.
-const B32 = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // بدون 0/O/1/I برای خوانایی
-function genCode(): string {
-  const bytes = randomBytes(8);
-  let out = 'RZ';
-  for (let i = 0; i < 7; i++) out += B32[bytes[i] % 32];
-  return out;
-}
-
-// ── تشخیص خطاهای تداخل/serialization دیتابیس ──
-function isConflictError(e: unknown): boolean {
-  // 23P01 = exclusion_violation (EXCLUDE constraint ما)
-  // 40001 = serialization_failure ، 40P01 = deadlock_detected
-  const code = (e as { code?: string })?.code;
-  if (code === '23P01' || code === '40001' || code === '40P01') return true;
-  if (e instanceof Prisma.PrismaClientKnownRequestError) {
-    if (e.code === 'P2010') {
-      const inner = (e.meta as { code?: string } | undefined)?.code;
-      return inner === '23P01' || inner === '40001' || inner === '40P01';
-    }
-    if (e.code === 'P2034') return true; // write conflict / deadlock در Prisma
-  }
-  return false;
-}
-function isSerializationError(e: unknown): boolean {
-  const code = (e as { code?: string })?.code;
-  if (code === '40001' || code === '40P01') return true;
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034') return true;
-  return false;
-}
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -127,6 +94,15 @@ export async function createReservation(
   const r = await db.restaurant.findUnique({ where: { id: input.restaurantId } });
   if (!r) throw Err.notFound('رستوران');
   if (!r.isOpen) throw Err.restaurantClosed();
+
+  // ── گارد اتصال: رزرو آنلاین (از اپ مشتری) وقتی رستوران آفلاین است رد می‌شود ──
+  // این شبکه‌ی ایمنی نهایی است: حتی اگر اپ مشتری به‌خاطر cache قدیمی رستوران را نشان
+  // دهد، ثبت رزرو آنلاین رد می‌شود تا با ثبت حضوریِ آفلاینِ پرسنل تضاد پیدا نکند.
+  // رزرو دستی پرسنل (source='manual') همیشه مجاز است — پنل باید آفلاین کار کند.
+  if (input.source === 'app' && r.onlineGating) {
+    const online = r.lastSeenAt && (Date.now() - new Date(r.lastSeenAt).getTime() < 90_000);
+    if (!online) throw Err.restaurantOffline();
+  }
 
   // ── اعتبارسنجی ورودی با خطاهای مشخص ──
   if (!Number.isInteger(input.partySize) || input.partySize < 1) throw Err.validation('تعداد نفر نامعتبر است');
@@ -145,6 +121,24 @@ export async function createReservation(
   const now = Date.now();
   if (+start < now - 60_000) throw Err.pastTime();
   if (+start > now + MAX_DAYS_AHEAD * 86_400_000) throw Err.tooFarAhead(MAX_DAYS_AHEAD);
+
+  // ── گاردِ ساعتِ کاری (سناریو ۴): رزروِ آنلاین فقط در ساعتِ باز ──
+  // رزروِ دستیِ پرسنل (source='manual') مجاز است حتی خارج ساعت (مثلاً رویدادِ خصوصی).
+  if (input.source === 'app' && r.openingHours) {
+    const closureRows = await db.$queryRaw<Array<{ closure_date: Date }>>`
+      SELECT closure_date FROM restaurant_closures
+      WHERE restaurant_id = ${input.restaurantId}::uuid AND closure_date = ${input.date}::date
+    `.catch(() => [] as Array<{ closure_date: Date }>);
+    const closureSet = new Set(closureRows.map(c => (c.closure_date instanceof Date
+      ? c.closure_date.toISOString().slice(0, 10)
+      : String(c.closure_date).slice(0, 10))));
+    const { isTimeWithinHours } = await import('./hours');
+    const ok = isTimeWithinHours(
+      r.openingHours as OpeningHours,
+      input.date, input.time, r.timezone ?? 'Asia/Tehran', closureSet,
+    );
+    if (!ok) throw Err.outsideHours();
+  }
 
   // ── تعیین کاندیداهای میز (هنوز رزرو نمی‌کنیم) ──
   // حالت دستی: شماره‌ی مشخص. حالت خودکار: میزهای مناسب به ترتیب «کم‌هدر».
@@ -223,7 +217,7 @@ export async function createReservation(
 // ── هسته‌ی ثبت: transaction سریالایزبل + بازچک داخل tx + insert ──
 async function placeReservation(
   input: CreateReservationInput,
-  r: { id: string; name: string; clubPrefix: string },
+  r: { id: string; name: string; clubPrefix: string; cbBasePct: number },
   cfg: TimingConfig,
   ranges: { start: Date; end: Date; blockEnd: Date; duration: number; blockBufferMin: number },
   candidateTableIds: string[],
@@ -235,7 +229,7 @@ async function placeReservation(
   const status: 'pending' | 'confirmed' = isHold ? 'pending' : 'confirmed';
   const holdExpiresAt = isHold ? new Date(Date.now() + cfg.holdMinutes * 60_000) : null;
 
-  let result: { resv: any; club: { enrolledNow: boolean; code: string } | null; tableNumber: number };
+  let result: { resv: any; club: { enrolledNow: boolean; code: string } | null; tableNumber: number; checkout?: any };
 
   try {
     result = await db.$transaction(
@@ -246,7 +240,7 @@ async function placeReservation(
         if (candidateTableIds.length > 0) {
           const occRows = await tx.$queryRaw<{ table_id: string }[]>`
             SELECT DISTINCT table_id FROM reservations
-            WHERE status IN ('pending','confirmed','arrived','seated')
+            WHERE status IN (${ACTIVE_STATUSES_FRAGMENT})
               AND table_id = ANY(${candidateTableIds}::uuid[])
               AND tsrange(slot_start, block_end) && tsrange(${start}::timestamp, ${blockEnd}::timestamp)
           `;
@@ -287,11 +281,12 @@ async function placeReservation(
   }
 
   // ── بعد از commit: کش availability را باطل کن + SMS ──
-  await redis.del(`avail:${r.id}:${input.date}`);
+  await invalidateAvailability(r.id, input.date);
   if (!isHold && input.notifySms !== false && result.resv.guestPhone) {
     await enqueueSms({
       to: result.resv.guestPhone, template: 'booking_confirm',
       tokens: [result.resv.guestName ?? 'مهمان', r.name, input.time, result.resv.code],
+      restaurantId: r.id,  // C6: تا از موجودی SMS رستوران کسر شود
     });
   }
 
@@ -321,7 +316,7 @@ async function insertReservation(
   tx: Prisma.TransactionClient,
   p: {
     input: CreateReservationInput;
-    r: { id: string; clubPrefix: string };
+    r: { id: string; clubPrefix: string; cbBasePct: number };
     status: 'pending' | 'confirmed';
     holdExpiresAt: Date | null;
     start: Date; end: Date; duration: number; blockBufferMin: number;
@@ -345,7 +340,7 @@ async function insertReservation(
     try {
       resv = await tx.reservation.create({
         data: {
-          code: genCode(),
+          code: genReservationCode(),
           restaurantId: r.id,
           tableId: p.tableId,
           userId: input.userId ?? null,
@@ -403,8 +398,8 @@ async function insertReservation(
     if (input.couponCode) {
       const coupon = await validateCoupon(r.id, input.couponCode, input.userId ?? null); // throw می‌کند اگر نامعتبر
       discount = calcDiscount(coupon, subtotal);
-      const ok = await redeemCouponAtomicTx(tx, coupon.id, input.userId ?? null, resv!.code, discount);
-      if (!ok) throw Err.validation('ظرفیت کوپن پر شده است');
+      const ok = await redeemCouponAtomicTx(tx, coupon.id, input.userId ?? null, resv!.code, discount, input.ip ?? null);
+      if (!ok) throw Err.validation('ظرفیت کوپن پر شده یا سقف استفاده‌ی شما به پایان رسیده است');
       method = 'coupon';
     }
     // ── کارت هدیه (مبلغ دلخواه، با رفع مبلغ منفی از ممیزی دوم) ──
@@ -477,7 +472,7 @@ async function tryMergeTables(
   //    تست‌شده روی Postgres: ~۰.۳ms برای ۱۰۰۰ رزرو با استفاده از ایندکس GiST. ──
   const occupiedRows = await tx.$queryRaw<{ table_id: string }[]>`
     SELECT DISTINCT table_id FROM reservations
-    WHERE status IN ('pending','confirmed','arrived','seated')
+    WHERE status IN (${ACTIVE_STATUSES_FRAGMENT})
       AND table_id IS NOT NULL
       AND tsrange(slot_start, block_end) && tsrange(${start}::timestamp, ${blockEnd}::timestamp)
   `;
@@ -507,122 +502,152 @@ async function tryMergeTables(
 
 // ═══════════════════════════════════════════════════════════
 //  انقضای هولدها (نیاز ۱۱) — توسط cron/کارگر پس‌زمینه صدا زده می‌شود
+//  هولدهای منقضی یک‌جا expired می‌شوند. چون expired وضعیت پایانی است و
+//  میز را آزاد می‌کند، کش availability آن روزها هم باطل می‌شود.
 // ═══════════════════════════════════════════════════════════
-export async function expireStaleHolds(): Promise<number> {
-  const res = await db.reservation.updateMany({
-    where: { status: 'pending', holdExpiresAt: { lt: new Date() } },
-    data: { status: 'expired' },
-  });
-  return res.count;
-}
+// ── عملیاتِ cronِ چرخه‌ی حیات به ماژول جدا منتقل شد (reservation-lifecycle-ops.ts) ──
+// re-export برای سازگاری با گذشته.
+export { expireStaleHolds, markLateNoShows } from './reservation-lifecycle-ops';
 
-// ═══════════════════════════════════════════════════════════
-//  علامت‌زدن مهمانان دیرکرده به‌عنوان no_show (نیاز ۱۰)
-//  رزروهایی که زمان شروع + مهلت تأخیر گذشته و هنوز نرسیده‌اند.
-// ═══════════════════════════════════════════════════════════
-export async function markLateNoShows(restaurantId: string): Promise<number> {
-  const r = await db.restaurant.findUnique({ where: { id: restaurantId }, select: { lateGraceMinutes: true } });
-  const grace = r?.lateGraceMinutes ?? 15;
-  const cutoff = new Date(Date.now() - grace * 60_000);
-  const res = await db.reservation.updateMany({
-    where: { restaurantId, status: { in: ['pending', 'confirmed'] }, slotStart: { lt: cutoff } },
-    data: { status: 'no_show' },
-  });
-  return res.count;
-}
 
 // ═══════════════════════════════════════════════════════════
 //  availability — با درنظرگرفتن مدت/بافر/نظافت از پیکربندی رستوران
 // ═══════════════════════════════════════════════════════════
-export async function getAvailability(restaurantId: string, date: string, party: number) {
-  const cacheKey = `avail:${restaurantId}:${date}:${party}`;
-  const FRESH_SEC = 30;        // تا ۳۰s کاملاً تازه
-  const STALE_SEC = 300;       // تا ۵ دقیقه به‌عنوان stale قابل‌سرو (پس‌زمینه refresh)
+// ── Availability Engine به ماژول جدا منتقل شد (availability.ts) ──
+// re-export برای سازگاری با گذشته: importهای موجود از reservations همچنان کار می‌کنند.
+export { getAvailability, computeAndCacheAvailability, refreshAvailabilityInBackground } from './availability';
 
-  // ── Stale-While-Revalidate: ضد thundering herd ──
-  // ساختار cache شامل داده + زمان تولید است. اگر تازه باشد، مستقیم برگردان.
-  // اگر stale باشد، همان stale را فوراً برگردان ولی در پس‌زمینه refresh کن
-  // (فقط یک request قفل refresh را می‌گیرد؛ بقیه stale می‌گیرند → DB یک‌بار،
-  //  نه هزار بار همزمان برای یک رستوران داغ).
-  const cached = await redis.get(cacheKey);
-  if (cached) {
-    try {
-      const wrapped = JSON.parse(cached) as { payload: any; computedAt: number };
-      const ageSec = (Date.now() - wrapped.computedAt) / 1000;
-      if (ageSec < FRESH_SEC) {
-        return wrapped.payload; // تازه — مستقیم
-      }
-      // stale — refresh پس‌زمینه با single-flight lock، ولی stale را الان برگردان
-      void refreshAvailabilityInBackground(restaurantId, date, party, cacheKey);
-      return wrapped.payload;
-    } catch {
-      // فرمت قدیمی/خراب — از نو محاسبه کن
+// ═══════════════════════════════════════════════════════════
+//  createWalkin — ثبت ورودِ مهمانِ بدون رزرو (walk-in) توسط پرسنل.
+//  منطق قبلاً در route پخش شده بود؛ حالا در لایه‌ی سرویس متمرکز است تا
+//  با منطق رزروِ عادی هماهنگ بماند (اگر قانون رزرو عوض شود، یک‌جا عوض می‌شود).
+// ═══════════════════════════════════════════════════════════
+
+export interface WalkinInput {
+  restaurantId: string;
+  clubPrefix: string;
+  phone: string;
+  partySize: number;
+  firstName: string | null;
+  lastName: string | null;
+  tableId: string | null;
+  birthDay: number | null;
+  birthMonth: number | null;
+  durationMinutes?: number;
+}
+
+export async function createWalkin(input: WalkinInput) {
+  // اعتبارسنجی میز (مالکیت) — قبل از باز کردن transaction
+  if (input.tableId) {
+    const t = await db.table.findUnique({ where: { id: input.tableId } });
+    if (!t || t.restaurantId !== input.restaurantId) throw Err.notFound('میز');
+  }
+
+  return db.$transaction(async (tx) => {
+    // کاربر را پیدا یا بساز (همان الگوی ورود با OTP)
+    const user = await tx.user.upsert({
+      where: { phone: input.phone },
+      create: {
+        phone: input.phone, firstName: input.firstName, lastName: input.lastName,
+        birthDate: (input.birthDay && input.birthMonth) ? new Date(Date.UTC(1990, input.birthMonth - 1, input.birthDay)) : null,
+      },
+      update: {},
+    });
+    // تکمیلِ اطلاعاتِ ناقص (بدون overwrite)
+    const patch: Record<string, unknown> = {};
+    if ((input.firstName || input.lastName) && (!user.firstName || !user.lastName)) {
+      patch.firstName = user.firstName || input.firstName;
+      patch.lastName = user.lastName || input.lastName;
     }
-  }
+    if (input.birthDay && input.birthMonth && !user.birthDate) {
+      patch.birthDate = new Date(Date.UTC(1990, input.birthMonth - 1, input.birthDay));
+    }
+    if (Object.keys(patch).length) {
+      await tx.user.update({ where: { id: user.id }, data: patch });
+    }
 
-  // cache miss کامل — محاسبه و ذخیره (با قفل تا فقط یکی محاسبه کند)
-  return computeAndCacheAvailability(restaurantId, date, party, cacheKey, STALE_SEC);
+    // عضویت خودکار باشگاه — اتمیک، بدون تکرار (همان الگوی createReservation)
+    let clubCode: string;
+    let enrolledNow: boolean;
+    const existingMember = await tx.clubMember.findUnique({
+      where: { restaurantId_userId: { restaurantId: input.restaurantId, userId: user.id } },
+    });
+    if (existingMember) {
+      clubCode = existingMember.code; enrolledNow = false;
+    } else {
+      const counter = await tx.clubCodeCounter.upsert({
+        where: { restaurantId: input.restaurantId },
+        create: { restaurantId: input.restaurantId, nextValue: 1002 },
+        update: { nextValue: { increment: 1 } },
+      });
+      clubCode = `${input.clubPrefix}-${counter.nextValue - 1}`;
+      await tx.clubMember.create({ data: { restaurantId: input.restaurantId, userId: user.id, code: clubCode } });
+      enrolledNow = true;
+    }
+
+    // رزرو walk-in: شروع همین الان، وضعیت seated
+    const now = new Date();
+    const slotEnd = new Date(now.getTime() + (input.durationMinutes || 90) * 60_000);
+    const reservation = await tx.reservation.create({
+      data: {
+        code: genReservationCode(), restaurantId: input.restaurantId, tableId: input.tableId, userId: user.id,
+        partySize: input.partySize, slotStart: now, slotEnd, status: 'seated', source: 'walkin',
+      },
+    });
+
+    if (input.tableId) {
+      await tx.table.update({ where: { id: input.tableId }, data: { state: 'occupied' } });
+    }
+
+    return { user, clubCode, enrolledNow, reservation };
+  });
 }
 
-/** refresh پس‌زمینه با قفل single-flight — فقط یک request همزمان محاسبه می‌کند. */
-async function refreshAvailabilityInBackground(restaurantId: string, date: string, party: number, cacheKey: string) {
-  const lockKey = `avail-lock:{${cacheKey}}`;
-  // قفل کوتاه؛ اگر کسی دیگر در حال refresh است، رد شو (او انجام می‌دهد)
-  const gotLock = await redis.set(lockKey, '1', 'PX', 10_000, 'NX');
-  if (!gotLock) return;
-  try {
-    await computeAndCacheAvailability(restaurantId, date, party, cacheKey, 300);
-  } catch {
-    // refresh پس‌زمینه نباید چیزی را بشکند؛ stale تا انقضای کامل می‌ماند
-  } finally {
-    await redis.del(lockKey).catch(() => {});
-  }
+// ═══════════════════════════════════════════════════════════
+//  markArrival — پرسنل «رسید» می‌زند: وضعیت→arrived، امتیازِ وفاداری، SMS خوش‌آمد.
+//  منطق قبلاً در route پخش شده بود؛ حالا در لایه‌ی سرویس متمرکز است تا با
+//  بقیه‌ی منطقِ رزرو هماهنگ بماند و قابلِ تست و استفاده‌ی مجدد باشد.
+// ═══════════════════════════════════════════════════════════
+export interface ArrivalInput {
+  code: string;
+  tenantId: string;   // از توکنِ پرسنل — برای بررسی مالکیت
 }
 
-/** محاسبه‌ی واقعی availability و ذخیره در cache با مهر زمان. */
-async function computeAndCacheAvailability(restaurantId: string, date: string, party: number, cacheKey: string, ttlSec: number) {
-  const r = await db.restaurant.findUnique({ where: { id: restaurantId } });
-  if (!r) throw Err.notFound('رستوران');
-  const cfg: TimingConfig = {
-    slotMinutes: r.slotMinutes ?? 90,
-    bufferMinutes: r.bufferMinutes ?? 0,
-    cleaningMinutes: r.cleaningMinutes ?? 15,
-    holdMinutes: r.holdMinutes ?? 10,
-  };
+const ARRIVAL_POINTS = 50;
 
-  const times = ['12:30','13:00','13:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30'];
-  const tables = await db.table.findMany({
-    where: { restaurantId, isActive: true, state: { not: 'maintenance' }, capacity: { gte: party }, minPartySize: { lte: party } },
-    select: { id: true, number: true },
+export async function markArrival(input: ArrivalInput) {
+  const resv = await db.reservation.findUnique({
+    where: { code: input.code },
+    include: { restaurant: { select: { tenantId: true, name: true } } },
+  });
+  if (!resv) throw Err.notFound('رزرو');
+  if (resv.restaurant.tenantId !== input.tenantId) throw Err.forbidden();
+  if (resv.status !== 'confirmed' && resv.status !== 'pending') {
+    throw Err.validation(`رزرو در وضعیت ${resv.status} قابل تأیید حضور نیست`);
+  }
+
+  const updated = await db.$transaction(async (tx) => {
+    const u = await tx.reservation.update({ where: { id: resv.id }, data: { status: 'arrived' } });
+    if (resv.userId) {
+      await tx.clubMember.updateMany({
+        where: { restaurantId: resv.restaurantId, userId: resv.userId },
+        data: { points: { increment: ARRIVAL_POINTS } },
+      });
+    }
+    return u;
   });
 
-  const dayStart = new Date(`${date}T00:00:00+03:30`);
-  const dayEnd = new Date(+dayStart + 24 * 3600_000);
-  const busy = await db.reservation.findMany({
-    where: {
-      restaurantId, status: { in: ['pending','confirmed','arrived','seated'] },
-      slotStart: { lt: dayEnd }, slotEnd: { gt: dayStart },
-    },
-    select: { tableId: true, slotStart: true, slotEnd: true, blockBufferMinutes: true } as any,
-  });
+  // SMS خوش‌آمد (بعد از commit — شکستش رزرو را برنمی‌گرداند)
+  if (resv.guestPhone) {
+    const member = resv.userId ? await db.clubMember.findUnique({
+      where: { restaurantId_userId: { restaurantId: resv.restaurantId, userId: resv.userId } },
+    }) : null;
+    await enqueueSms({
+      to: resv.guestPhone, template: 'welcome_visit',
+      tokens: [resv.guestName ?? 'مهمان', String(member?.points ?? 0), String(ARRIVAL_POINTS), member?.tier ?? 'bronze'],
+      restaurantId: resv.restaurantId,
+    });
+  }
 
-  const blockBuffer = cfg.cleaningMinutes + cfg.bufferMinutes;
-  const slots = times.map(time => {
-    const start = new Date(`${date}T${time}:00+03:30`);
-    const end = new Date(+start + cfg.slotMinutes * 60_000);
-    const blockEnd = new Date(+end + blockBuffer * 60_000);
-    const freeTables = tables
-      .filter(t => !busy.some((b: any) => {
-        if (b.tableId !== t.id) return false;
-        const bBlockEnd = new Date(+b.slotEnd + (b.blockBufferMinutes ?? 0) * 60_000);
-        return b.slotStart < blockEnd && bBlockEnd > start; // هم‌پوشانی بازه‌ی بلاک
-      }))
-      .map(t => t.number);
-    return { time, free_tables: freeTables, status: freeTables.length ? 'open' : 'full' };
-  });
-
-  const payload = { date, party, slots };
-  // wrap با مهر زمان برای SWR
-  await redis.set(cacheKey, JSON.stringify({ payload, computedAt: Date.now() }), 'EX', ttlSec);
-  return payload;
+  return { code: updated.code, status: updated.status };
 }

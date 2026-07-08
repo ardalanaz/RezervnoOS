@@ -17,11 +17,20 @@ RUN apk --no-cache upgrade && apk add --no-cache dumb-init
 # امنیت: ساخت کاربر non-root اختصاصی (اجرا با root خطرناک است)
 RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nextjs -G nodejs
 
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+# ── بهینه‌سازیِ اندازه: به‌جای کپیِ کلِ node_modules (شامل typescript/tsx/@types که
+#    فقط برای build لازم بودند)، فقط وابستگی‌های production + prisma CLI نصب می‌شود.
+#    prisma CLI در زمان اجرا برای `migrate deploy` در entrypoint لازم است. ──
+COPY --chown=nextjs:nodejs package.json package-lock.json* ./
+RUN npm ci --omit=dev && \
+    npm install prisma@5.20.0 --no-save && \
+    npm cache clean --force
+
+# فایل‌های build و اسکیمای لازم برای اجرا
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Prisma Client تولیدشده (در مرحله‌ی build ساخته شد) — تا دوباره generate لازم نشود
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --chown=nextjs:nodejs docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 

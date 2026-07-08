@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { withStaffAuth } from '@/lib/with-restaurant-auth';
 import { getEffectivePermissions } from '@/lib/permissions';
+import type { AccessPayload } from '@/lib/jwt';
 import { Err } from '@/lib/errors';
+
+type StaffPayload = Extract<AccessPayload, { kind: 'staff' }>;
 
 // نکته: این route مدیریت کارکنان سطح tenant است، نه scoped به یک رستوران مشخص
 // (resolveStaffRestaurant عمداً صدا زده نمی‌شود) — به همین دلیل withStaffAuth
@@ -13,7 +16,7 @@ import { Err } from '@/lib/errors';
 // (وگرنه یک manager می‌تواند به یک staff اجازه‌ی «مدیریت کارکنان» بدهد که شامل خودِ
 // owner هم می‌شود — ریسک privilege-escalation).
 
-function assertManagerOrOwner(auth: { kind: string; role: string }) {
+function assertManagerOrOwner(auth: AccessPayload): asserts auth is StaffPayload {
   if (auth.kind !== 'staff') throw Err.unauthorized();
   if (auth.role !== 'owner' && auth.role !== 'manager') throw Err.forbidden('فقط مدیر می‌تواند کارکنان را مدیریت کند');
 }

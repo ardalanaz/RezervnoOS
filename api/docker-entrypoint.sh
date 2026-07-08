@@ -15,19 +15,35 @@ do
 done
 echo "✓ دیتابیس آماده است"
 
-echo "→ اعمال schema روی دیتابیس..."
-npx prisma db push --skip-generate --accept-data-loss
+# ═══════════════════════════════════════════════════════════
+#  اعمال schema با migration history واقعی (نه db push).
+#  C5: قبلاً `db push --accept-data-loss` بود که روی هر استارت می‌توانست
+#  ستون/داده‌ی production را حذف کند. حالا migrate deploy فقط migrationهای
+#  ثبت‌شده را به‌ترتیب اعمال می‌کند و چیزی drop نمی‌کند.
+# ═══════════════════════════════════════════════════════════
+echo "→ اعمال migrationها (prisma migrate deploy)..."
+if ! npx prisma migrate deploy; then
+  echo "✗ migrate deploy ناموفق بود — استارت متوقف شد (برای جلوگیری از اجرای ناقص)"
+  exit 1
+fi
 
-echo "→ افزودن constraint قفل دو-لایه (اگر نباشد)..."
-npx prisma db execute --schema=prisma/schema.prisma --stdin <<'SQL' || echo "  (constraint احتمالاً از قبل هست)"
-CREATE EXTENSION IF NOT EXISTS btree_gist;
-ALTER TABLE reservations ADD CONSTRAINT no_table_overlap
-  EXCLUDE USING gist (
-    table_id WITH =,
-    tstzrange(slot_start, slot_end) WITH &&
-  )
-  WHERE (status IN ('pending','confirmed','arrived') AND table_id IS NOT NULL);
-SQL
+# ═══════════════════════════════════════════════════════════
+#  اعمال constraintهای خارج از توان Prisma (EXCLUDE + generated column).
+#  C4: قبلاً اینجا یک کانسترینت اشتباه (tstzrange + slot_end بدون زمان نظافت +
+#  مجموعه‌ی وضعیت ناقص) ساخته می‌شد. حالا فایل canonical که تست‌شده و درست است
+#  اجرا می‌شود (tsrange + block_end + مجموعه‌ی کامل وضعیت‌های فعال).
+#  این فایل idempotent است (DROP IF EXISTS / ADD COLUMN IF NOT EXISTS).
+# ═══════════════════════════════════════════════════════════
+echo "→ اعمال constraint قفل دو-لایه و ستون block_end (canonical)..."
+if [ -f prisma/migrations/0_init/EXTRA-after-prisma-migrate.sql ]; then
+  npx prisma db execute --schema=prisma/schema.prisma \
+    --file prisma/migrations/0_init/EXTRA-after-prisma-migrate.sql \
+    || { echo "✗ اعمال EXTRA constraint ناموفق — استارت متوقف شد"; exit 1; }
+  echo "✓ constraint و ستون block_end اعمال شد"
+else
+  echo "✗ فایل EXTRA-after-prisma-migrate.sql یافت نشد — استارت متوقف شد"
+  exit 1
+fi
 
 # seed خودکار فقط اگر RUN_SEED=true باشد (برای اولین راه‌اندازی)
 if [ "$RUN_SEED" = "true" ]; then

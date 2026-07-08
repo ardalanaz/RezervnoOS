@@ -1,10 +1,20 @@
-import { createHash, randomInt } from 'crypto';
+import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import { db } from './db';
 import { redis } from './redis';
 import { Err } from './errors';
 import { enqueueSms } from './sms';
 
 const hash = (s: string) => createHash('sha256').update(s + process.env.JWT_SECRET).digest('hex');
+
+// مقایسه‌ی constant-time دو hash هم‌طول (ASVS V2.9 / CWE-208).
+// هرچند ورودی قبل از مقایسه hash می‌شود (پس نشت زمانی مستقیم plaintext را لو نمی‌دهد)،
+// مقایسه‌ی امن یک لایه‌ی دفاعی استاندارد است و هزینه‌ای ندارد.
+function hashEquals(a: string, b: string): boolean {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
 
 export function normalizePhone(raw: string): string {
   const d = raw.replace(/\D/g, '');
@@ -27,15 +37,24 @@ export async function requestOtp(rawPhone: string): Promise<{ devCode?: string }
     create: { phone, codeHash: hash(code), expiresAt: new Date(Date.now() + 2 * 60_000) },
     update: { codeHash: hash(code), expiresAt: new Date(Date.now() + 2 * 60_000), attempts: 0 },
   });
-  await enqueueSms({ to: phone, template: 'otp', tokens: [code] });
-  return process.env.OTP_DEV_MODE === 'true' ? { devCode: code } : {};
+  // حالت dev: کد روی صفحه برمی‌گردد، پس نیازی به پیامک (و کاوه‌نگار) نیست.
+  // این باعث می‌شود لاگین بدون هیچ وابستگی خارجی کار کند — برای تست قبل از راه‌اندازی SMS.
+  // production حتماً پیامک می‌فرستد و کد را برنمی‌گرداند.
+  const devMode = process.env.OTP_DEV_MODE === 'true';
+  if (devMode) {
+    // هشدار بلند: حالت تست فعال است. این هرگز نباید در محیط واقعی روشن بماند.
+    console.warn('[امنیت] OTP_DEV_MODE فعال است — کد روی صفحه برمی‌گردد و پیامک ارسال نمی‌شود. فقط برای تست!');
+  } else {
+    await enqueueSms({ to: phone, template: 'otp', tokens: [code] });
+  }
+  return devMode ? { devCode: code } : {};
 }
 
 export async function verifyOtp(rawPhone: string, code: string): Promise<string /* userId */> {
   const phone = normalizePhone(rawPhone);
   const rec = await db.otpCode.findUnique({ where: { phone } });
   if (!rec || rec.expiresAt < new Date() || rec.attempts >= 5) throw Err.otpInvalid();
-  if (rec.codeHash !== hash(code)) {
+  if (!hashEquals(rec.codeHash, hash(code))) {
     await db.otpCode.update({ where: { phone }, data: { attempts: { increment: 1 } } });
     throw Err.otpInvalid();
   }

@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     const normalized = normalizePhone(phone);
     const staff = await db.staff.findFirst({ where: { phone: normalized } });
     if (!staff) throw Err.forbidden('این شماره دسترسی پنل رستوران ندارد');
+    if (!staff.isActive) throw Err.forbidden('این حساب غیرفعال شده است');
     const r = await requestOtp(normalized);
     return NextResponse.json(r, { status: r.devCode ? 200 : 204 });
   } catch (e) { return errorResponse(e); }

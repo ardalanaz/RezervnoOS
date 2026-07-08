@@ -3,11 +3,13 @@ import { Err } from './errors';
 
 /**
  * احراز هویت مدیر پلتفرم (پنل شرکت).
- * در فاز ۱، یک staff با role='owner' که به tenant پلتفرم تعلق دارد.
- * tenant(های) پلتفرم از env تعیین می‌شوند (PLATFORM_ADMIN_TENANT_ID).
+ * مدیر پلتفرم = یک staff با role='owner' که به tenant پلتفرم تعلق دارد.
+ * tenant پلتفرم از env تعیین می‌شود (PLATFORM_ADMIN_TENANT_ID).
  *
- * fail-closed: بدون allowlist صریح هیچ‌کس مدیر پلتفرم نیست. اگر متغیر
- * خالی/ست‌نشده باشد، دسترسی رد می‌شود — نه باز. چند تنانت با کاما جدا می‌شوند.
+ * ⚠️ امنیت (C2): اگر PLATFORM_ADMIN_TENANT_ID تنظیم نشده باشد، دسترسی رد می‌شود
+ * (fail-closed). قبلاً اگر این env غایب بود، چک tenant کلاً نادیده گرفته می‌شد و
+ * «هر» صاحب رستورانی به پنل شرکت/پلتفرم دسترسی پیدا می‌کرد (نشت کامل عایق‌بندی
+ * multi-tenant). حالا نبودِ پیکربندی = هیچ‌کس دسترسی ندارد، نه همه.
  */
 export function adminAuthFromRequest(req: Request): { sub: string; tenantId: string } {
   const h = req.headers.get('authorization');
@@ -16,15 +18,12 @@ export function adminAuthFromRequest(req: Request): { sub: string; tenantId: str
   if (payload.kind !== 'staff' || payload.role !== 'owner') {
     throw Err.forbidden('دسترسی مدیر پلتفرم لازم است');
   }
-  const allowlist = (process.env.PLATFORM_ADMIN_TENANT_ID ?? '')
-    .split(',')
-    .map((t) => t.trim())
-    .filter(Boolean);
-  if (allowlist.length === 0) {
-    // misconfiguration: هیچ تنانت پلتفرمی تعریف نشده — fail-closed.
+  const platformTenant = process.env.PLATFORM_ADMIN_TENANT_ID;
+  // fail-closed: بدون پیکربندی tenant پلتفرم، هیچ دسترسی admin داده نمی‌شود.
+  if (!platformTenant) {
     throw Err.forbidden('پنل شرکت پیکربندی نشده است');
   }
-  if (!allowlist.includes(payload.tenantId)) {
+  if (payload.tenantId !== platformTenant) {
     throw Err.forbidden('این حساب دسترسی پنل شرکت ندارد');
   }
   return { sub: payload.sub, tenantId: payload.tenantId };

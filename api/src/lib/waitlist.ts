@@ -1,5 +1,6 @@
 import { db } from './db';
 import { redis } from './redis';
+import { metrics } from './metrics';
 import { Err } from './errors';
 import { enqueueSms } from './sms';
 import { queuePush, queueEmail } from './notify';
@@ -178,10 +179,10 @@ export async function promoteNext(restaurantId: string): Promise<{ promoted: boo
   });
   if (!next) return { promoted: false };
 
-  // پیدا کردن یک میز آزادِ اکنون برای این گروه (تخصیص خودکار)
+  // پیدا کردن میزهای کاندید آزادِ اکنون برای این گروه (تخصیص خودکار)
   const now = new Date();
   const horizon = new Date(+now + AVG_DINING_MINUTES * 60_000);
-  const tables = await db.table.findMany({
+  const candidates = await db.table.findMany({
     where: {
       restaurantId, isActive: true, state: 'free',
       capacity: { gte: next.partySize }, minPartySize: { lte: next.partySize },
@@ -189,43 +190,60 @@ export async function promoteNext(restaurantId: string): Promise<{ promoted: boo
     orderBy: [{ priority: 'desc' }, { capacity: 'asc' }],
     select: { id: true, number: true },
   });
-  // چک تداخل رزرو برای هر میز کاندید
-  let chosen: { id: string; number: number } | null = null;
-  for (const t of tables) {
-    const conflict = await db.reservation.count({
-      where: {
-        tableId: t.id,
-        status: { in: ['pending', 'confirmed', 'auto_confirmed', 'arrived', 'checked_in', 'seated'] },
-        slotStart: { lt: horizon }, slotEnd: { gt: now },
-      },
-    });
-    if (conflict === 0) { chosen = t; break; }
-  }
-  if (!chosen) return { promoted: false }; // میزی آزاد نیست، در صف می‌ماند
+  if (candidates.length === 0) return { promoted: false };
 
-  // آفر: وضعیت offered + تایمر انقضا + رزرو میز موقت (با علامت‌گذاری میز)
-  // ⚠️ همزمانی: گاردِ status='waiting' داخل updateMany تا اگر دو فراخوانی همزمان
-  // (cron + declineOffer) همین نفر را برداشتند، فقط یکی واقعاً آفر بدهد (count=1)
-  // و میز دوبار reserve/notify نشود. (declineOffer/leaveWaitlist هم همین الگو را دارند.)
   const offerExpiresAt = new Date(+now + OFFER_TTL_MINUTES * 60_000);
-  const won = await db.$transaction(async (tx) => {
-    const claimed = await tx.waitlistEntry.updateMany({
-      where: { id: next.id, status: 'waiting' },
-      data: {
-        status: 'offered', offeredAt: now, offerExpiresAt,
-        offeredTableId: chosen!.id, offeredTableNumber: chosen!.number,
-      },
-    });
-    if (claimed.count === 0) return false; // رقیب همزمان زودتر این نفر را آفر داد
-    // میز را reserved کن تا به کس دیگری آفر نشود
-    await tx.table.update({ where: { id: chosen!.id }, data: { state: 'reserved' } });
-    return true;
-  });
-  if (!won) return { promoted: false };
 
-  await notifyEntry(next.id, 'offered', { table: chosen.number, ttl: OFFER_TTL_MINUTES });
-  await redis.del(`waitlist:${restaurantId}`).catch(() => {});
-  return { promoted: true, entryId: next.id, table: chosen.number };
+  // ⚠️ باگ H8: قبلاً میز کاندید با خواندنِ بدون قفل انتخاب می‌شد و سپس در یک
+  // تراکنش جدا reserved می‌شد؛ بین این دو، فراخوانی هم‌زمان دیگری (cron + یک
+  // decline) می‌توانست همان میز را به مهمان دیگری هم آفر بدهد → یک میز فیزیکی
+  // به دو نفر. حالا ادعای میز اتمیک است: داخل تراکنش، میز فقط اگر «هنوز free
+  // است» به reserved تغییر می‌کند (UPDATE شرطی). اگر رقیب زودتر گرفت (۰ ردیف)،
+  // سراغ کاندید بعدی می‌رویم. علاوه بر آن، خود چک تداخل رزرو هم داخل همان تراکنش
+  // بعد از قفل‌شدن میز انجام می‌شود تا از رزروِ هم‌پوشان جا نماند.
+  for (const t of candidates) {
+    const claimed = await db.$transaction(async (tx) => {
+      // ۱) ادعای اتمیک میز: فقط اگر هنوز free است
+      const upd = await tx.$executeRaw`
+        UPDATE tables SET state = 'reserved'
+        WHERE id = ${t.id}::uuid AND state = 'free'
+      `;
+      if (upd === 0) return false; // رقیب زودتر گرفت → کاندید بعدی
+
+      // ۲) چک تداخل رزرو (حالا که میز قفل است، امن)
+      const conflict = await tx.reservation.count({
+        where: {
+          tableId: t.id,
+          status: { in: ['pending', 'confirmed', 'auto_confirmed', 'preparing', 'checked_in', 'running_late', 'arrived', 'seated', 'dining'] },
+          slotStart: { lt: horizon }, slotEnd: { gt: now },
+        },
+      });
+      if (conflict > 0) {
+        // این میز رزرو هم‌پوشان دارد → آزادش کن و کاندید بعدی
+        await tx.table.update({ where: { id: t.id }, data: { state: 'free' } });
+        return false;
+      }
+
+      // ۳) آفر به نفر اول صف
+      await tx.waitlistEntry.update({
+        where: { id: next.id },
+        data: {
+          status: 'offered', offeredAt: now, offerExpiresAt,
+          offeredTableId: t.id, offeredTableNumber: t.number,
+        },
+      });
+      return true;
+    });
+
+    if (claimed) {
+      await notifyEntry(next.id, 'offered', { table: t.number, ttl: OFFER_TTL_MINUTES });
+      await redis.del(`waitlist:${restaurantId}`).catch(() => {});
+      metrics.waitlistPromoted.inc();  // متریک: ارتقاء موفق از لیست انتظار
+      return { promoted: true, entryId: next.id, table: t.number };
+    }
+  }
+
+  return { promoted: false }; // همه‌ی کاندیدها گرفته شدند یا تداخل داشتند
 }
 
 // ── پذیرش آفر توسط مشتری → رزرو ساخته می‌شود ──
@@ -379,7 +397,7 @@ async function notifyEntry(entryId: string, kind: NotifyKind, data: Record<strin
   const m = messages[kind];
   // SMS
   if (e.notifySms && e.guestPhone && m.sms) {
-    await enqueueSms({ to: e.guestPhone, template: m.sms.template, tokens: m.sms.tokens }).catch(() => {});
+    await enqueueSms({ to: e.guestPhone, template: m.sms.template, tokens: m.sms.tokens, restaurantId: e.restaurantId }).catch(() => {});
   }
   // Push
   if (e.notifyPush && e.userId) {

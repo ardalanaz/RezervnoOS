@@ -33,12 +33,37 @@ const log = createLogger('db');
 const g = globalThis as unknown as {
   prismaPrimary?: PrismaClient;
   prismaReplica?: PrismaClient;
+  dbShutdownHooked?: boolean;
   shutdownHooked?: boolean;
+  dbMetricsHooked?: boolean;
 };
 
+// اتصال به دیتابیس با pool محدود (حیاتی در ۱۰k همزمان).
+// در مقیاس بالا، pgbouncer حالت transaction بین app و Postgres است و هر instance
+// باید pool محدود داشته باشد تا مجموع اتصال‌ها از سقف Postgres رد نشود.
+// connection_limit و pool_timeout از env قابل تنظیم‌اند؛ اگر در URL نباشند، افزوده می‌شوند.
+function withPoolParams(url: string): string {
+  try {
+    const u = new URL(url);
+    // connection_limit: تعداد اتصال هر instance. پیش‌فرض محافظه‌کارانه؛ در deploy
+    // با N instance، مقدار = (سقف اتصال Postgres ÷ N) را در env تنظیم کن.
+    if (!u.searchParams.has('connection_limit')) {
+      u.searchParams.set('connection_limit', process.env.DB_CONNECTION_LIMIT || '10');
+    }
+    // pool_timeout: چند ثانیه صبر برای اتصال آزاد قبل از خطا (به‌جای انتظار بی‌نهایت).
+    if (!u.searchParams.has('pool_timeout')) {
+      u.searchParams.set('pool_timeout', process.env.DB_POOL_TIMEOUT || '10');
+    }
+    return u.toString();
+  } catch {
+    return url; // اگر URL قابل‌parse نبود، دست‌نخورده برگردان
+  }
+}
+
 function makeClient(url: string | undefined): PrismaClient {
+  const finalUrl = url ? withPoolParams(url) : undefined;
   return new PrismaClient({
-    ...(url ? { datasources: { db: { url } } } : {}),
+    ...(finalUrl ? { datasources: { db: { url: finalUrl } } } : {}),
     log: [{ level: 'error', emit: 'event' }, { level: 'warn', emit: 'event' }],
   });
 }
@@ -51,9 +76,41 @@ export const db = g.prismaPrimary ?? makeClient(process.env.DATABASE_URL);
 export const dbRead = g.prismaReplica
   ?? (process.env.DATABASE_REPLICA_URL ? makeClient(process.env.DATABASE_REPLICA_URL) : db);
 
-if (process.env.NODE_ENV !== 'production') {
-  g.prismaPrimary = db;
-  if (dbRead !== db) g.prismaReplica = dbRead;
+// ⚠️ باگ H4: کلاینت‌ها باید «همیشه» روی globalThis کش شوند، نه فقط در non-production.
+// قبلاً این کش فقط در حالت توسعه انجام می‌شد؛ در production هر بار که ماژول دوباره
+// ارزیابی می‌شد (بارگذاری route، مسیرهای serverless، چند entrypoint) یک PrismaClient
+// جدید با pool مستقل ساخته می‌شد و اتصال‌ها تا سقف Postgres (~۶۰ در Supabase) پر
+// می‌شدند و کل API با «too many connections» می‌افتاد. حالا در هر محیطی singleton است.
+g.prismaPrimary = db;
+if (dbRead !== db) g.prismaReplica = dbRead;
+
+// ── متریکِ latency دیتابیس: هر کوئری زمان‌سنجی می‌شود (یک‌بار نصب می‌شود) ──
+// چرا مهم است: بدون این نمی‌فهمی کندیِ سیستم از DB است یا از کد. سیگنالِ حیاتیِ مانیتورینگ.
+if (!g.dbMetricsHooked) {
+  g.dbMetricsHooked = true;
+  // import تنبل تا چرخه‌ی وابستگی ایجاد نشود (metrics ممکن است db را نخواهد، ولی محتاطیم)
+  import('./metrics').then(({ metrics }) => {
+    const timer = async (params: unknown, next: (p: unknown) => Promise<unknown>) => {
+      const t0 = Date.now();
+      try { return await next(params); }
+      finally { metrics.dbDuration.observe((Date.now() - t0) / 1000); }
+    };
+    // $use روی هر دو کلاینت (primary و replica اگر جداست)
+    (db as unknown as { $use: (m: unknown) => void }).$use(timer);
+    if (dbRead !== db) (dbRead as unknown as { $use: (m: unknown) => void }).$use(timer);
+  }).catch(() => { /* اگر metrics در دسترس نبود، بی‌خطر رد شو */ });
+}
+
+// ── خاموشی تمیز: بستن اتصال‌ها روی سیگنال‌های خاتمه (جلوگیری از نشت اتصال هنگام deploy) ──
+if (!g.dbShutdownHooked) {
+  g.dbShutdownHooked = true;
+  const closeAll = async () => {
+    try { await db.$disconnect(); } catch { /* بستن best-effort */ }
+    if (dbRead !== db) { try { await dbRead.$disconnect(); } catch { /* */ } }
+  };
+  process.once('SIGTERM', closeAll);
+  process.once('SIGINT', closeAll);
+  process.once('beforeExit', closeAll);
 }
 
 // ═══════════════════════════════════════════════════════════

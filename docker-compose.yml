@@ -28,11 +28,13 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    # امنیت (CWE-306): احراز هویت با رمز حتی روی شبکه‌ی داخلی (دفاع در عمق).
+    # اگر کانتینر دیگری هک شود، Redis بدون رمز هدف حرکت جانبی است.
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?رمز Redis را در .env تنظیم کن} --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -48,8 +50,13 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # اتصال مستقیم به Postgres محلی (بدون pooler) — pgbouncer لازم نیست.
+      # ⚠️ L9: اگر به pooler حالت transaction (مثل Supabase pgbouncer) مهاجرت کردی،
+      #   حتماً «?pgbouncer=true&connection_limit=1» را به انتهای URL اضافه کن، وگرنه
+      #   prepared statementهای Prisma با خطای «prepared statement already exists» می‌شکنند.
+      #   و برای migrationها یک DATABASE_DIRECT_URL جدا (اتصال مستقیم) بگذار.
       DATABASE_URL: postgresql://${POSTGRES_USER:-rezervno}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rezervno}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET:?کلید JWT را در .env تنظیم کن}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?کلید refresh را در .env تنظیم کن}
       NODE_ENV: production

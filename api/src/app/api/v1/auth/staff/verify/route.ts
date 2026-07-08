@@ -17,10 +17,12 @@ export async function POST(req: Request) {
       include: { tenant: { select: { id: true, restaurants: { select: { id: true, name: true }, take: 1 } } } },
     });
     if (!staff) throw Err.forbidden('این شماره دسترسی پنل رستوران ندارد');
+    if (!staff.isActive) throw Err.forbidden('این حساب غیرفعال شده است');
     await verifyOtp(normalized, code);
     const role = (staff.role === 'owner' || staff.role === 'manager' || staff.role === 'staff') ? staff.role : 'staff';
-    const access = signAccess({ sub: staff.id, kind: 'staff', tenantId: staff.tenantId, role });
-    const refresh = signRefresh(staff.id);
+    const principal = { sub: staff.id, kind: 'staff' as const, tenantId: staff.tenantId, role };
+    const access = signAccess(principal);
+    const refresh = signRefresh(principal);
     return NextResponse.json({
       access, refresh,
       staff: { id: staff.id, role, tenant_id: staff.tenantId, restaurant_id: staff.tenant.restaurants[0]?.id || null, restaurant_name: staff.tenant.restaurants[0]?.name || null },

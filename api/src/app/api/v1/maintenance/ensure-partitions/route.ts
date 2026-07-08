@@ -38,3 +38,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, partitions: results });
   } catch (e) { return errorResponse(e); }
 }
+
+// Vercel Cron از GET استفاده می‌کند؛ به همان منطق POST وصلش می‌کنیم.
+export const GET = POST;

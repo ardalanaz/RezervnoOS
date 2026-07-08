@@ -40,6 +40,20 @@ export const GET = withRestaurantAuth(
       `;
       const peakHours = hourRows.map(r => ({ hour: r.hour, count: Number(r.cnt) }));
 
+      // ── نقشه‌ی حرارتیِ اشغال: روزِ هفته × ساعت (برای دیدنِ الگوهای شلوغی) ──
+      // DOW در Postgres: 0=یکشنبه..6=شنبه. ساعت‌های سرویس معمولاً ۱۲..۲۴.
+      const heatRows = await db.$queryRaw<{ dow: number; hour: number; cnt: bigint }[]>`
+        SELECT EXTRACT(DOW FROM slot_start)::int AS dow,
+               EXTRACT(HOUR FROM slot_start)::int AS hour,
+               COUNT(*)::bigint AS cnt
+        FROM reservations
+        WHERE restaurant_id = ${restaurant.id}::uuid
+          AND slot_start >= ${sinceDays(90)}
+          AND status IN ('confirmed','arrived','seated','completed')
+        GROUP BY dow, hour
+      `;
+      const heatmap = heatRows.map(r => ({ dow: r.dow, hour: r.hour, count: Number(r.cnt) }));
+
       const since28 = sinceDays(28);
       const weekRows = await db.$queryRaw<{ wk: number; cnt: bigint }[]>`
         SELECT FLOOR(EXTRACT(EPOCH FROM (now() - slot_start)) / (7*86400))::int AS wk, COUNT(*)::bigint AS cnt
@@ -62,6 +76,7 @@ export const GET = withRestaurantAuth(
         visit_distribution: visitCountDist,
         weekly_reservations: weekly,
         peak_hours: peakHours,
+        heatmap,
       };
     });
     return NextResponse.json(data);

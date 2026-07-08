@@ -1,4 +1,5 @@
 import { redis } from './redis';
+import { metrics } from './metrics';
 
 // ═══════════════════════════════════════════════════════════
 //  لایه‌ی Cache مرکزی — الگوی cache-aside با Redis
@@ -19,8 +20,9 @@ import { redis } from './redis';
 export async function cached<T>(key: string, ttlSec: number, fetcher: () => Promise<T>): Promise<T> {
   try {
     const hit = await redis.get(`cache:${key}`);
-    if (hit !== null) return JSON.parse(hit) as T;
+    if (hit !== null) { metrics.cacheHits.inc(); return JSON.parse(hit) as T; }
   } catch { /* cache miss on error — به دیتابیس برو */ }
+  metrics.cacheMisses.inc();
 
   const data = await fetcher();
   try {
@@ -45,9 +47,14 @@ export async function invalidatePattern(pattern: string): Promise<number> {
     do {
       const [next, keys] = await redis.scan(cursor, 'MATCH', `cache:${pattern}`, 'COUNT', 100);
       cursor = next;
-      if (keys.length > 0) { await redis.del(...keys); count += keys.length; }
+      // ⚠️ باگ M13: DEL چندکلیدی روی Redis Cluster اگر کلیدها روی slotهای مختلف
+      // باشند خطای CROSSSLOT می‌دهد. حذف تک‌به‌تک با Cluster سازگار است.
+      for (const k of keys) {
+        await redis.del(k).catch(() => {});
+        count++;
+      }
     } while (cursor !== '0');
-  } catch { /* */ }
+  } catch { /* باطل‌سازی نباید مسیر اصلی را بشکند؛ TTL در نهایت پاک می‌کند */ }
   return count;
 }
 

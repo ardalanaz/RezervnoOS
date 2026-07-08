@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { redis } from './redis';
 import { Err } from './errors';
 import { createLogger } from './logger';
@@ -35,7 +36,7 @@ export async function rateLimit(
   const key = `rl:${rule.prefix}:${identifier}`;
   const now = Date.now();
   const windowStart = now - rule.windowMs;
-  const member = `${now}-${Math.random().toString(36).slice(2, 10)}`;
+  const member = `${now}-${randomUUID()}`;
 
   const pipe = redis.multi();
   pipe.zremrangebyscore(key, 0, windowStart);   // ۱) حذف خارج از پنجره
@@ -75,16 +76,40 @@ export async function enforceRateLimit(
 }
 
 /**
- * استخراج IP کلاینت. پشت CDN، IP واقعی در X-Forwarded-For/X-Real-IP/CF-Connecting-IP.
- * هشدار: این هدرها قابل جعل‌اند مگر پشت پروکسی معتمد که آن‌ها را بازنویسی کند.
+ * استخراج IP کلاینت — امن در برابر جعل (باگ H10).
+ *
+ * قبلاً اولین مقدار X-Forwarded-For خوانده می‌شد که کاملاً توسط کلاینت قابل تعیین
+ * است؛ مهاجم می‌توانست با ست‌کردن XFF دلخواه، سطل rate-limit تازه بگیرد (دور زدن
+ * محدودیت و بن) یا IP قربانی را بن کند (DoS).
+ *
+ * اصلاح چندلایه:
+ *  ۱) اولویت با X-Real-IP است که پروکسی معتمد (nginx) از روی اتصال واقعی
+ *     ($remote_addr) ست می‌کند و کلاینت نمی‌تواند آن را جعل کند (nginx بازنویسی
+ *     می‌کند نه append). CF-Connecting-IP هم مورد اعتماد Cloudflare است.
+ *  ۲) اگر فقط XFF داریم، «راست‌ترین» مقدار خوانده می‌شود (نزدیک‌ترین هاپ به سرور،
+ *     که پروکسی افزوده)، نه چپ‌ترین که کلاینت کنترل می‌کند.
+ *
+ * توجه: nginx در این پروژه XFF را با $remote_addr بازنویسی می‌کند، پس هم X-Real-IP
+ * و هم XFF قابل‌اعتمادند. در استقرار بدون پروکسی معتمد، این هدرها نباید باور شوند
+ * (متغیر TRUST_PROXY_HEADERS=false این را کنترل می‌کند).
  */
 export function clientIp(req: Request): string {
-  const xff = req.headers.get('x-forwarded-for');
-  if (xff) return xff.split(',')[0].trim();
-  const real = req.headers.get('x-real-ip');
-  if (real) return real.trim();
-  const cf = req.headers.get('cf-connecting-ip');
-  if (cf) return cf.trim();
+  const trustProxy = process.env.TRUST_PROXY_HEADERS !== 'false'; // پیش‌فرض: معتمد (پشت nginx)
+
+  if (trustProxy) {
+    // X-Real-IP: پروکسی معتمد آن را از اتصال واقعی ست می‌کند (غیرقابل جعل توسط کلاینت).
+    const real = req.headers.get('x-real-ip');
+    if (real) return real.trim();
+    // Cloudflare
+    const cf = req.headers.get('cf-connecting-ip');
+    if (cf) return cf.trim();
+    // XFF: راست‌ترین مقدار = هاپی که پروکسی افزوده (نه چپ‌ترینِ کلاینت‌محور).
+    const xff = req.headers.get('x-forwarded-for');
+    if (xff) {
+      const parts = xff.split(',').map(s => s.trim()).filter(Boolean);
+      if (parts.length) return parts[parts.length - 1];
+    }
+  }
   return 'unknown';
 }
 
@@ -133,4 +158,42 @@ export function rateLimitHeaders(r: RateLimitResult, rule: RateLimitRule): Recor
     'RateLimit-Remaining': String(r.remaining),
     'RateLimit-Reset': String(Math.ceil((r.resetAt - Date.now()) / 1000)),
   };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  In-Memory Rate Limit — fallback وقتی Redis در دسترس نیست.
+//
+//  چرا: middleware با fail-open کار می‌کند (اگر Redis قطع شود، عبور می‌دهد) تا
+//  کل API سقوط نکند. ولی fail-open خالص، درِ DDoS را باز می‌گذارد. این لایه یک
+//  سقفِ حداقلیِ per-process می‌گذارد که حتی بدونِ Redis کار می‌کند.
+//
+//  محدودیت‌ها (صادقانه): این per-instance است، نه سراسری — با چند instance، سقفِ
+//  واقعی = max × تعدادِ instance. ولی همین هم بی‌نهایت بهتر از «هیچ سقفی» است و
+//  یک حمله‌ی ساده را کند می‌کند تا Redis برگردد. حافظه هم خودش پاک می‌شود (پنجره‌ای).
+// ═══════════════════════════════════════════════════════════
+const memBuckets = new Map<string, { count: number; resetAt: number }>();
+let lastSweep = Date.now();
+
+/** rate limit درون‌حافظه‌ای (fallback بدونِ Redis). همان امضای خروجیِ rateLimit. */
+export function rateLimitInMemory(ip: string, rule: RateLimitRule): RateLimitResult {
+  const now = Date.now();
+  const key = `${rule.prefix}:${ip}`;
+
+  // پاک‌سازیِ دوره‌ای کلیدهای منقضی (هر ۶۰s) تا حافظه رشد نکند
+  if (now - lastSweep > 60_000) {
+    for (const [k, v] of memBuckets) if (v.resetAt <= now) memBuckets.delete(k);
+    lastSweep = now;
+  }
+
+  const b = memBuckets.get(key);
+  if (!b || b.resetAt <= now) {
+    memBuckets.set(key, { count: 1, resetAt: now + rule.windowMs });
+    return { allowed: true, remaining: rule.max - 1, resetAt: now + rule.windowMs, retryAfterSec: 0 };
+  }
+  b.count++;
+  if (b.count > rule.max) {
+    const retryAfterSec = Math.max(1, Math.ceil((b.resetAt - now) / 1000));
+    return { allowed: false, remaining: 0, resetAt: b.resetAt, retryAfterSec };
+  }
+  return { allowed: true, remaining: Math.max(0, rule.max - b.count), resetAt: b.resetAt, retryAfterSec: 0 };
 }
