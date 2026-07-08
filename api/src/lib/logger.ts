@@ -58,9 +58,19 @@ async function sendToSentry(level: LogLevel, scope: string, msg: string, meta?: 
   }
 }
 
-function safeMeta(meta: unknown): unknown {
+// کلیدهای حساس که هرگز نباید در لاگ ظاهر شوند (CWE-532 — نشت داده در لاگ).
+const SENSITIVE_KEYS = /^(password|pass|secret|token|access|refresh|jwt|authorization|auth|otp|code|apikey|api_key|cookie|session|creditcard|cvv)$/i;
+
+function safeMeta(meta: unknown, depth = 0): unknown {
   if (meta instanceof Error) return { name: meta.name, message: meta.message, stack: meta.stack };
-  return meta;
+  if (meta === null || typeof meta !== 'object' || depth > 4) return meta;
+  if (Array.isArray(meta)) return meta.map((x) => safeMeta(x, depth + 1));
+  // بازنویسی recursive: هر کلید حساس → [REDACTED]
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(meta as Record<string, unknown>)) {
+    out[k] = SENSITIVE_KEYS.test(k) ? '[REDACTED]' : safeMeta(v, depth + 1);
+  }
+  return out;
 }
 
 function emit(level: LogLevel, scope: string, msg: string, meta?: unknown) {

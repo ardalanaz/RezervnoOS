@@ -39,7 +39,7 @@ export async function GET(req: Request) {
       // اقدامات حساس اخیر (حذف، تغییر دسترسی، و...)
       db.auditLog.findMany({
         where: {
-          action: { in: ['restaurant.deactivated', 'staff.permission_changed', 'coupon.created', 'plan.changed'] },
+          action: { in: ['restaurant.deactivated', 'restaurant.activated', 'staff.permission_change', 'plan.changed', 'subscription.cancelled', 'coupon.created'] },
           createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) },
         },
         select: { action: true, actorId: true, restaurantId: true, detail: true, createdAt: true },

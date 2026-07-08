@@ -73,12 +73,14 @@ export async function sendSmsNow(job: SmsJob): Promise<void> {
     const data = await res.json().catch(() => null);
     if (!res.ok || data?.return?.status !== 200) {
       log.error(`ارسال ناموفق → ${receptor}`, { template: job.template, reason: data?.return?.message || res.status });
+      metrics.smsFailed.inc({ template: job.template, reason: 'rejected' });
       return;
     }
     log.info(`ارسال شد → ${receptor}`, { template: job.template });
     metrics.smsSent.inc({ template: job.template });
   } catch (e) {
     log.error(`خطای شبکه → ${receptor}`, { template: job.template, error: (e as Error).message });
+    metrics.smsFailed.inc({ template: job.template, reason: 'network' });
     throw e; // به worker اجازه بده retry را تصمیم بگیرد
   }
 }

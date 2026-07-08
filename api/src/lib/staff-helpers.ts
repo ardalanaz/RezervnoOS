@@ -7,7 +7,7 @@ export async function resolveStaffRestaurant(auth: AccessPayload) {
   if (auth.kind !== 'staff') throw Err.forbidden();
   const restaurant = await db.restaurant.findFirst({
     where: { tenantId: auth.tenantId },
-    select: { id: true, name: true, slug: true, cbBasePct: true, cbPreorderPct: true, cbVipPct: true, cbWinbackPct: true },
+    select: { id: true, name: true, slug: true, clubPrefix: true, cbBasePct: true, cbPreorderPct: true, cbVipPct: true, cbWinbackPct: true },
   });
   if (!restaurant) throw Err.notFound('رستورانی برای این حساب یافت نشد');
   return restaurant;

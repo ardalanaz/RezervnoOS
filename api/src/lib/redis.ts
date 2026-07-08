@@ -18,7 +18,7 @@ import Redis, { Cluster } from 'ioredis';
 //     تعیین نود hash شود. قفل ما تک‌کلیدی است پس امن است.
 // ═══════════════════════════════════════════════════════════════════════
 
-const g = globalThis as unknown as { redis?: Redis | Cluster };
+const g = globalThis as unknown as { redis?: Redis | Cluster; redisShutdownHooked?: boolean };
 
 function makeRedis(): Redis | Cluster {
   const clusterNodes = process.env.REDIS_CLUSTER_NODES?.split(',').map(s => s.trim()).filter(Boolean);
@@ -36,15 +36,40 @@ function makeRedis(): Redis | Cluster {
   return new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: 3 });
 }
 
+// ⚠️ باگ H5: مثل Prisma، اتصال Redis باید «همیشه» singleton باشد نه فقط در توسعه.
+// قبلاً در production هر بار بارگذاری ماژول یک اتصال جدید می‌ساخت و هیچ‌کدام بسته
+// نمی‌شدند → شمار اتصال Redis تا رد شدن اتصال‌های جدید بالا می‌رفت و rate-limit،
+// قفل و cache هم‌زمان می‌شکستند. حالا در هر محیطی روی globalThis کش می‌شود.
 export const redis = g.redis ?? makeRedis();
-if (process.env.NODE_ENV !== 'production') g.redis = redis;
+g.redis = redis;
+
+// خاموشی تمیز: بستن اتصال روی سیگنال خاتمه (جلوگیری از نشت socket هنگام هر deploy)
+if (!g.redisShutdownHooked) {
+  g.redisShutdownHooked = true;
+  const closeRedis = () => { redis.quit().catch(() => { redis.disconnect(); }); };
+  process.once('SIGTERM', closeRedis);
+  process.once('SIGINT', closeRedis);
+  process.once('beforeExit', closeRedis);
+}
 
 /** قفل کوتاه‌مدت رزرو — لایه اول جلوگیری از double-booking.
- *  از hash-tag {} استفاده می‌کنیم تا در حالت Cluster، کلید قفل روی یک نود پایدار بماند. */
+ *  از hash-tag {} استفاده می‌کنیم تا در حالت Cluster، کلید قفل روی یک نود پایدار بماند.
+ *
+ *  ⚠️ باگ M6: قبلاً اگر قفل آزاد نبود بلافاصله خطای ۴۲۳ می‌داد؛ یعنی دو کاربر که
+ *  هم‌زمان همان اسلات را می‌گرفتند، دومی رد می‌شد حتی اگر میز دیگری آزاد بود. حالا
+ *  چند بار با backoff کوتاه تلاش می‌کنیم؛ فقط اگر واقعاً قفل طولانی نگه داشته شده
+ *  خطا می‌دهیم. منبع حقیقت نهایی، تراکنش serializable در دیتابیس است. */
 export async function withSlotLock<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
   const token = crypto.randomUUID();
   const lockKey = `lock:{${key}}`; // hash-tag: فقط {key} برای تعیین نود hash می‌شود
-  const ok = await redis.set(lockKey, token, 'PX', ttlMs, 'NX');
+  // تلاش برای گرفتن قفل با backoff نمایی کوتاه (۵ تلاش، مجموعاً ~۳۰۰ms).
+  let ok: string | null = null;
+  const delays = [0, 40, 80, 120, 160];
+  for (const d of delays) {
+    if (d) await new Promise(r => setTimeout(r, d));
+    ok = await redis.set(lockKey, token, 'PX', ttlMs, 'NX');
+    if (ok) break;
+  }
   if (!ok) throw (await import('./errors')).Err.lockTimeout();
   try { return await fn(); }
   finally {

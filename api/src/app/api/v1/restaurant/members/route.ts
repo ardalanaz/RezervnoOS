@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { dbRead as db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 
 /** GET — لیست اعضای باشگاه (?q= جستجو، ?limit=&offset= صفحه‌بندی). مهاجرت‌شده به wrapper. */

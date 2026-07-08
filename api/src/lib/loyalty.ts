@@ -155,9 +155,16 @@ export async function createGiftCard(opts: {
   return { code: card.code, amount_toman: card.amountToman, expires_at: card.expiresAt };
 }
 
+// M10: نرمال‌سازی یکسان کد کارت هدیه — کدها همیشه Base32 بزرگ ذخیره می‌شوند،
+// پس ورودی هم باید uppercase+trim شود تا check و redeem هر دو یکسان رفتار کنند
+// (قبلاً redeem uppercase می‌کرد ولی check نه → «کارت پیدا نشد» ناسازگار).
+function normalizeGiftCode(code: string): string {
+  return String(code || '').trim().toUpperCase();
+}
+
 // بررسی موجودی کارت هدیه
 export async function checkGiftCard(code: string) {
-  const card = await db.giftCard.findUnique({ where: { code } });
+  const card = await db.giftCard.findUnique({ where: { code: normalizeGiftCode(code) } });
   if (!card) throw Err.notFound('کارت هدیه');
   const valid = card.status === 'active' && (!card.expiresAt || card.expiresAt > new Date());
   return {
@@ -189,7 +196,7 @@ export async function redeemGiftCardTx(tx: any, code: string, amountToman: numbe
   }
   // قفل ردیف کارت (FOR UPDATE) — ضد double-spend همزمان
   const locked = await tx.$queryRaw<{ id: string; balance_toman: number; status: string; expires_at: Date | null }[]>`
-    SELECT id, balance_toman, status, expires_at FROM gift_cards WHERE code = ${code.toUpperCase()} FOR UPDATE
+    SELECT id, balance_toman, status, expires_at FROM gift_cards WHERE code = ${normalizeGiftCode(code)} FOR UPDATE
   `;
   const card = locked[0];
   if (!card) throw Err.notFound('کارت هدیه');
@@ -212,32 +219,26 @@ export async function grantBirthdayRewards(): Promise<{ birthday: number; annive
   const mm = today.getMonth() + 1;
   const dd = today.getDate();
 
-  // کاربرانی که امروز تولدشان است
-  const birthdayUsers = await db.$queryRaw<{ id: string }[]>`
-    SELECT id FROM users
+  // کاربرانی که امروز تولدشان است — نام و تلفن را یک‌جا می‌گیریم (بدون N+1)
+  const birthdayUsers = await db.$queryRaw<{ id: string; phone: string | null; first_name: string | null }[]>`
+    SELECT id, phone, first_name FROM users
     WHERE birth_date IS NOT NULL
       AND EXTRACT(MONTH FROM birth_date) = ${mm}
       AND EXTRACT(DAY FROM birth_date) = ${dd}
   `;
+  // PERF: چک dedup با findFirst حذف شد — ایندکس یکتای uniq_annual_reward خودش
+  // پاداش دوگانه را قطعی جلوگیری می‌کند و catch روی P2002 مسابقه را مدیریت می‌کند.
+  // پس به‌جای ۳ کوئری per user (dedup + addPoints + phone)، فقط addPoints می‌ماند.
   for (const u of birthdayUsers) {
-    // جلوگیری از اعطای دوباره در همان سال
-    const already = await db.pointsLedger.findFirst({
-      where: { userId: u.id, reason: 'birthday', createdAt: { gte: new Date(today.getFullYear(), 0, 1) } },
-    });
-    if (!already) {
-      // NEW-M1: اگر اجرای همزمان دیگری زودتر insert کرد، unique index خطا می‌دهد →
-      // catch می‌کنیم و رد می‌شویم (پاداش دوگانه نمی‌دهیم، crash هم نمی‌کنیم).
-      try {
-        await addPoints({ userId: u.id, delta: POINTS.birthday, reason: 'birthday', note: 'هدیه‌ی تولد 🎂' });
-        const usr = await db.user.findUnique({ where: { id: u.id }, select: { phone: true, firstName: true } });
-        if (usr?.phone) await enqueueSms({ to: usr.phone, template: 'campaign', tokens: [usr.firstName ?? 'دوست عزیز', String(POINTS.birthday)] }).catch(() => {});
-      } catch (e: any) {
-        if (e?.code !== 'P2002') throw e; // فقط unique violation را نادیده بگیر
-      }
+    try {
+      await addPoints({ userId: u.id, delta: POINTS.birthday, reason: 'birthday', note: 'هدیه‌ی تولد 🎂' });
+      if (u.phone) await enqueueSms({ to: u.phone, template: 'campaign', tokens: [u.first_name ?? 'دوست عزیز', String(POINTS.birthday)] }).catch(() => {});
+    } catch (e: any) {
+      if (e?.code !== 'P2002') throw e; // فقط پاداش تکراری (unique violation) را رد کن
     }
   }
 
-  // سالگرد
+  // سالگرد — همان الگو
   const annivUsers = await db.$queryRaw<{ id: string }[]>`
     SELECT id FROM users
     WHERE anniversary_date IS NOT NULL
@@ -245,15 +246,10 @@ export async function grantBirthdayRewards(): Promise<{ birthday: number; annive
       AND EXTRACT(DAY FROM anniversary_date) = ${dd}
   `;
   for (const u of annivUsers) {
-    const already = await db.pointsLedger.findFirst({
-      where: { userId: u.id, reason: 'anniversary', createdAt: { gte: new Date(today.getFullYear(), 0, 1) } },
-    });
-    if (!already) {
-      try {
-        await addPoints({ userId: u.id, delta: POINTS.anniversary, reason: 'anniversary', note: 'هدیه‌ی سالگرد 💍' });
-      } catch (e: any) {
-        if (e?.code !== 'P2002') throw e; // NEW-M1: unique violation از اجرای همزمان را نادیده بگیر
-      }
+    try {
+      await addPoints({ userId: u.id, delta: POINTS.anniversary, reason: 'anniversary', note: 'هدیه‌ی سالگرد 💍' });
+    } catch (e: any) {
+      if (e?.code !== 'P2002') throw e; // پاداش تکراری از اجرای همزمان را نادیده بگیر
     }
   }
 

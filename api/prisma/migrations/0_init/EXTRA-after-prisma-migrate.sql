@@ -32,6 +32,10 @@ ALTER TABLE reservations
 
 -- ── EXCLUDE constraint: هیچ دو رزرو فعالی روی یک میز نباید بازه‌ی مؤثرشان هم‌پوشانی کند ──
 -- بازه‌ی مؤثر = [slot_start, block_end) که شامل زمان نظافت است.
+-- ⚠️ مجموعه‌ی وضعیت‌ها باید دقیقاً با ACTIVE_RESERVATION_STATUSES در
+--    src/lib/reservation-status.ts یکی باشد (باگ C1: قبلاً ناقص بود و
+--    وضعیت‌های auto_confirmed/preparing/checked_in/running_late/dining را
+--    پوشش نمی‌داد → امکان double-booking در آن وضعیت‌ها).
 ALTER TABLE reservations DROP CONSTRAINT IF EXISTS no_table_overlap;
 ALTER TABLE reservations ADD CONSTRAINT no_table_overlap
   EXCLUDE USING gist (
@@ -39,15 +43,16 @@ ALTER TABLE reservations ADD CONSTRAINT no_table_overlap
     tsrange(slot_start, block_end) WITH &&
   )
   WHERE (
-    status IN ('pending','confirmed','arrived','seated')
+    status IN ('pending','confirmed','auto_confirmed','preparing','checked_in','running_late','arrived','seated','dining')
     AND table_id IS NOT NULL
   );
 
 -- ── ایندکس‌های عملکرد (مکمل ایندکس‌های Prisma) ──
 -- برای کوئری تداخل و داشبورد در ساعات شلوغ:
+DROP INDEX IF EXISTS idx_resv_table_active_range;
 CREATE INDEX IF NOT EXISTS idx_resv_table_active_range
   ON reservations USING gist (table_id, tsrange(slot_start, block_end))
-  WHERE status IN ('pending','confirmed','arrived','seated');
+  WHERE status IN ('pending','confirmed','auto_confirmed','preparing','checked_in','running_late','arrived','seated','dining');
 
 -- برای پاکسازی هولدهای منقضی:
 CREATE INDEX IF NOT EXISTS idx_resv_hold_expiry

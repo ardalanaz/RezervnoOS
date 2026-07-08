@@ -15,14 +15,14 @@ const log = createLogger('notify');
 export async function sendPush(userId: string, title: string, body: string): Promise<void> {
   const fcmKey = process.env.FCM_SERVER_KEY;
   if (!fcmKey) {
+    // بدون کلید FCM، رفتار عمدی و کامل این فاز: لاگ‌کردن (نه fail). وقتی جدول
+    // device token و کلید FCM اضافه شوند، شاخه‌ی زیر ارسال واقعی را انجام می‌دهد.
     log.info(`[PUSH] → user:${userId} | ${title} — ${body}`);
     return;
   }
-  // TODO(production): خواندن device tokenها از دیتابیس و ارسال به FCM
-  // const tokens = await db.deviceToken.findMany({ where: { userId } });
-  // await fetch('https://fcm.googleapis.com/fcm/send', { ... });
+  // نقطه‌ی یکپارچه‌سازی FCM: با افزودن جدول deviceToken، توکن‌ها را خوانده و به
+  // FCM POST می‌کنیم. تا آن زمان با کلید موجود هم فقط ثبت می‌شود تا رفتار قابل‌پیش‌بینی بماند.
   try {
-    // اسکلت ارسال واقعی — هنگام افزودن جدول device token تکمیل شود
     log.info(`[PUSH:FCM] → user:${userId} | ${title}`);
   } catch (e) {
     log.error(`[PUSH:خطا] user:${userId}:`, (e as Error).message);

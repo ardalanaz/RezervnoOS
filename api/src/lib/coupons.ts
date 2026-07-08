@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { db } from './db';
 import { Err } from './errors';
 
@@ -72,10 +73,34 @@ export async function redeemCouponAtomic(
   });
 }
 
-/** نسخه‌ی tx-aware (برای فراخوانی داخل تراکنش رزرو، بدون تراکنش تودرتو). */
+/** نسخه‌ی tx-aware (برای فراخوانی داخل تراکنش رزرو، بدون تراکنش تودرتو).
+ *
+ *  ⚠️ باگ H1: قبلاً این نسخه (که مسیر واقعی checkout از آن استفاده می‌کند) فقط
+ *  سقف کل را چک می‌کرد و perUserLimit را نادیده می‌گرفت؛ پس یک کاربر با چند
+ *  درخواست هم‌زمان می‌توانست کوپن «یک‌بار به‌ازای هر نفر» را چند بار مصرف کند.
+ *  حالا در همان تراکنش، تعداد مصرف این کاربر شمرده و در برابر perUserLimit چک
+ *  می‌شود. چون این چک داخل تراکنش رزرو اجرا می‌شود و کل مسیر با قفل اسلات +
+ *  تراکنش serializable محافظت شده، دو درخواست هم‌زمان همان کاربر سریالایز می‌شوند
+ *  و دومی سقف را پر می‌بیند. (ایندکس یکتای ثابت سطح دیتابیس اینجا مناسب نیست چون
+ *  perUserLimit per-coupon متغیر است و می‌تواند >۱ باشد؛ ایندکس یکتای بی‌قید،
+ *  کوپن‌های چندبارمصرف مجاز را هم اشتباهاً بلاک می‌کرد.)
+ *
+ *  ⚠️ باگ M1: ip اکنون ذخیره می‌شود تا داشبورد تشخیص سوءاستفاده‌ی چندحسابی کار کند.
+ */
 export async function redeemCouponAtomicTx(
-  tx: any, couponId: string, userId: string | null, reservationCode: string | null, discountToman: number,
+  tx: any, couponId: string, userId: string | null, reservationCode: string | null,
+  discountToman: number, ip?: string | null,
 ): Promise<boolean> {
+  // ── گارد per-user (فقط وقتی کاربر شناخته‌شده است) ──
+  if (userId) {
+    const coupon = await tx.coupon.findUnique({ where: { id: couponId }, select: { perUserLimit: true } });
+    const perUserLimit = coupon?.perUserLimit ?? 1;
+    if (perUserLimit > 0) {
+      const used = await tx.couponRedemption.count({ where: { couponId, userId } });
+      if (used >= perUserLimit) return false; // این کاربر به سقف شخصی رسیده
+    }
+  }
+  // ── گارد سقف کل (اتمیک: افزایش شمارنده فقط اگر ظرفیت هست) ──
   const claimed = await tx.$queryRaw<{ id: string }[]>`
     UPDATE coupons SET redemption_count = redemption_count + 1
     WHERE id = ${couponId}::uuid
@@ -83,7 +108,7 @@ export async function redeemCouponAtomicTx(
     RETURNING id
   `;
   if (claimed.length === 0) return false;
-  await tx.couponRedemption.create({ data: { couponId, userId, reservationCode, discountToman } });
+  await tx.couponRedemption.create({ data: { couponId, userId, reservationCode, discountToman, ip: ip ?? null } });
   return true;
 }
 
@@ -95,8 +120,13 @@ export async function redeemCoupon(couponId: string, userId: string | null, rese
   });
 }
 
-/** کد یکتای خوانا برای کمپین خودکار می‌سازد (مثلاً WELCOME-7K2N). */
+/** کد یکتای خوانا برای کمپین خودکار می‌سازد (مثلاً WELCOME-7K2N).
+ *  L1: از crypto امن استفاده می‌کند نه Math.random (کد قابل‌حدس‌زدن نباشد). */
 export function genCouponCode(prefix: string): string {
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  // Base32 بدون کاراکترهای مبهم (0/O/1/I) برای خوانایی
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = randomBytes(4);
+  let rand = '';
+  for (let i = 0; i < 4; i++) rand += alphabet[bytes[i] % alphabet.length];
   return `${prefix.toUpperCase()}-${rand}`;
 }

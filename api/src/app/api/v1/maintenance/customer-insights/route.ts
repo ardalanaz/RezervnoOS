@@ -21,14 +21,22 @@ export async function POST(req: Request) {
     if (denied) return denied;
 
     const restaurants = await db.restaurant.findMany({ select: { id: true } });
-    let totalUsers = 0;
-    for (const r of restaurants) {
-      totalUsers += await recomputeAllForRestaurant(r.id);
-      // RFM بعد از insights — چون به lastVisit/totalVisits/totalSpend به‌روز نیاز دارد
-      await recomputeRfmForRestaurant(r.id).catch(() => {});
-      await invalidatePattern(`customers:${r.id}:*`);
-      await invalidatePattern(`ai-recs:${r.id}`);
+
+    // ⚠️ M5: پردازش موازی محدود (concurrency=4). این job سنگین‌تر است (هر رستوران
+    // خودش روی کاربران حلقه می‌زند)، پس concurrency پایین‌تر تا pool اتصال اشباع نشود.
+    // چون nightly است، هدف کاهش دیوار زمانی و جلوگیری از timeout است.
+    let i = 0, totalUsers = 0;
+    async function worker() {
+      while (i < restaurants.length) {
+        const r = restaurants[i++];
+        totalUsers += await recomputeAllForRestaurant(r.id);
+        await recomputeRfmForRestaurant(r.id).catch(() => {});
+        await invalidatePattern(`customers:${r.id}:*`);
+        await invalidatePattern(`ai-recs:${r.id}`);
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(4, restaurants.length) }, worker));
+
     const automationResult = await runAllDueAutomations();
 
     // پروفایل سراسری مهمانان را از insightهای به‌روز بازسازی کن (cross-restaurant)
@@ -37,3 +45,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, restaurants: restaurants.length, users_recomputed: totalUsers, guest_profiles: guestProfiles.profiles, ...automationResult });
   } catch (e) { return errorResponse(e); }
 }
+
+// Vercel Cron از GET استفاده می‌کند؛ به همان منطق POST وصلش می‌کنیم.
+export const GET = POST;

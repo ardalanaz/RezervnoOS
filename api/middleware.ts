@@ -1,5 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit, clientIp, rateLimitHeaders, RULES, isBanned, recordViolation } from '@/lib/ratelimit';
+import { rateLimit, clientIp, rateLimitHeaders, RULES, isBanned, recordViolation, rateLimitInMemory } from '@/lib/ratelimit';
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ⚠️ این middleware به ioredis (از طریق ratelimit/redis) وابسته است که به
+//  سوکت TCP نیاز دارد و فقط در Node.js runtime کار می‌کند، نه Edge runtime.
+//
+//  این پروژه به‌صورت self-host با `next start` (سرور Node) اجرا می‌شود، پس
+//  middleware در Node runtime اجرا می‌شود و ioredis کار می‌کند. اگر روی پلتفرم
+//  Edge (مثل Vercel Edge) دیپلوی شود، باید این منطق به لایه‌ی route (که در Node
+//  runtime اجرا می‌شود) منتقل شود یا از یک کلاینت Edge-compatible (مثل Upstash
+//  REST) استفاده شود.
+//
+//  دفاع در عمق (باگ C7): همه‌ی فراخوان‌های وابسته به Redis در try/catch هستند و
+//  در صورت خطا fail-open می‌شوند، تا حتی اگر Redis در دسترس نباشد یا محیط محدود
+//  باشد، کل API با ۵۰۰ سقوط نکند (rate-limit در همان حالت توسط لایه‌ی route و
+//  nginx همچنان اعمال می‌شود).
+// ═══════════════════════════════════════════════════════════════════════
 
 export const config = { matcher: '/api/:path*' };
 
@@ -29,10 +45,12 @@ function applySecurityHeaders(res: NextResponse) {
 export async function middleware(req: NextRequest) {
   const ip = clientIp(req);
 
-  // ── لایه ۱: آیا IP بن شده؟ (سریع‌ترین چک) ──
-  if (await isBanned(ip)) {
-    return applySecurityHeaders(blocked('دسترسی شما موقتاً مسدود شده است.', 403));
-  }
+  // ── لایه ۱: آیا IP بن شده؟ (سریع‌ترین چک) — fail-open در صورت خطای Redis ──
+  try {
+    if (await isBanned(ip)) {
+      return applySecurityHeaders(blocked('دسترسی شما موقتاً مسدود شده است.', 403));
+    }
+  } catch { /* Redis در دسترس نبود → ادامه بده، nginx/route لایه‌ی بعدی‌اند */ }
 
   // ── لایه ۲: محافظت CSRF برای درخواست‌های تغییردهنده ──
   // API با JWT در هدر Authorization ذاتاً در برابر CSRF مقاوم است (کوکی نیست)،
@@ -41,23 +59,33 @@ export async function middleware(req: NextRequest) {
   if (method === 'POST' || method === 'PATCH' || method === 'PUT' || method === 'DELETE') {
     const origin = req.headers.get('origin');
     const allowed = process.env.ALLOWED_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
-    // اگر لیست مجاز تعریف شده و Origin وجود دارد ولی مجاز نیست → رد
+    // اگر لیست مجاز تعریف شده و Origin وجود دارد ولی مجاز نیست → رد.
+    // نکته‌ی امنیتی: وقتی ALLOWED_ORIGINS تنظیم نشده، این چک skip می‌شود؛ در
+    // production حتماً باید ALLOWED_ORIGINS ست شود (به docker-compose رجوع کن).
     if (allowed.length > 0 && origin && !allowed.includes(origin)) {
-      await recordViolation(ip);
+      await recordViolation(ip).catch(() => {});
       return applySecurityHeaders(blocked('منشأ درخواست مجاز نیست.', 403));
     }
   }
 
-  // ── لایه ۳: ریت‌لیمیت سراسری ──
-  const result = await rateLimit(ip, RULES.globalPerIp);
-  if (!result.allowed) {
-    await recordViolation(ip);
+  // ── لایه ۳: ریت‌لیمیت سراسری — اگر Redis قطع شد، fallback به in-memory (نه fail-open کامل) ──
+  let result: Awaited<ReturnType<typeof rateLimit>> | null = null;
+  try {
+    result = await rateLimit(ip, RULES.globalPerIp);
+  } catch {
+    // Redis در دسترس نبود → به‌جای عبورِ کامل، سقفِ حداقلیِ in-memory (ضدِ DDoS پایه)
+    result = rateLimitInMemory(ip, RULES.globalPerIp);
+  }
+  if (result && !result.allowed) {
+    await recordViolation(ip).catch(() => {});
     return applySecurityHeaders(blocked('تعداد درخواست بیش از حد مجاز. کمی صبر کن.', 429, result.retryAfterSec));
   }
 
   const res = applySecurityHeaders(NextResponse.next());
-  for (const [k, v] of Object.entries(rateLimitHeaders(result, RULES.globalPerIp))) {
-    res.headers.set(k, v);
+  if (result) {
+    for (const [k, v] of Object.entries(rateLimitHeaders(result, RULES.globalPerIp))) {
+      res.headers.set(k, v);
+    }
   }
   // هدر trace-id برای ردیابی درخواست (handlerها و لاگ‌ها از آن استفاده می‌کنند)
   const traceId = req.headers.get('x-trace-id') || crypto.randomUUID().replace(/-/g, '');

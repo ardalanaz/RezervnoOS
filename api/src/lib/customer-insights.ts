@@ -131,7 +131,12 @@ export async function recomputeCustomerInsight(restaurantId: string, userId: str
   return { totalVisits, totalSpend, avgSpend, freqDays, predictedClv, noShowRatePct, churnRisk, segment };
 }
 
-/** پس از تعیین سگمنت‌ها، VIP = ۱۰٪ بالای CLV این رستوران (دهک برتر) — جداگانه فراخوانی می‌شود (سبک، یک کوئری). */
+/** پس از تعیین سگمنت‌ها، VIP = ۱۰٪ بالای CLV این رستوران (دهک برتر) — جداگانه فراخوانی می‌شود (سبک، یک کوئری).
+ *
+ *  ⚠️ باگ M11: قبلاً برای مشتریان بالای cutoff، segment را هم به 'vip' تغییر می‌داد
+ *  (حتی اگر churned/at_risk بودند) و برای مشتریانی که از دهک برتر خارج می‌شدند فقط
+ *  isVip را false می‌کرد ولی segment='vip' باقی می‌ماند → drift دائمی. حالا VIP فقط
+ *  یک flag بولی است و segment (که از churn/recency محاسبه می‌شود) دست‌نخورده می‌ماند. */
 export async function refreshVipFlags(restaurantId: string) {
   const count = await db.customerInsight.count({ where: { restaurantId } });
   if (count < 10) return; // برای رستوران‌های کوچک، VIP-بندی دهکی بی‌معنی است
@@ -140,7 +145,8 @@ export async function refreshVipFlags(restaurantId: string) {
     where: { restaurantId }, orderBy: { predictedClvToman: 'desc' }, skip: vipCutoffIndex, take: 1, select: { predictedClvToman: true },
   });
   const cutoff = cutoffRow[0]?.predictedClvToman ?? Infinity;
-  await db.customerInsight.updateMany({ where: { restaurantId, predictedClvToman: { gte: cutoff } }, data: { isVip: true, segment: 'vip' } });
+  // فقط flag بولی isVip را ست/ریست کن — segment را تغییر نده (drift رفع شد).
+  await db.customerInsight.updateMany({ where: { restaurantId, predictedClvToman: { gte: cutoff } }, data: { isVip: true } });
   await db.customerInsight.updateMany({ where: { restaurantId, predictedClvToman: { lt: cutoff } }, data: { isVip: false } });
 }
 

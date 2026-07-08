@@ -1,0 +1,50 @@
+// ═══════════════════════════════════════════════════════════
+//  رزرونو — شروع اپ (ES Module)
+//  R متغیر زنده‌ی رستوران‌هاست: اول از نمونه (نمایش فوری)، بعد از API به‌روز می‌شود.
+// ═══════════════════════════════════════════════════════════
+
+import { Actions } from './actions.js';
+import { API, loadRestaurants, refreshAuthUI, setUSER } from './api.js';
+import { renderDiscoverSections, renderFeed } from './data/discover.js';
+import { R_SAMPLE } from './data/seed.js';
+import { armReveals, updateThemeIcon } from './theme-pwa.js';
+export let R = R_SAMPLE;
+
+// ── startup: بعد از آماده‌شدنِ DOM اجرا شو (چرخه‌ی load-time را می‌شکند) ──
+function boot(){
+  Actions.init();                    // فعال‌سازی event delegation
+  updateThemeIcon();                 // آیکونِ تم (حالا DOM آماده است)
+  renderFeed(R);                     // نمایش فوری با داده‌ی نمونه
+  renderDiscoverSections();          // نزدیک تو، ترند، رویدادها
+  armReveals();                      // انیمیشنِ اسکرول
+  restoreSession();                  // بازیابی نشست
+  syncRestaurants();                 // داده‌ی واقعی از بک‌اند
+}
+
+// بازیابی نشست از localStorage — اگر توکن داشت، کاربر را دوباره وارد نگه دار
+async function restoreSession(){
+  if (!API.restoreSession()) return;
+  const res = await API.get('/me');
+  if (res.ok && res.data?.user) {
+    setUSER(res.data.user);
+    refreshAuthUI();
+  }
+  // اگر ۴۰۱ برگشت، لایه‌ی request خودش refresh می‌کند.
+}
+
+// تلاش برای دریافت داده‌ی واقعی از بک‌اند
+async function syncRestaurants(){
+  const fresh = await loadRestaurants();
+  R = fresh;
+  if (document.getElementById('page-discover')?.classList.contains('active')) {
+    renderFeed(R);
+    renderDiscoverSections();
+  }
+}
+
+// اجرای startup پس از آماده‌شدنِ DOM
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}

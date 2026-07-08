@@ -3,13 +3,14 @@ import { dbRead as db } from '@/lib/db';
 import { enforceRateLimit, clientIp, RULES } from '@/lib/ratelimit';
 import { adminAuthFromRequest } from '@/lib/admin-auth';
 import { errorResponse } from '@/lib/errors';
+import { computeSubscriptionStatus } from '@/lib/subscription';
 
 /** GET — آمار کلی پلتفرم (داشبورد پنل شرکت) */
 export async function GET(req: Request) {
   try {
     await enforceRateLimit(clientIp(req), RULES.search);
     adminAuthFromRequest(req);
-    const [totalRestaurants, activeRestaurants, totalMembers, totalReservations, topRestaurants, platformValue, systemHealth] = await Promise.all([
+    const [totalRestaurants, activeRestaurants, totalMembers, totalReservations, topRestaurants, platformValue, systemHealth, tenants] = await Promise.all([
       db.restaurant.count(),
       db.restaurant.count({ where: { isOpen: true } }),
       db.clubMember.count(),
@@ -31,10 +32,18 @@ export async function GET(req: Request) {
                count(*) FILTER (WHERE status='dead') AS dead
         FROM jobs
       `,
+      // برای محاسبه‌ی واقعی وضعیت اشتراک هر تنانت (نه ساختگی)
+      db.tenant.findMany({ select: { plan: true, planExpiresAt: true, trialEndsAt: true } }),
     ]);
 
     const value = platformValue[0] ?? { total_clv: 0n, total_vips: 0n, total_guests: 0n };
     const health = systemHealth[0] ?? { failed: 0n, dead: 0n };
+
+    const subCounts = { active: 0, expiring: 0, expired: 0, trial: 0, trial_expired: 0 };
+    for (const t of tenants) {
+      const sub = computeSubscriptionStatus(t.plan, t.planExpiresAt, t.trialEndsAt);
+      subCounts[sub.status]++;
+    }
 
     return NextResponse.json({
       total_restaurants: totalRestaurants,
@@ -46,6 +55,8 @@ export async function GET(req: Request) {
       total_vips: Number(value.total_vips),
       total_guests: Number(value.total_guests),
       system_health: Number(health.dead) > 0 ? 'critical' : Number(health.failed) > 10 ? 'warning' : 'healthy',
+      // وضعیت واقعی اشتراک‌ها (دیگر ساختگی نیست)
+      subscription_breakdown: subCounts,
       top_restaurants: topRestaurants.map(r => ({
         id: r.id, name: r.name, reservations: r._count.reservations, members: r._count.members,
       })),

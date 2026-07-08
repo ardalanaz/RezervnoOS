@@ -23,8 +23,10 @@ const log = createLogger('audit');
 export type AuditAction =
   | 'auth.login' | 'auth.failure' | 'auth.logout'
   | 'staff.permission_change' | 'staff.login'
-  | 'giftcard.redeem' | 'coupon.redeem'
+  | 'giftcard.redeem' | 'coupon.redeem' | 'coupon.created'
   | 'reservation.cancel' | 'admin.action'
+  | 'restaurant.activated' | 'restaurant.deactivated'
+  | 'plan.changed' | 'subscription.cancelled'
   | 'security.rate_limit' | 'security.idor_attempt';
 
 type AuditEntry = {

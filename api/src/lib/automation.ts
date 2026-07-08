@@ -32,8 +32,13 @@ async function targetsForBirthday(restaurantId: string, daysBefore: number) {
 }
 
 async function targetsForSegment(restaurantId: string, segment: 'at_risk' | 'churned' | 'vip') {
+  // M11: VIP یک flag بولی است، نه مقدار segment. برای vip از isVip فیلتر کن؛
+  // برای بقیه از segment. این با مدل «VIP = flag» سازگار است و drift ندارد.
+  const where = segment === 'vip'
+    ? { restaurantId, isVip: true }
+    : { restaurantId, segment };
   const rows = await db.customerInsight.findMany({
-    where: { restaurantId, segment },
+    where,
     select: { userId: true, user: { select: { phone: true, firstName: true } } },
   });
   return rows.map(r => ({ id: r.userId, phone: r.user.phone, firstName: r.user.firstName }));
@@ -97,8 +102,6 @@ export async function runAutomation(automation: {
     const tokens = template === 'winback_offer'
       ? [t.firstName || 'مهمان', coupon?.code || 'WELCOME', restaurant?.name || '']
       : [t.firstName || 'مهمان', restaurant?.name || ''];
-    // restaurantId لازم است تا worker از موجودی SMS رستوران کم کند (consumeSms) —
-    // اتوماسیون بازاریابی هم مثل کمپین دستی باید متر شود.
     await enqueueSms({ to: t.phone, template, tokens, restaurantId: automation.restaurantId });
     sent++;
   }

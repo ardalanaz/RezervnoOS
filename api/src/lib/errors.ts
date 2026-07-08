@@ -19,11 +19,13 @@ export const Err = {
 
   // ── خطاهای مشخص موتور رزرو (نیاز ۱۵: پیام بامعنی) ──
   restaurantClosed: () => new ApiError('RESTAURANT_CLOSED', 'رستوران در این زمان بسته است', 422),
+  restaurantOffline: () => new ApiError('RESTAURANT_OFFLINE', 'این رستوران موقتاً برای رزرو آنلاین در دسترس نیست؛ لطفاً بعداً یا تلفنی تلاش کنید', 422),
   noTableForParty:  (party: number) => new ApiError('NO_TABLE_FOR_PARTY', `میزی با ظرفیت ${party} نفر در این رستوران وجود ندارد`, 422, { party }),
   slotFull:         (time: string) => new ApiError('SLOT_FULL', `ساعت ${time} پر است؛ زمان دیگری انتخاب کنید`, 409, { time }),
   tableNotFound:    (n: number) => new ApiError('TABLE_NOT_FOUND', `میز شماره ${n} وجود ندارد`, 404, { table: n }),
   tableTooSmall:    (n: number) => new ApiError('TABLE_TOO_SMALL', `ظرفیت میز ${n} برای این تعداد کافی نیست`, 422, { table: n }),
   pastTime:         () => new ApiError('PAST_TIME', 'زمان رزرو در گذشته است', 422),
+  outsideHours:     () => new ApiError('OUTSIDE_HOURS', 'رستوران در این ساعت باز نیست', 422),
   tooFarAhead:      (days: number) => new ApiError('TOO_FAR_AHEAD', `رزرو حداکثر تا ${days} روز آینده ممکن است`, 422, { days }),
   partyTooLarge:    (max: number) => new ApiError('PARTY_TOO_LARGE', `حداکثر ظرفیت رزرو آنلاین ${max} نفر است؛ برای گروه بزرگ‌تر با رستوران تماس بگیرید`, 422, { max }),
   mergeUnavailable: () => new ApiError('MERGE_UNAVAILABLE', 'میزهای کافی برای ترکیب و نشاندن این گروه آزاد نیست', 409),
