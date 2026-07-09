@@ -225,7 +225,7 @@ function showStaffLoginCode(devCode, offline){
   document.getElementById('loginCard').innerHTML = `
     <div class="login-logo">✉️</div>
     <div class="login-title">کد ورود رو وارد کن</div>
-    <div class="login-sub">کد ۴ رقمی به شماره‌ی ${toFaDigits(_staffPhone)} ارسال شد</div>
+    <div class="login-sub">کد تأیید به شماره‌ی ${toFaDigits(_staffPhone)} ارسال شد</div>
     <label class="login-field-label">کد ورود</label>
     <input class="login-inp code" id="staffCode" inputmode="numeric" maxlength="4" placeholder="····" onkeydown="if(event.key==='Enter')staffConfirmOtp()">
     <button class="login-btn" id="staffVerifyBtn" onclick="staffConfirmOtp()">ورود به پنل</button>
@@ -236,7 +236,7 @@ function showStaffLoginCode(devCode, offline){
 async function staffConfirmOtp(){
   const el = document.getElementById('staffCode');
   const code = (el?.value||'').trim().replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-  if (!/^\d{4}$/.test(code)) { toast('⚠️','کد ۴ رقمی رو کامل وارد کن'); return; }
+  if (!/^\d{4,6}$/.test(code)) { toast('⚠️','کد تأیید رو کامل وارد کن'); return; }
   const btn = document.getElementById('staffVerifyBtn');
   if (btn){ btn.disabled = true; btn.textContent = 'در حال بررسی...'; }
   const res = await API.verifyStaffOtp(_staffPhone, code);

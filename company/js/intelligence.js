@@ -298,7 +298,7 @@ function showAdminLoginCode(devCode, offline){
   document.getElementById('loginCard').innerHTML = `
     <div class="login-logo">✉️</div>
     <div class="login-title">کد ورود را وارد کنید</div>
-    <div class="login-sub">کد ۴ رقمی به شماره‌ی ${faD(_adminPhone)} ارسال شد</div>
+    <div class="login-sub">کد تأیید به شماره‌ی ${faD(_adminPhone)} ارسال شد</div>
     <label class="login-field-label">کد ورود</label>
     <input class="login-inp code" id="adminCode" inputmode="numeric" maxlength="4" placeholder="····" onkeydown="if(event.key==='Enter')adminConfirmOtp()">
     <button class="login-btn" id="adminVerifyBtn" onclick="adminConfirmOtp()">ورود به پنل</button>
@@ -309,7 +309,7 @@ function showAdminLoginCode(devCode, offline){
 async function adminConfirmOtp(){
   const el = document.getElementById('adminCode');
   const code = (el?.value||'').trim().replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-  if (!/^\d{4}$/.test(code)) { toast('⚠️','کد ۴ رقمی را کامل وارد کن'); return; }
+  if (!/^\d{4,6}$/.test(code)) { toast('⚠️','کد تأیید را کامل وارد کن'); return; }
   const btn = document.getElementById('adminVerifyBtn');
   if (btn){ btn.disabled = true; btn.textContent = 'در حال بررسی...'; }
   const res = await API.verifyAdminOtp(_adminPhone, code);

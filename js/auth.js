@@ -45,7 +45,7 @@ export function showOtpStep(devCode, offline){
   openSheet(`
     <div class="login-icon">✉️</div>
     <div style="text-align:center;margin-bottom:6px"><div class="sheet-title" style="font-size:20px;font-weight:800">کد ورود رو وارد کن</div></div>
-    <div style="text-align:center;color:var(--t2);font-size:14px;margin-bottom:22px">کد ۴ رقمی به شماره‌ی ${faNum(_loginPhone)} ارسال شد</div>
+    <div style="text-align:center;color:var(--t2);font-size:14px;margin-bottom:22px">کد تأیید به شماره‌ی ${faNum(_loginPhone)} ارسال شد</div>
     <div class="field-label">کد ورود</div>
     <input class="otp-input" id="otpCode" inputmode="numeric" maxlength="4" placeholder="····" onkeydown="if(event.key==='Enter')confirmOtp()">
     <button class="btn btn-primary btn-lg btn-block" style="margin-top:18px" onclick="confirmOtp()">تأیید و ورود</button>
@@ -57,7 +57,7 @@ export function showOtpStep(devCode, offline){
 export async function confirmOtp(){
   const codeEl = document.getElementById('otpCode');
   const code = (codeEl?.value||'').trim().replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-  if (!/^\d{4}$/.test(code)) { toast('⚠️','کد ۴ رقمی رو کامل وارد کن'); return; }
+  if (!/^\d{4,6}$/.test(code)) { toast('⚠️','کد تأیید رو کامل وارد کن'); return; }
   const btn = codeEl.nextElementSibling;
   if (btn) { btn.disabled = true; btn.textContent = 'در حال بررسی...'; }
 
