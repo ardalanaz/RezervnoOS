@@ -138,11 +138,18 @@ export function renderFavs(){
   empty.style.display='none';grid.innerHTML=list.map(cardHTML).join('');grid.querySelectorAll('.rc').forEach(c=>c.classList.add('in'));
 }
 // تبدیل وضعیت رزرو API به وضعیت فرانت‌اند
-// enum واقعی بک‌اند: pending/confirmed/arrived/no_show/cancelled_by_user/cancelled_by_restaurant
+// enum کاملِ بک‌اند (reservation_status): pending, waitlisted, confirmed, auto_confirmed,
+// preparing, checked_in, running_late, seated, dining, completed, no_show, rejected,
+// expired, cancelled, auto_cancelled, arrived, cancelled_by_user, cancelled_by_restaurant.
+// قبلاً فقط ۳ وضعیت شناخته می‌شد و بقیه (از جمله completed/cancelled/expired) اشتباهاً
+// «پیش‌رو» نمایش داده می‌شدند؛ حالا کل enum پوشش داده می‌شود.
 export function mapTripStatus(apiStatus){
-  if(apiStatus==='arrived')return'done';
-  if(apiStatus==='no_show'||apiStatus==='cancelled_by_user'||apiStatus==='cancelled_by_restaurant')return'cancelled';
-  return'up'; // pending/confirmed → پیش‌رو
+  // رسیده/نشسته/تکمیل‌شده → «انجام‌شده»
+  if(apiStatus==='arrived'||apiStatus==='seated'||apiStatus==='dining'||apiStatus==='completed')return'done';
+  // لغو/عدم‌حضور/منقضی/ردشده → «لغوشده»
+  if(apiStatus==='no_show'||apiStatus==='cancelled'||apiStatus==='auto_cancelled'||apiStatus==='cancelled_by_user'||apiStatus==='cancelled_by_restaurant'||apiStatus==='expired'||apiStatus==='rejected')return'cancelled';
+  // pending/confirmed/auto_confirmed/waitlisted/preparing/checked_in/running_late → «پیش‌رو»
+  return'up';
 }
 // نگاشت رزرو API به ساختار trip فرانت‌اند
 export function mapApiTrip(apiR){
