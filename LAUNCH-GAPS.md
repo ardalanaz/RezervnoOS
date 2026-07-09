@@ -24,6 +24,7 @@
 | 5 | **push/email اسکلت‌اند:** `sendPush`/`sendEmail` فقط لاگ می‌کنند و `me/push-subscribe` no-op است (هیچ توکن/ترجیحی ذخیره نمی‌شود). اعلانِ غیر-SMS کار نمی‌کند. (SMS از کاوه‌نگار = زیرساخت.) | `api/src/lib/notify.ts` · `api/src/app/api/v1/me/push-subscribe/route.ts` | M |
 | 6 | **مشتری نمی‌تواند نظر ثبت کند:** فقط `restaurant/reviews` با GET/PATCH وجود دارد (خواندن/پاسخ رستوران)؛ هیچ روتِ POST برای ساختِ نظر نیست. کلِ فیچرِ نظرات بی‌اثر است (رستوران به نظری که کسی نمی‌تواند بسازد پاسخ می‌دهد). | `api/src/app/api/v1/me/` (روتِ POST نظر ندارد) | M |
 | 7 | **بدون صفحه‌ی خطای اختصاصیِ Next:** بک‌اند `app/error.tsx` و `not-found.tsx` ندارد. روت‌های API خطا را به JSON envelope تبدیل می‌کنند (خوب)، ولی هر مسیرِ غیر-API صفحه‌ی پیش‌فرضِ Next را می‌دهد. کم‌اثر چون API همیشه JSON است. | `api/src/app/` | S |
+| 8 | **موجودیِ SMSِ پیش‌فرض صفر:** با اصلاحِ «C6»، **همه‌ی** پیامک‌ها (تأیید رزرو، lifecycle، کمپین) از `sms_balance` کم می‌کنند؛ ولی `smsBalance` در schema پیش‌فرض `0` است. رستورانِ تازه‌ی بدونِ شارژ **هیچ پیامکی نمی‌فرستد** (job با «موجودی کافی نیست» به DLQ می‌رود). اصلاح: موجودیِ اولیه در seed/schema یا شارژِ خودکار هنگام ساختِ رستوران. | `api/prisma/schema.prisma` (`smsBalance @default(0)`) · `api/src/lib/worker.ts` | S |
 
 ---
 
@@ -33,8 +34,9 @@
 |---|------|------|--------|
 | 8 | **پارتیشن‌بندیِ reservations اجرا نشده:** تابع `ensure_reservation_partition` ساخته نشده؛ فقط در مقیاسِ میلیون‌ها ردیف لازم است و روت `ensure-partitions` الان تمیز skip می‌کند. | `api/prisma/migrations/manual/011-reservations-partitioning.sql` | L |
 | 9 | **Read replica بدون replica:** `dbRead` پیکربندی شده ولی بدون `DATABASE_REPLICA_URL` به primary برمی‌گردد (degrade تمیز). برای بار خواندنیِ بالا بعداً. | `api/src/lib/db.ts` | L |
-| 10 | **بیلینگِ پیامکِ تراکنشی:** پیامک‌های رزرو/lifecycle عمداً از موجودی SMS کم نمی‌کنند (فقط کمپین/اتوماسیون متر می‌شوند). تصمیمِ کسب‌وکار؛ `smsBalance` پیش‌فرض ۰. | `api/src/lib/reservations.ts` · `api/src/lib/lifecycle.ts` | M |
-| 11 | **CRUD عمیق‌ترِ پنل‌ها:** بخش‌های reviews/photos/notes/campaigns پایه‌اند و جای پولیش دارند (فیلتر، صفحه‌بندی، حالتِ خالی). | `business/js/*` | M |
+| 10 | **CRUD عمیق‌ترِ پنل‌ها:** بخش‌های reviews/photos/notes/campaigns پایه‌اند و جای پولیش دارند (فیلتر، صفحه‌بندی، حالتِ خالی). | `business/js/*` | M |
+
+> **تصحیح (double-check):** موردِ قبلیِ «بیلینگِ پیامکِ تراکنشی عمداً متر نمی‌شود» **غلط بود** — کدِ v2129 با اصلاحِ «C6» روی **همه‌ی** SMS (تأیید رزرو، lifecycle، markArrival، کمپین، اتوماسیون) `restaurantId` می‌فرستد، پس همه از موجودی کسر می‌شوند. پیامدِ واقعی به 🟡 منتقل شد (مورد ۷ پایین).
 
 ---
 
