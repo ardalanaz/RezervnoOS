@@ -1,3 +1,7 @@
+# ریشه فقط لانچرِ استاتیک را سرو می‌کند؛ «api» در ریشه پوشه‌ی رزروِ توابع Vercel است
+# و باید همیشه ignore شود (طبق CLAUDE.md هرگز حذف نشود).
+# نکته: پس از انتقال فرانت‌اند به apps/، دیگر apps را ignore نمی‌کنیم؛ بک‌اند و
+# پوشه‌های زیرساخت/بیلد ignore می‌مانند تا در دیپلویِ ریشه بارگذاری نشوند.
 api
 deploy
 backup
@@ -7,7 +11,10 @@ loadtest
 e2e
 docs
 design-preview
-apps
+shared
+tools
+standalone
+demo-mvp
 .github
 docker-compose*.yml
 *.md

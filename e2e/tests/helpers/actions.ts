@@ -14,31 +14,57 @@ export async function gotoApp(page: Page) {
 
 /** بازکردنِ اولین رستوران از فید. */
 export async function openFirstRestaurant(page: Page) {
-  // کارت‌های رستوران با کلاس rc هستند
-  const firstCard = page.locator('.rc').first();
+  // کارت‌های واقعیِ رستوران onclick دارند؛ اسکلت‌های بارگذاری (div.rc) ندارند —
+  // پس روی [onclick] فیلتر می‌کنیم تا تا آمدنِ کارتِ واقعی صبر شود، نه اسکلت.
+  const firstCard = page.locator('.rc[onclick]').first();
   await expect(firstCard).toBeVisible();
   await firstCard.click();
   // صفحه‌ی جزئیاتِ رستوران باید باز شود
   await expect(page.locator('#page-rest')).toBeVisible();
 }
 
-/** ورود با شماره‌ی دمو و کدِ OTP. */
+/** ورود مستقل از UI و موتورِ مرورگر.
+ *  به‌جای درایوِ فلوی OTP (که روی webkit مرحله‌ی کد را قابل‌اتکا رندر نمی‌کرد)، از
+ *  مسیرِ «بازیابیِ نشست» اپ استفاده می‌کنیم: init.js اگر توکنِ ذخیره‌شده ببیند،
+ *  /me را می‌خواند و کاربر را set می‌کند. پس توکنِ دمو در localStorage می‌گذاریم،
+ *  پاسخِ /me را به کاربرِ دمو override می‌کنیم و صفحه را reload می‌کنیم. */
 export async function login(page: Page, phone = '09123456789') {
-  // فرضِ باز بودنِ شیتِ ورود؛ اگر نه، فراخوانی‌کننده باید بازش کند
-  const phoneInput = page.locator('#loginPhone');
-  await expect(phoneInput).toBeVisible();
-  await phoneInput.fill(phone);
-  await page.getByRole('button', { name: /ورود|ادامه|تایید/ }).first().click();
-
-  // مرحله‌ی کد — کدِ دمو 123456 (از mock)
-  const otp = page.locator('input').filter({ hasText: '' }).first();
-  // بسیاری از پیاده‌سازی‌ها یک input کد دارند؛ پرش می‌کنیم اگر خودکار باشد
-  await page.waitForTimeout(300);
+  type W = { isLoggedIn?: () => boolean };
+  // این override بعد از mockِ beforeEach ثبت می‌شود، پس برای GET /me اولویت دارد.
+  await page.route('**/api/v1/me', (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user: { id: 'user-demo', phone: '+989123456789', first_name: 'کاربر', last_name: 'دمو' },
+        }),
+      });
+    }
+    return route.fallback();
+  });
+  await page.evaluate(() => {
+    try {
+      localStorage.setItem('rz_access', 'demo-access-token');
+      localStorage.setItem('rz_refresh', 'demo-refresh-token');
+    } catch { /* ignore */ }
+  });
+  await page.reload();
+  await expect(page.locator('#page-discover')).toBeVisible();
+  await page.waitForFunction(
+    () => (window as unknown as W).isLoggedIn?.() === true,
+    undefined,
+    { timeout: 8000 },
+  );
+  void phone;
 }
 
-/** رفتن به یک تبِ ناوبریِ پایین. */
+/** رفتن به یک تبِ ناوبری.
+ *  نکته: data-nav هم روی navِ پایین (موبایل) و هم navِ بالا (دسکتاپ) هست و فقط یکی
+ *  در هر ویوپورت دیده می‌شود؛ با :visible همان قابل‌مشاهده را می‌زنیم تا strict-mode
+ *  نشکند و روی هر دو ویوپورت کار کند. */
 export async function navTo(page: Page, tab: 'discover' | 'favorites' | 'trips' | 'loyalty') {
-  await page.locator(`[data-nav="${tab}"]`).click();
+  await page.locator(`[data-nav="${tab}"]:visible`).first().click();
   await expect(page.locator(`#page-${tab}`)).toBeVisible();
 }
 

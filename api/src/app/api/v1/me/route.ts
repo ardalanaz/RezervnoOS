@@ -3,6 +3,13 @@ import { authFromRequest } from '@/lib/jwt';
 import { db } from '@/lib/db';
 import { enforceRateLimit, clientIp, RULES } from '@/lib/ratelimit';
 import { Err, errorResponse } from '@/lib/errors';
+import { parseBody, z } from '@/lib/schemas';
+
+const patchSchema = z.object({
+  first_name: z.string().min(1).max(50).trim(),
+  last_name: z.string().max(50).trim().optional(),
+  birth_date: z.string().max(30).optional(),
+});
 
 /** GET /api/v1/me — اطلاعات کاربر فعلی */
 export async function GET(req: Request) {
@@ -27,14 +34,11 @@ export async function PATCH(req: Request) {
     await enforceRateLimit(clientIp(req), RULES.auth);
     const auth = authFromRequest(req);
     if (auth.kind !== 'customer') throw Err.forbidden();
-    const b = await req.json();
+    const b = await parseBody(req, patchSchema);
 
-    const firstName = (b.first_name ?? '').toString().trim();
-    if (!firstName) throw Err.validation('نام الزامی است');
-    if (firstName.length > 50) throw Err.validation('نام بیش از حد طولانی است');
-
+    const firstName = b.first_name;
     const data: { firstName: string; lastName?: string; birthDate?: Date } = { firstName };
-    if (b.last_name != null) data.lastName = b.last_name.toString().trim().slice(0, 50);
+    if (b.last_name != null) data.lastName = b.last_name;
     if (b.birth_date) {
       const d = new Date(b.birth_date);
       if (!isNaN(+d)) data.birthDate = d;

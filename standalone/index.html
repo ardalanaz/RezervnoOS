@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B1020">
+<title>رزرونو — نسخه‌ی آفلاین</title>
+<style>
+:root{--bg:#0B1020;--card:#161B2E;--brd:#252C44;--t1:#F2F4F8;--t2:#9AA3B8;--brand:#6A4BFF}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--t1);
+ font-family:'Vazirmatn',Tahoma,-apple-system,system-ui,sans-serif;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:22px}
+h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+p.sub{margin:0;color:var(--t2);font-size:14px;text-align:center;line-height:1.9;max-width:340px}
+.apps{display:flex;flex-direction:column;gap:12px;width:100%;max-width:360px;margin-top:6px}
+a.app{display:flex;align-items:center;gap:14px;padding:16px 18px;min-height:64px;
+ background:var(--card);border:1px solid var(--brd);border-radius:16px;color:inherit;
+ text-decoration:none;transition:transform .13s ease,border-color .13s ease}
+a.app:active{transform:scale(.98);border-color:var(--brand)}
+.ic{width:42px;height:42px;flex-shrink:0;display:grid;place-items:center;border-radius:12px;
+ background:rgba(106,75,255,.14);color:#A78BFA}
+.nm{font-weight:700;font-size:15px}
+.ds{font-size:12.5px;color:var(--t2);margin-top:3px}
+.note{font-size:12px;color:var(--t2);text-align:center;max-width:340px;line-height:1.9;
+ border-top:1px solid var(--brd);padding-top:16px;margin-top:4px}
+code{background:rgba(255,255,255,.07);padding:1px 6px;border-radius:5px;font-size:12px}
+</style>
+</head>
+<body>
+<h1>رزرونو</h1>
+<p class="sub">نسخه‌ی آفلاینِ تک‌فایلی — بدونِ نصب، بدونِ سرور. روی گوشی هم کار می‌کند.</p>
+
+<div class="apps">
+  <a class="app" href="customer.html">
+    <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7a3 3 0 0 0 3 3v10M6 2v6M9 2v10M17 2c-1.5 0-3 1.5-3 5s1.5 5 3 5v10"/></svg></span>
+    <span><span class="nm">اپ مشتری</span><span class="ds">کشف رستوران، رزرو، باشگاه مشتریان</span></span>
+  </a>
+  <a class="app" href="business.html">
+    <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9M3 9h18"/></svg></span>
+    <span><span class="nm">پنل رستوران</span><span class="ds">رزروها، صف، سالن، مشتریان، مارکتینگ</span></span>
+  </a>
+  <a class="app" href="company.html">
+    <span class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01"/></svg></span>
+    <span><span class="nm">پنل شرکت</span><span class="ds">مدیریت پلتفرم، اشتراک‌ها، سلامت سیستم</span></span>
+  </a>
+</div>
+
+<p class="note">
+داده‌ها نمونه‌اند و بک‌اند لازم نیست.<br>
+کدِ ورودِ پنل‌ها: <code>1234</code> (یا دکمه‌ی «ورود سریع»)<br>
+اپ مشتری بدونِ ورود هم قابلِ استفاده است.
+</p>
+</body>
+</html>

@@ -6,18 +6,18 @@ function rReservations(){
     <!-- جستجو -->
     <div class="search-res">
       <div class="search-box">
-        <span class="s-ic">🔍</span>
+        <span class="s-ic">${icon('search',{size:16})}</span>
         <input id="resSearch" placeholder="جستجو با نام، فامیل یا شماره تلفن..." value="${esc(resQuery)}" oninput="searchRes(this.value)">
         <button class="s-clear ${resQuery?'show':''}" onclick="clearResSearch()">×</button>
       </div>
-      <button class="btn btn-primary" onclick="openManual()">➕ رزرو جدید</button>
+      <button class="btn btn-primary" onclick="openManual()">${icon('plus',{size:16})} رزرو جدید</button>
     </div>
     <!-- تاریخ -->
     <div class="date-tabs">
-      <button class="date-tab ${resDate==='today'?'active':''}" onclick="setResDate('today')">📅 امروز</button>
+      <button class="date-tab ${resDate==='today'?'active':''}" onclick="setResDate('today')">${icon('calendar',{size:14})} امروز</button>
       <button class="date-tab ${resDate==='tomorrow'?'active':''}" onclick="setResDate('tomorrow')">فردا</button>
       <button class="date-tab ${resDate==='upcoming'?'active':''}" onclick="setResDate('upcoming')">روزهای آینده</button>
-      <button class="date-tab ${resDate==='past'?'active':''}" onclick="setResDate('past')">📋 گزارش گذشته</button>
+      <button class="date-tab ${resDate==='past'?'active':''}" onclick="setResDate('past')">${icon('inbox',{size:14})} گزارش گذشته</button>
       <button class="date-tab ${resDate==='all'?'active':''}" onclick="setResDate('all')">همه</button>
     </div>
     <div class="panel">
@@ -49,7 +49,7 @@ async function renderResList(){
   }
   const dateLabel={today:'امروز',tomorrow:'فردا',upcoming:'روزهای آینده',past:'گذشته',all:'همه روزها'}[resDate];
   if(!list.length){
-    el.innerHTML=`<div class="no-results"><div class="nr-emoji">${resDate==='past'?'📋':'🔍'}</div><div style="font-weight:700;margin-bottom:4px">رزروی پیدا نشد</div><div style="font-size:13px">${resQuery?'با این جستجو نتیجه‌ای نبود':'برای '+dateLabel+' رزروی نیست'}</div></div>`;
+    el.innerHTML=`<div class="empty-state"><div class="empty-state-icon">${resDate==='past'?icon('inbox',{size:40}):icon('search',{size:40})}</div><div style="font-weight:700;margin-bottom:4px">رزروی پیدا نشد</div><div style="font-size:13px">${resQuery?'با این جستجو نتیجه‌ای نبود':'برای '+dateLabel+' رزروی نیست'}</div></div>`;
     return;
   }
   // گزارش گذشته: خلاصه‌ی آماری بالا
@@ -59,9 +59,9 @@ async function renderResList(){
     const cancelled=list.filter(x=>x.r.status==='cancelled').length;
     el.innerHTML=`
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
-        <div style="background:var(--green-50);border:1px solid #BBF7D0;border-radius:var(--r);padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#15803D">${fa(done)}</div><div style="font-size:11px;color:var(--t2);font-weight:600">✅ انجام‌شده</div></div>
-        <div style="background:var(--amber-50);border:1px solid #FDE68A;border-radius:var(--r);padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#D97706">${fa(noshow)}</div><div style="font-size:11px;color:var(--t2);font-weight:600">⚠️ نیومدن (no-show)</div></div>
-        <div style="background:var(--red-50);border:1px solid #FECACA;border-radius:var(--r);padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#B91C1C">${fa(cancelled)}</div><div style="font-size:11px;color:var(--t2);font-weight:600">🚫 لغوشده</div></div>
+        <div style="background:var(--green-50);border:1px solid #BBF7D0;border-radius:var(--r);padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#15803D">${fa(done)}</div><div style="font-size:11px;color:var(--t2);font-weight:600">${icon('check',{size:12})} انجام‌شده</div></div>
+        <div style="background:var(--amber-50);border:1px solid #FDE68A;border-radius:var(--r);padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#D97706">${fa(noshow)}</div><div style="font-size:11px;color:var(--t2);font-weight:600">${icon('alert',{size:12})} نیومدن (no-show)</div></div>
+        <div style="background:var(--red-50);border:1px solid #FECACA;border-radius:var(--r);padding:12px;text-align:center"><div style="font-size:22px;font-weight:800;color:#B91C1C">${fa(cancelled)}</div><div style="font-size:11px;color:var(--t2);font-weight:600">${icon('close',{size:12})} لغوشده</div></div>
       </div>`+
       list.map(x=>resItemHTML(x.r,x.i)).join('');
     return;
@@ -77,7 +77,7 @@ function clearResSearch(){resQuery='';const i=document.getElementById('resSearch
 function setResDate(d){resDate=d;rReservations()}
 function resItemHTML(r,i){
   const isPast=['completed','noshow','no_show','cancelled','auto_cancelled','rejected','expired'].includes(r.status);
-  const statusChip=(STATUS_META[r.status]?`<span class="chip-status" style="background:${STATUS_META[r.status].bg};color:${STATUS_META[r.status].fg}">${STATUS_META[r.status].icon} ${STATUS_META[r.status].label}</span>`:'');
+  const statusChip=(STATUS_META[r.status]?`<span class="chip-status" style="background:${STATUS_META[r.status].bg};color:${STATUS_META[r.status].fg}">${icon(STATUS_META[r.status].icon,{size:12})} ${STATUS_META[r.status].label}</span>`:'');
   // برچسب تاریخ (وقتی تب «همه» یا گذشته‌ست مفیده)
   const dateBadge=(resDate==='all'||resDate==='past'||resDate==='upcoming')&&r.dLabel?`<span style="font-size:11px;color:var(--t3);font-weight:600">${r.dLabel} · </span>`:'';
   return `<div class="tl-item"><div class="tl-time"><div class="tl-time-v">${r.t}</div></div>
@@ -86,15 +86,15 @@ function resItemHTML(r,i){
         <div class="tl-name">${esc(r.name)} ${r.seg==='vip'?'<span class="tl-tag vip">VIP</span>':r.seg==='new'?'<span class="tl-tag new">جدید</span>':''}</div>
         ${statusChip}
       </div>
-      <div class="tl-meta">${dateBadge}👥 ${fa(r.party)} نفر · میز ${fa(r.table)} · 📞 ${esc(r.phone)} ${r.pre?'· 🍽 پیش‌سفارش':''}</div>
-      ${r.note?`<div class="tl-meta" style="color:#D97706">📝 ${esc(r.note)}</div>`:''}
-      ${r.cancelReason?`<div class="tl-meta" style="color:#B91C1C">🚫 دلیل لغو: ${r.cancelReason}</div>`:''}
+      <div class="tl-meta">${dateBadge}${icon('users',{size:13})} ${fa(r.party)} نفر · میز ${fa(r.table)} · ${icon('phone',{size:13})} ${esc(r.phone)} ${r.pre?`· ${icon('utensils',{size:12})} پیش‌سفارش`:''}</div>
+      ${r.note?`<div class="tl-meta" style="color:#D97706">${icon('inbox',{size:13})} ${esc(r.note)}</div>`:''}
+      ${r.cancelReason?`<div class="tl-meta" style="color:#B91C1C">${icon('alert',{size:13})} دلیل لغو: ${r.cancelReason}</div>`:''}
       ${!isPast?`<div class="tl-actions">
-        ${r.status!=='arrived'?`<button class="btn btn-teal btn-sm" onclick="markArrived(${i})">✓ رسید</button>`:''}
-        <button class="btn btn-ghost btn-sm" onclick="openStatusMenu(${i})">⇄ وضعیت</button>
-        <button class="btn btn-ghost btn-sm" onclick="toast('📞','تماس با '+${JSON.stringify(esc(r.name))})">تماس</button>
+        ${r.status!=='arrived'?`<button class="btn btn-teal btn-sm" onclick="markArrived(${i})">${icon('check',{size:14})} رسید</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="openStatusMenu(${i})">${icon('refresh',{size:14})} وضعیت</button>
+        <button class="btn btn-ghost btn-sm" onclick="toast('','تماس با '+${JSON.stringify(esc(r.name))})">تماس</button>
         <button class="btn btn-danger btn-sm" onclick="cancelRes(${i})">لغو</button>
-      </div>`:`<div class="tl-actions"><button class="btn btn-ghost btn-sm" onclick="viewHistory(${i})">📜 تاریخچه</button><button class="btn btn-ghost btn-sm" onclick="toast('📞','تماس با '+${JSON.stringify(esc(r.name))})">تماس</button>${r.status==='completed'?`<button class="btn btn-ghost btn-sm" onclick="openManual()">رزرو مجدد</button>`:''}</div>`}
+      </div>`:`<div class="tl-actions"><button class="btn btn-ghost btn-sm" onclick="viewHistory(${i})">${icon('inbox',{size:14})} تاریخچه</button><button class="btn btn-ghost btn-sm" onclick="toast('','تماس با '+${JSON.stringify(esc(r.name))})">تماس</button>${r.status==='completed'?`<button class="btn btn-ghost btn-sm" onclick="openManual()">رزرو مجدد</button>`:''}</div>`}
     </div></div>`;
 }
 async function markArrived(i){
@@ -104,15 +104,15 @@ async function markArrived(i){
   // اگر آفلاین: تغییر وضعیت را برای همگام‌سازی صف کن (روی داده‌ی محلی از قبل اعمال شد)
   if(isOffline() && API.getToken()){
     Outbox.enqueue({ type:'checkin', path:`/restaurant/reservations/${RES[i].code||RES[i].id||''}/status`, method:'PATCH', body:{ status:'checked_in' }, label:`ثبت ورود ${RES[i].name}` });
-    toast('📴',`${RES[i].name} رسید — با برگشت اینترنت همگام می‌شود`);
+    toast('',`${RES[i].name} رسید — با برگشت اینترنت همگام می‌شود`);
     return;
   }
   if(API.getToken() && phone){
     const res=await API.sendSms({kind:'campaign',phones:[phone.replace(/\s/g,'')],message:'welcome'});
-    if(res.ok){toast('🟢',`${RES[i].name} رسید — پیامک خوش‌آمد ارسال شد`);return;}
+    if(res.ok){toast('',`${RES[i].name} رسید — پیامک خوش‌آمد ارسال شد`);return;}
   }
   // fallback
-  toast('🟢',`${RES[i].name} رسید${phone?' — پیامک خوش‌آمد ارسال شد':''}`);
+  toast('',`${RES[i].name} رسید${phone?' — پیامک خوش‌آمد ارسال شد':''}`);
 }
 function cancelRes(i){
   openModal(`<div class="modal-title">لغو رزرو</div><div class="modal-sub">${RES[i].name} — ساعت ${RES[i].t}</div>
@@ -122,8 +122,8 @@ function cancelRes(i){
 }
 function doCancelRes(i){
   const reason=document.getElementById('cancelReason').value.trim();
-  if(!reason){toast('⚠️','دلیل لغو الزامیه');return}
-  RES.splice(i,1);closeModal();rReservations();toast('✓','رزرو لغو شد — دلیل ثبت شد');
+  if(!reason){toast('','دلیل لغو الزامیه');return}
+  RES.splice(i,1);closeModal();rReservations();toast('','رزرو لغو شد — دلیل ثبت شد');
 }
 // تولید تاریخ‌های شمسی تا ۱ ماه آینده (نمونه: از پنجشنبه ۱۵ خرداد)
 function buildDateOptions(){
@@ -172,7 +172,7 @@ function openManual(){
 // ═══ WALK-IN (ورود بدون رزرو) ═══
 async function openWalkin(){
   openModal(`
-    <div class="modal-title">🚶 ورود بدون رزرو</div>
+    <div class="modal-title">${icon('users',{size:18})} ورود بدون رزرو</div>
     <div class="modal-sub">شماره موبایل مهمان رو وارد کن — بقیه‌اش خودکاره</div>
     <div class="field-label">شماره موبایل</div>
     <input class="inp" id="wPhone" placeholder="۰۹..." inputmode="tel" style="font-size:17px;letter-spacing:.05em;text-align:center">
@@ -186,7 +186,7 @@ async function openWalkin(){
 async function walkinLookup(){
   const raw=document.getElementById('wPhone').value;
   const ph=normalizePhone(raw);
-  if(!ph||ph.length<11){toast('⚠️','شماره موبایل کامل وارد کن');return}
+  if(!ph||ph.length<11){toast('','شماره موبایل کامل وارد کن');return}
   // مطمئن شو میزها لود شدن (اگه هنوز نشدن، الان لود کن و منتظر بمون)
   if(API.getToken() && !_tablesLoaded){
     const btn=event?.target;
@@ -203,9 +203,9 @@ async function walkinLookup(){
     ? `<select class="inp" id="wTable"><option value="">— بعداً تخصیص می‌دم —</option>${tableOptions}</select>`
     : `<select class="inp" id="wTable" disabled><option value="">میز خالی موجود نیست</option></select><div style="font-size:11px;color:var(--t3);margin-top:4px">همه‌ی میزها پرن — می‌تونی بعداً از پلان سالن تخصیص بدی</div>`;
   if(member){
-    const tierName={gold:'🥇 طلایی',silver:'🥈 نقره‌ای',bronze:'🥉 برنزی'}[member.tier]||member.tier;
+    const tierName={gold:'طلایی',silver:'نقره‌ای',bronze:'برنزی'}[member.tier]||member.tier;
     openModal(`
-      <div style="text-align:center;margin-bottom:6px"><div style="width:56px;height:56px;border-radius:50%;background:var(--teal-50);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px">👋</div></div>
+      <div style="text-align:center;margin-bottom:6px"><div style="width:56px;height:56px;border-radius:50%;background:var(--teal-50);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">${icon('user',{size:28})}</div></div>
       <div class="modal-title" style="text-align:center">${esc(member.fn)} ${esc(member.ln)} خوش اومدی!</div>
       <div class="modal-sub" style="text-align:center">مشتری قدیمی — قبلاً ثبت‌شده</div>
       <div class="summary" style="margin-bottom:18px">
@@ -220,14 +220,14 @@ async function walkinLookup(){
       </div>
       <div class="field-label">میز (اختیاری)</div>
       ${tableSelectHtml}
-      <button class="btn btn-teal btn-lg btn-block" id="wConfirmBtn" style="margin-top:14px" onclick="walkinCheckinMember()">✓ ثبت ورود</button>
+      <button class="btn btn-teal btn-lg btn-block" id="wConfirmBtn" style="margin-top:14px" onclick="walkinCheckinMember()">${icon('check',{size:16})} ثبت ورود</button>
     `);
     window._walkinMember={phone:member.phone,name:(member.fn+' '+member.ln).trim()};
   }else{
     openModal(`
-      <div class="modal-title">مهمان جدید 👋</div>
+      <div class="modal-title">مهمان جدید</div>
       <div class="modal-sub">این شماره تازه‌ست — یه ثبت سریع کنیم تا دفعه‌ی بعد بشناسیمش</div>
-      <div style="background:var(--teal-50);border:1px solid #99F6E4;border-radius:var(--r);padding:11px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--teal-600);text-align:center">📞 ${ph}</div>
+      <div style="background:var(--teal-50);border:1px solid #99F6E4;border-radius:var(--r);padding:11px 14px;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--teal-600);text-align:center">${icon('phone',{size:13})} ${ph}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div><div class="field-label">نام</div><input class="inp" id="wFn" placeholder="نام"></div>
         <div><div class="field-label">نام خانوادگی</div><input class="inp" id="wLn" placeholder="فامیل"></div>
@@ -243,7 +243,7 @@ async function walkinLookup(){
       </div>
       <div class="field-label">میز (اختیاری)</div>
       ${tableSelectHtml}
-      <button class="btn btn-primary btn-lg btn-block" id="wConfirmBtn" style="margin-top:16px" onclick="walkinNewSave('${esc(raw)}')">✓ ثبت ورود + عضویت باشگاه</button>
+      <button class="btn btn-primary btn-lg btn-block" id="wConfirmBtn" style="margin-top:16px" onclick="walkinNewSave('${esc(raw)}')">${icon('check',{size:16})} ثبت ورود + عضویت باشگاه</button>
     `);
   }
 }
@@ -270,11 +270,11 @@ async function walkinCheckinReal(phone,firstName,lastName,birthDayMonth){
       closeModal();
       if(document.getElementById('v-overview').classList.contains('active'))rOverview();
       else if(document.getElementById('v-floor').classList.contains('active'))rFloor();
-      toast('📴',`${nm} محلی ثبت شد — با برگشت اینترنت همگام می‌شود`);
+      toast('',`${nm} محلی ثبت شد — با برگشت اینترنت همگام می‌شود`);
       return;
     }
-    toast('⚠️',res.error?.message||'ثبت ورود ناموفق بود');
-    if(btn){btn.disabled=false;btn.textContent='✓ ثبت ورود';}
+    toast('',res.error?.message||'ثبت ورود ناموفق بود');
+    if(btn){btn.disabled=false;btn.textContent='ثبت ورود';}
     return;
   }
   closeModal();
@@ -283,13 +283,13 @@ async function walkinCheckinReal(phone,firstName,lastName,birthDayMonth){
   if(document.getElementById('v-overview').classList.contains('active'))rOverview();
   else if(document.getElementById('v-reservations').classList.contains('active')){resDate='today';rReservations()}
   else if(document.getElementById('v-floor').classList.contains('active'))rFloor();
-  toast('✅',`${res.data.name} ثبت ورود شد${tableId?' · میز اختصاص یافت':''}`);
-  if(res.data.enrolled_now) setTimeout(()=>toast('🎫',`عضو باشگاه شد (${res.data.club_code})`),900);
+  toast('',`${res.data.name} ثبت ورود شد${tableId?' · میز اختصاص یافت':''}`);
+  if(res.data.enrolled_now) setTimeout(()=>toast('',`عضو باشگاه شد (${res.data.club_code})`),900);
 }
 async function walkinNewSave(rawPhone){
   const fn=document.getElementById('wFn').value.trim();
   const ln=document.getElementById('wLn').value.trim();
-  if(!fn){toast('⚠️','حداقل نام رو وارد کن');return}
+  if(!fn){toast('','حداقل نام رو وارد کن');return}
   const bd=document.getElementById('wBd').value;
   const bm=document.getElementById('wBm').value;
   await walkinCheckinReal(rawPhone,fn,ln,(bd&&bm)?[bd,bm]:null);
@@ -297,7 +297,7 @@ async function walkinNewSave(rawPhone){
 
 async function saveManual(){
   const n=document.getElementById('mName').value.trim();
-  if(!n){toast('⚠️','نام مهمان رو وارد کن');return}
+  if(!n){toast('','نام مهمان رو وارد کن');return}
   const phone=document.getElementById('mPhone').value;
   const dateSel=document.getElementById('mDate');
   const dateVal=dateSel.value;
@@ -325,10 +325,10 @@ async function saveManual(){
       closeModal();resDate=dateKey;
       if(document.getElementById('v-reservations').classList.contains('active'))rReservations();
       else if(document.getElementById('v-overview').classList.contains('active'))rOverview();
-      toast('🎫',`رزرو ${dLabel} در سیستم ثبت شد${newlyEnrolled?` + ${n} به باشگاه اضافه شد`:''}`);
+      toast('',`رزرو ${dLabel} در سیستم ثبت شد${newlyEnrolled?` + ${n} به باشگاه اضافه شد`:''}`);
       return;
     }
-    if(!res.offline){toast('⚠️',res.error?.message||'ثبت رزرو ناموفق بود');return;}
+    if(!res.offline){toast('',res.error?.message||'ثبت رزرو ناموفق بود');return;}
     // اگر offline، می‌افتد به مسیر محلی پایین
   }
 
@@ -349,11 +349,11 @@ async function saveManual(){
   if(document.getElementById('v-reservations').classList.contains('active'))rReservations();
   else if(document.getElementById('v-overview').classList.contains('active'))rOverview();
   if(res.enrolled){
-    toast('🎫',`رزرو ${dLabel} ثبت شد + ${n} به باشگاه اضافه شد (${res.member.code})`);
+    toast('',`رزرو ${dLabel} ثبت شد + ${n} به باشگاه اضافه شد (${res.member.code})`);
   }else if(res.reason==='exists'){
-    toast('✓',`رزرو ${dLabel} ثبت شد · ${n} قبلاً عضو باشگاهه`);
+    toast('',`رزرو ${dLabel} ثبت شد · ${n} قبلاً عضو باشگاهه`);
   }else{
-    toast('✓',`رزرو ${dLabel} ثبت شد`);
+    toast('',`رزرو ${dLabel} ثبت شد`);
   }
 }
 

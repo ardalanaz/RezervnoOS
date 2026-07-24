@@ -2,30 +2,31 @@
 import { API, isLoggedIn } from '../api.js';
 import { closeSheet, esc, openLogin, openSheet, toApiDateTime, toast } from '../auth.js';
 import { detailSocialProof, fmtFa, go, toggleRestFav } from './discover.js';
-import { GRAD, TRIPS, bk, curRest, favs, pts } from './seed.js';
+import { GRAD, TRIPS, bk, curRest, favs, pts, setCurRest, setBk, setPts } from './seed.js';
 import { R } from '../init.js';
 import { offerWaitlist } from '../reservation.js';
 import { armReveals, buzz } from '../theme-pwa.js';
+import { icon } from '../icons.js';
 export function openRest(id){
-  curRest=id;const r=R.find(x=>x.id===id);
-  const stars=n=>'★'.repeat(Math.round(n))+'☆'.repeat(5-Math.round(n));
+  setCurRest(id);const r=R.find(x=>x.id===id);
+  const stars=n=>Array.from({length:5},(_,i)=>icon('star',{size:13,fill:i<Math.round(n)})).join('');
   document.getElementById('page-rest').innerHTML=`
     <div class="rp-hero" style="background:${GRAD[id]}">
       <div class="rp-hero-mesh"></div>
       <button class="rp-hero-back glass" onclick="go('discover')" aria-label="بازگشت به کشف">→</button>
       <div class="rp-hero-actions">
-        <button class="rp-hero-icon glass" onclick="buzz&&buzz();toast('🔗','لینک کپی شد')" aria-label="اشتراک‌گذاری رستوران">🔗</button>
-        <button class="rp-hero-icon glass" id="rpFav" onclick="buzz&&buzz();toggleRestFav(${id})" aria-label="افزودن به علاقه‌مندی‌ها">${favs.has(id)?'❤️':'🤍'}</button>
+        <button class="rp-hero-icon glass" onclick="buzz&&buzz();toast('','لینک کپی شد')" aria-label="اشتراک‌گذاری رستوران">${icon('share',{size:20})}</button>
+        <button class="rp-hero-icon glass" id="rpFav" onclick="buzz&&buzz();toggleRestFav(${id})" aria-pressed="${favs.has(id)}" aria-label="${favs.has(id)?'حذف از علاقه‌مندی‌ها':'افزودن به علاقه‌مندی‌ها'}">${icon('heart',{size:22,fill:favs.has(id)})}</button>
       </div>
       <div class="rp-hero-emoji">${r.e}</div>
       <div class="rp-hero-overlay">
         <div class="rp-hero-badges">
-          ${r.now?`<span class="rp-hero-badge live">🟢 الان باز</span>`:''}
-          <span class="rp-hero-badge">💰 ${fmtFa(r.cb)}٪ کش‌بک</span>
+          ${r.now?`<span class="rp-hero-badge live"><span class="live-dot" aria-hidden="true"></span> الان باز</span>`:''}
+          <span class="rp-hero-badge">${icon('wallet',{size:14})} ${fmtFa(r.cb)}٪ کش‌بک</span>
         </div>
         <div class="rp-hero-name">${esc(r.n)}</div>
         <div class="rp-hero-meta">
-          <span class="rp-hero-rate"><span style="color:#FBBF24">★</span> ${fmtFa(r.rt)}</span>
+          <span class="rp-hero-rate"><span style="color:#FBBF24;display:inline-flex">${icon('star',{size:14,fill:true})}</span> ${fmtFa(r.rt)}</span>
           <span class="rp-hero-dot">·</span>
           <span>${fmtFa(r.reviews)} نظر</span>
           <span class="rp-hero-dot">·</span>
@@ -38,7 +39,7 @@ export function openRest(id){
     <div class="wrap rp-body">
       ${detailSocialProof(r)}
 
-      <div class="rp-section reveal"><h3>درباره</h3><p class="rp-about">${esc(r.about)}</p><div class="feat-row">${r.feats.map(f=>`<span class="feat">✓ ${esc(f)}</span>`).join('')}</div></div>
+      <div class="rp-section reveal"><h3>درباره</h3><p class="rp-about">${esc(r.about)}</p><div class="feat-row">${r.feats.map(f=>`<span class="feat">${icon('check',{size:13})} ${esc(f)}</span>`).join('')}</div></div>
 
       <div class="rp-section reveal"><h3>منو</h3><div class="menu-list">${r.menu.map(m=>`<div class="menu-item glass"><div class="menu-emoji">${m[0]}</div><div class="menu-info"><div class="menu-name">${esc(m[1])}</div><div class="menu-price">${m[2]} تومان</div></div></div>`).join('')}</div></div>
 
@@ -49,18 +50,19 @@ export function openRest(id){
           <div class="rb-bars">${[['غذا',r.rb.food],['سرویس',r.rb.service],['فضا',r.rb.atmo],['ارزش',r.rb.value]].map(([l,v])=>`<div class="rb-bar-row"><span class="rl">${l}</span><div class="rb-track"><div class="rb-fill" style="width:0" data-w="${v/5*100}"></div></div><span class="rv">${fmtFa(v)}</span></div>`).join('')}</div>
         </div>
         <div class="ai-review glass">
-          <div class="ai-review-head"><div class="icn">✦</div><div class="ttl">خلاصه‌ی هوشمند نظرها</div><span class="tag">AI</span></div>
-          <div class="ai-col"><div class="ai-col-label">👍 مهمان‌ها تعریف می‌کنن از:</div>${r.good.map(g=>`<div class="ai-point"><span class="ic good">✓</span>${esc(g)}</div>`).join('')}</div>
-          <div class="ai-col"><div class="ai-col-label">👎 گاهی گله دارن از:</div>${r.bad.map(b=>`<div class="ai-point"><span class="ic bad">!</span>${esc(b)}</div>`).join('')}</div>
+          <div class="ai-review-head"><div class="icn">${icon('sparkle',{size:16,fill:true})}</div><div class="ttl">خلاصه‌ی هوشمند نظرها</div><span class="tag">AI</span></div>
+          <div class="ai-col"><div class="ai-col-label">${icon('thumbsUp',{size:14})} مهمان‌ها تعریف می‌کنن از:</div>${r.good.map(g=>`<div class="ai-point"><span class="ic good">${icon('check',{size:12})}</span>${esc(g)}</div>`).join('')}</div>
+          <div class="ai-col"><div class="ai-col-label">${icon('thumbsDown',{size:14})} گاهی گله دارن از:</div>${r.bad.map(b=>`<div class="ai-point"><span class="ic bad">!</span>${esc(b)}</div>`).join('')}</div>
         </div>
-        ${r.revs.map(rv=>`<div class="review reveal"><div class="review-ava">${rv[1]}</div><div class="review-body"><div class="review-top"><span class="review-name">${esc(rv[0])}</span><span class="review-date">${esc(rv[4])}</span></div><div class="review-stars">${'★'.repeat(+rv[2])}</div><div class="review-text">${esc(rv[3])}</div></div></div>`).join('')}
+        ${r.revs.map(rv=>`<div class="review reveal"><div class="review-ava">${rv[1]}</div><div class="review-body"><div class="review-top"><span class="review-name">${esc(rv[0])}</span><span class="review-date">${esc(rv[4])}</span></div><div class="review-stars">${Array.from({length:+rv[2]},()=>icon('star',{size:12,fill:true})).join('')}</div><div class="review-text">${esc(rv[3])}</div></div></div>`).join('')}
       </div>
     </div>
     <div class="rp-bookbar glass">
       <div class="rp-bookbar-info">
-        <div class="rp-bookbar-cb">💰 ${fmtFa(r.cb)}٪ کش‌بک</div>
+        <div class="rp-bookbar-cb">${icon('wallet',{size:13})} ${fmtFa(r.cb)}٪ کش‌بک</div>
         <div class="rp-bookbar-sub">رزرو رایگان · بدون پیش‌پرداخت</div>
       </div>
+      <button class="btn btn-ghost rp-msg-btn" onclick="buzz&&buzz();openChat('${esc(r.slug||'')}')" aria-label="پیام به رستوران" ${r.slug?'':'disabled'}>${icon('message',{size:20})}</button>
       <button class="btn btn-primary rp-bookbar-btn" onclick="buzz&&buzz();openBookSheet(${id})">رزرو میز</button>
     </div>`;
   go('rest');
@@ -119,13 +121,13 @@ export function dateValToISO(v){
   return d.toISOString().slice(0,10);
 }
 export function faTime(t){return (t||'').replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);}
-export function quickBook(id,slot){bk={id,date:'امروز',time:slot,party:'۲ نفر'};openSheet(bookStep2(R.find(x=>x.id===id)))}
+export function quickBook(id,slot){setBk({id,date:'امروز',time:slot,party:'۲ نفر'});openSheet(bookStep2(R.find(x=>x.id===id)))}
 export function startBook(id){
   const t=document.getElementById('bwTime').value;
-  if(!t){toast('⚠️','برای این روز ساعت خالی نیست — روز دیگه‌ای انتخاب کن');return;}
+  if(!t){toast('','برای این روز ساعت خالی نیست — روز دیگه‌ای انتخاب کن');return;}
   const dateSel=document.getElementById('bwDate');
   const dateLabel=dateSel.options[dateSel.selectedIndex].text;
-  bk={id,date:dateLabel,dateVal:dateSel.value,time:faTime(t),timeRaw:t,party:document.getElementById('bwParty').value};
+  setBk({id,date:dateLabel,dateVal:dateSel.value,time:faTime(t),timeRaw:t,party:document.getElementById('bwParty').value});
   openSheet(bookStep2(R.find(x=>x.id===id)));
 }
 export function bookStep2(r){
@@ -133,8 +135,11 @@ export function bookStep2(r){
     <div class="steps"><div class="step-bar done"></div><div class="step-bar now"></div><div class="step-bar"></div></div>
     <div class="field-label">پیش‌سفارش (اختیاری) — <span style="color:var(--teal-600)">+۲۰ امتیاز</span></div>
     <div class="opt-row">${r.menu.map(m=>`<div class="opt" onclick="this.classList.toggle('sel')">${m[0]} ${m[1]}</div>`).join('')}</div>
-    <button class="btn btn-primary btn-lg btn-block" onclick="openSheet(bookStep3(R.find(x=>x.id===${r.id})))">ادامه</button>`;
+    <button class="btn btn-primary btn-lg btn-block" onclick="toBookStep3(${r.id})">ادامه</button>`;
 }
+// wrapperِ سراسری: onclick در scope سراسری اجرا می‌شود و به R (ماژولی) دسترسی ندارد،
+// پس lookup را اینجا (با دسترسی به R) انجام می‌دهیم.
+export function toBookStep3(id){ openSheet(bookStep3(R.find(x=>x.id===id))); }
 export function bookStep3(r){
   return `<div class="sheet-title">تأیید اطلاعات</div><div class="sheet-sub">یه قدم تا رزرو</div>
     <div class="steps"><div class="step-bar done"></div><div class="step-bar done"></div><div class="step-bar now"></div></div>
@@ -149,7 +154,7 @@ export async function confirmBook(id){
   // رزرو نیاز به ورود دارد
   if(!isLoggedIn()){
     closeSheet();
-    toast('🔐','برای رزرو اول وارد شو');
+    toast('','برای رزرو اول وارد شو');
     setTimeout(()=>openLogin(),400);
     return;
   }
@@ -182,13 +187,13 @@ export async function confirmBook(id){
       offerWaitlist(id, r);
       return;
     }
-    toast('⚠️', res.error?.message || 'ثبت رزرو ناموفق بود، دوباره تلاش کن');
+    toast('', res.error?.message || 'ثبت رزرو ناموفق بود، دوباره تلاش کن');
     if(confirmBtn){confirmBtn.disabled=false;confirmBtn.textContent='تأیید رزرو';}
     return;
   }
 
   // موفقیت (واقعی یا دمو)
-  pts+=50;document.getElementById('navPts').textContent=fmtFa(pts);
+  setPts(pts+50);document.getElementById('navPts').textContent=fmtFa(pts);
   TRIPS.unshift({rid:id,date:bk.date,time:bk.time,party:bk.party,code,status:'up'});
   sheetBody.innerHTML=`
     <div class="success">
@@ -212,5 +217,6 @@ window.openBookSheet = openBookSheet;
 window.quickBook = quickBook;
 window.startBook = startBook;
 window.bookStep3 = bookStep3;
+window.toBookStep3 = toBookStep3;
 window.confirmBook = confirmBook;
 window.copyCode = copyCode;

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 import { Err } from '@/lib/errors';
+import { safeJson } from '@/lib/schemas';
 
 // ═══════════════════════════════════════════════════════════
 //  GET  /restaurant/hours — خواندن ساعتِ کاری + تعطیلاتِ خاص
@@ -47,7 +48,7 @@ export const GET = withRestaurantAuth({ permission: 'canManageSettings', rateLim
 });
 
 export const PUT = withRestaurantAuth({ permission: 'canManageSettings', rateLimit: 'auth' }, async (req, ctx) => {
-  const b = await req.json();
+  const b = await safeJson(req);
   if (!validateHours(b.opening_hours)) throw Err.validation('ساختار ساعتِ کاری نامعتبر است');
 
   await db.restaurant.update({

@@ -115,7 +115,7 @@ export async function createReservation(
     holdMinutes: r.holdMinutes ?? 10,
   };
   const { start, end, blockEnd, duration, blockBufferMin } =
-    computeRanges(input.date, input.time, cfg, input.durationMinutes);
+    computeRanges(input.date, input.time, cfg, input.durationMinutes, r.timezone ?? 'Asia/Tehran');
 
   // ── زمان نباید در گذشته یا خیلی دور باشد ──
   const now = Date.now();

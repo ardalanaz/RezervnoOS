@@ -41,6 +41,13 @@ export async function requestOtp(rawPhone: string): Promise<{ devCode?: string }
   // این باعث می‌شود لاگین بدون هیچ وابستگی خارجی کار کند — برای تست قبل از راه‌اندازی SMS.
   // production حتماً پیامک می‌فرستد و کد را برنمی‌گرداند.
   const devMode = process.env.OTP_DEV_MODE === 'true';
+  // ⚠️ فیکسِ حسابرسیِ ۲۰۲۶-۰۷-۱۹ (FINAL-PRODUCTION-AUDIT.md بخشِ ۳): قبلاً اینجا فقط
+  // console.warn بود و چیزی جلوی OTP_DEV_MODE=true در production را نمی‌گرفت — یعنی
+  // endpoint وریفای کدِ OTP را مستقیم در پاسخِ API برمی‌گرداند (auth bypass کامل).
+  // حالا fail-fast: اگر این ترکیبِ خطرناک رخ دهد، پردازش OTP اصلاً متوقف می‌شود.
+  if (devMode && process.env.NODE_ENV === 'production') {
+    throw new Error('[SECURITY] OTP_DEV_MODE=true در production مجاز نیست. جلوگیری از bypass احراز هویت.');
+  }
   if (devMode) {
     // هشدار بلند: حالت تست فعال است. این هرگز نباید در محیط واقعی روشن بماند.
     console.warn('[امنیت] OTP_DEV_MODE فعال است — کد روی صفحه برمی‌گردد و پیامک ارسال نمی‌شود. فقط برای تست!');

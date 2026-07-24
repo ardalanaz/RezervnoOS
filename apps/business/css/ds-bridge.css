@@ -1,0 +1,80 @@
+/* ═══════════════════════════════════════════════════════════
+   رزرونو — لایه‌ی سازگاریِ Design System (DS Bridge)
+   هدف: هم‌ترازکردنِ کامپوننت‌های قدیمیِ اپ‌ها با Design System،
+        بدونِ لمسِ markupِ صفحات (نه ری‌دیزاین).
+
+   دو کار:
+   ۱) نگاشتِ توکن‌های قدیمیِ هر اپ (--r-sm, --t, --blue...) به توکن‌های DS.
+      → هر کلاسی که از توکنِ قدیمی استفاده می‌کند، خودکار مقدارِ DS می‌گیرد.
+   ۲) هم‌ترازیِ کامپوننت‌های پایه (.btn, .inp) به استانداردِ DS.
+
+   باید *بعد از* CSS اصلیِ هر اپ لود شود تا واگرایی را اصلاح کند.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── ۱) نگاشتِ توکن‌های قدیمی → DS (منبعِ واحدِ حقیقت) ── */
+:root {
+  /* شعاع: قدیمی → DS (کاملِ مقیاس، رفعِ واگراییِ r-xl=24→20، r-2xl=32→28) */
+  --r-xs:  var(--radius-xs);
+  --r-sm:  var(--radius-sm);
+  --r-md:  var(--radius-md);
+  --r:     var(--radius-md);
+  --r-lg:  var(--radius-lg);
+  --r-xl:  var(--radius-xl);
+  --r-2xl: var(--radius-2xl);
+  /* حرکت: قدیمی → DS (کامل، شاملِ t-slow=340→320 و spring) */
+  --t:      var(--motion-base);
+  --t-fast: var(--motion-fast);
+  --t-slow: var(--motion-slow);
+  --ease:   var(--ease-out);
+  --spring: var(--ease-spring);
+  /* برند: قدیمی → DS (حفظِ تمِ هر اپ، فقط یکدست‌سازیِ منبع) */
+  --blue: var(--brand-500);
+  /* توجه: سایه (--sh-*) عمداً نگاشت نمی‌شود — هر اپ سایه‌ی متناسب با تمِ خود دارد
+     (مشتریِ دارک = سایه‌ی قوی‌تر با rgba بالا). نگاشتِ سراسریِ elevation روشن،
+     سایه را در دارک‌مود نامرئی می‌کرد. این یک رگرسیونِ بصری بود که اصلاح شد. */
+}
+
+/* ── ۲) هم‌ترازیِ .btn به استانداردِ DS (رفعِ واگراییِ سه‌گانه) ──
+   مقادیرِ یکدستِ توکنی، جایگزینِ 11px/10px و 14px/13px پراکنده. */
+.btn {
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);   /* block+inline کامل — override کاملِ shorthand قدیمی */
+  font-size: var(--fs-md);
+  min-height: var(--touch-min);
+  border-radius: var(--radius-md);
+  transition: transform var(--motion-fast) var(--ease-out),
+              background var(--motion-fast) var(--ease-out),
+              box-shadow var(--motion-fast) var(--ease-out),
+              opacity var(--motion-fast) var(--ease-out);
+}
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-sm { min-height: 36px; font-size: var(--fs-sm); padding: var(--sp-1) var(--sp-3); }
+.btn-lg { min-height: 44px; font-size: var(--fs-lg); padding: var(--sp-3) var(--sp-6); }
+
+/* ── ۳) هم‌ترازیِ .inp (کلاسِ قدیمی) به استانداردِ .field-input ── */
+.inp {
+  min-height: var(--touch-min);
+  padding: var(--sp-3) var(--sp-4);   /* توکنی — override کاملِ 12px/15px قدیمی */
+  border-radius: var(--radius-md);
+  font-size: var(--fs-md);
+  transition: border-color var(--motion-fast) var(--ease-out),
+              box-shadow var(--motion-fast) var(--ease-out);
+}
+.inp:focus {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 15%, transparent);
+}
+.inp[aria-invalid="true"] { border-color: var(--danger); }
+
+/* ── ۴) هم‌ترازیِ chip قدیمی (.opt) به استانداردِ .chip ── */
+.opt {
+  min-height: 34px;
+  border-radius: var(--radius-full);
+  transition: background var(--motion-fast) var(--ease-out),
+              color var(--motion-fast) var(--ease-out);
+}
+.opt:focus-visible { box-shadow: var(--focus-ring); }
+
+/* ── ۵) هم‌ترازیِ کارتِ قدیمی (.panel / .glass) به elevation یکدست ── */
+.panel { border-radius: var(--radius-lg); }

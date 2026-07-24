@@ -2,9 +2,23 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 import { Err } from '@/lib/errors';
+import { parseBody, z } from '@/lib/schemas';
 
-const SHAPES = ['rectangle', 'round', 'booth'];
-const ZONES = ['indoor', 'outdoor', 'window', 'vip', 'smoking'];
+const SHAPES = ['rectangle', 'round', 'booth'] as const;
+const ZONES = ['indoor', 'outdoor', 'window', 'vip', 'smoking'] as const;
+
+const createSchema = z.object({
+  number: z.number().int().min(1),
+  capacity: z.number().int().min(1).max(50),
+  name: z.string().max(50).optional(),
+  shape: z.enum(SHAPES).optional(),
+  zone: z.enum(ZONES).optional(),
+  is_vip: z.boolean().optional(),
+  is_smoking: z.boolean().optional(),
+  is_accessible: z.boolean().optional(),
+  min_party_size: z.number().int().min(1).optional(),
+  max_party_size: z.number().int().min(1).optional(),
+});
 
 /** GET — لیست همه‌ی میزهای رستوران (برای نقشه‌ی سالن و مدیریت میز در پنل) */
 export const GET = withRestaurantAuth({ permission: 'canManageTables' }, async (_req, ctx) => {
@@ -27,13 +41,8 @@ export const GET = withRestaurantAuth({ permission: 'canManageTables' }, async (
 
 /** POST — افزودن میز جدید · بدنه: { number, capacity, name?, shape?, zone?, is_vip?, is_smoking?, is_accessible? } */
 export const POST = withRestaurantAuth({ rateLimit: 'auth', permission: 'canManageTables' }, async (req, ctx) => {
-  const b = await req.json();
-  const number = Number(b.number);
-  const capacity = Number(b.capacity);
-  if (!Number.isInteger(number) || number <= 0) throw Err.validation('شماره میز باید عدد مثبت باشد');
-  if (!Number.isInteger(capacity) || capacity <= 0 || capacity > 50) throw Err.validation('ظرفیت میز نامعتبر است');
-  if (b.shape && !SHAPES.includes(b.shape)) throw Err.validation('شکل میز نامعتبر است');
-  if (b.zone && !ZONES.includes(b.zone)) throw Err.validation('ناحیه‌ی میز نامعتبر است');
+  const b = await parseBody(req, createSchema);
+  const { number, capacity } = b;
 
   const dup = await db.table.findFirst({ where: { restaurantId: ctx.restaurant.id, number } });
   if (dup) throw Err.validation(`میز شماره ${number} از قبل وجود دارد`);

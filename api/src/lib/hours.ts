@@ -18,6 +18,26 @@ function toMin(hhmm: string): number {
   return h * 60 + m;
 }
 
+/**
+ * تبدیل تاریخ+ساعتِ محلی (به وقت restaurant.timezone) به یک لحظه‌ی UTC واقعی.
+ * باگ (رفع‌شده): قبلاً آفستِ ثابتِ +03:30 هاردکد بود؛ برای timezoneهای غیرتهران
+ * لحظه‌ی رزرو اشتباه ذخیره می‌شد. Intl.DateTimeFormat با tzdata واقعی + DST درست کار می‌کند.
+ */
+export function zonedTimeToUtc(dateISO: string, timeHHMM: string, timeZone: string): Date {
+  const naiveUtc = new Date(`${dateISO}T${timeHHMM}:00Z`);
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const parts: Record<string, string> = {};
+  for (const p of dtf.formatToParts(naiveUtc)) parts[p.type] = p.value;
+  const hour = parts.hour === '24' ? 0 : Number(parts.hour);
+  const asUtcAgain = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), hour, Number(parts.minute), Number(parts.second));
+  const offsetMs = asUtcAgain - naiveUtc.getTime();
+  return new Date(naiveUtc.getTime() - offsetMs);
+}
+
 /** روزِ هفته‌ی یک تاریخ در تایم‌زونِ رستوران (0=یکشنبه..6=شنبه). */
 export function weekdayInTz(dateISO: string, timezone: string): number {
   // dateISO مثل "2026-07-10"؛ ظهر را می‌گیریم تا مرزِ نیمه‌شبِ تایم‌زون مشکل‌ساز نشود

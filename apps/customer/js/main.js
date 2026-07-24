@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════
 
 // زیربنا
+import './icons.js';
 import './store.js';
 import './actions.js';
 
@@ -26,6 +27,7 @@ import './features/trips.js';
 import './features/loyalty.js';
 import './features/rewards.js';
 import './features/food-dna.js';
+import './features/chat.js';
 
 // پروفایل و احراز هویت
 import './user-profile.js';

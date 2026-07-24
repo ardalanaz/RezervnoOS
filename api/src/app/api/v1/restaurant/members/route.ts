@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
 import { dbRead as db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
+import { parseQuery, z } from '@/lib/schemas';
+
+const querySchema = z.object({
+  q: z.string().max(100).trim().optional(),
+  limit: z.number().int().min(1).max(100).default(50),
+  offset: z.number().int().min(0).max(100_000).default(0),
+});
 
 /** GET — لیست اعضای باشگاه (?q= جستجو، ?limit=&offset= صفحه‌بندی). مهاجرت‌شده به wrapper. */
 export const GET = withRestaurantAuth(
   { permission: 'canViewAnalytics', rateLimit: 'search' },
   async (req, ctx) => {
     const restaurant = ctx.restaurant;
-    const url = new URL(req.url);
-    const q = (url.searchParams.get('q') || '').trim();
-    const limit = Math.min(100, parseInt(url.searchParams.get('limit') || '50'));
-    const offset = parseInt(url.searchParams.get('offset') || '0');
+    const { q = '', limit, offset } = parseQuery(req, querySchema);
 
     const where = {
       restaurantId: restaurant.id,

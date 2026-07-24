@@ -16,7 +16,7 @@ import { redis } from './redis';
 import { Err } from './errors';
 import { availabilityKey } from './availability-cache';
 import { ACTIVE_RESERVATION_STATUSES } from './reservation-status';
-import { filterTimesByHours, type OpeningHours } from './hours';
+import { filterTimesByHours, zonedTimeToUtc, type OpeningHours } from './hours';
 
 /** پیکربندیِ زمان‌بندیِ رستوران — مدت سانس، بافر، نظافت، هولد. */
 export interface TimingConfig {
@@ -105,7 +105,8 @@ export async function computeAndCacheAvailability(restaurantId: string, date: st
     select: { id: true, number: true },
   });
 
-  const dayStart = new Date(`${date}T00:00:00+03:30`);
+  const tz = r.timezone ?? 'Asia/Tehran';
+  const dayStart = zonedTimeToUtc(date, '00:00', tz);
   const dayEnd = new Date(+dayStart + 24 * 3600_000);
   const busy = await db.reservation.findMany({
     where: {
@@ -117,7 +118,7 @@ export async function computeAndCacheAvailability(restaurantId: string, date: st
 
   const blockBuffer = cfg.cleaningMinutes + cfg.bufferMinutes;
   const slots = times.map(time => {
-    const start = new Date(`${date}T${time}:00+03:30`);
+    const start = zonedTimeToUtc(date, time, tz);
     const end = new Date(+start + cfg.slotMinutes * 60_000);
     const blockEnd = new Date(+end + blockBuffer * 60_000);
     const freeTables = tables

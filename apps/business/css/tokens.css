@@ -1,0 +1,153 @@
+/* ═══════════════════════════════════════════════════════════
+   رزرونو — سیستم توکنِ طراحیِ مشترک (Design Tokens)
+   منبعِ واحدِ حقیقت برای هر سه اپ. دو لایه:
+     ۱) Primitive  — مقادیرِ خام (رنگ، اندازه). هیچ‌جا مستقیم استفاده نکن.
+     ۲) Semantic   — نقش‌ها (bg, text, brand, danger...). فقط این‌ها را استفاده کن.
+   هر اپ تمِ خودش را با override کردنِ لایه‌ی Semantic می‌سازد.
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── لایه ۱: Primitive — مقیاسِ تایپوگرافی (۴px-baseline، پرش‌های واضح) ── */
+  --fs-2xs: 11px;
+  --fs-xs:  12px;
+  --fs-sm:  13px;
+  --fs-md:  14px;   /* بدنه‌ی پیش‌فرض */
+  --fs-lg:  16px;
+  --fs-xl:  20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 32px;
+  --fs-4xl: 40px;
+
+  --lh-tight:   1.2;
+  --lh-snug:    1.4;
+  --lh-normal:  1.6;
+  --lh-relaxed: 1.8;
+
+  --ls-tight: -0.02em;   /* عنوان‌های بزرگ (به سبک Linear) */
+  --ls-snug:  -0.01em;
+  --ls-normal: 0;
+
+  --fw-normal:   400;
+  --fw-medium:   500;
+  --fw-semibold: 600;
+  --fw-bold:     700;
+  --fw-extra:    800;
+
+  /* ── لایه ۱: Primitive — مقیاسِ فاصله (۴px grid، پیکسل‌پرفکت) ── */
+  --sp-0:  0;
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* ── لایه ۱: Primitive — شعاع ── */
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
+
+  /* ── لایه ۱: Primitive — حرکت (یک سیستمِ زمانی واحد) ── */
+  --motion-fast:  130ms;
+  --motion-base:  200ms;
+  --motion-slow:  320ms;
+  --ease-out:    cubic-bezier(.4, 0, .2, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  /* ── لایه ۱: Primitive — رنگ‌های برند (خام) ── */
+  --brand-500: #4F46E5;
+  --brand-600: #4338CA;
+  --brand-400: #6A4BFF;
+  --violet-500: #7C3AED;
+  --warm-500:  #E8925A;
+
+  /* ── لایه ۲: Semantic — حالت‌های معنایی (مشترک بینِ همه‌ی اپ‌ها) ── */
+  --success:      #12A150;
+  --success-soft: #E7F6EE;
+  --success-ink:  #0A7A3C;
+  --warning:      #C2410C;
+  --warning-soft: #FEF0E7;
+  --warning-ink:  #9A3412;
+  --danger:       #DC2626;
+  --danger-soft:  #FDECEC;
+  --danger-ink:   #B91C1C;
+  --info:         #2563EB;
+  --info-soft:    #E8F0FE;
+  --info-ink:     #1D4ED8;
+
+  /* ── هدفِ لمسیِ حداقل (Apple HIG / Material) ── */
+  --touch-min: 44px;
+
+  /* ── focus ring یکدست (دسترسی‌پذیری) ── */
+  --focus-ring: 0 0 0 2px var(--bg, #fff), 0 0 0 4px var(--brand-500);
+}
+
+  /* ── لایه ۱: Primitive — Elevation (سایه‌های لایه‌ای، ۵ سطح) ── */
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px rgba(11,16,32,.05), 0 1px 1px rgba(11,16,32,.03);
+  --elevation-2: 0 2px 6px rgba(11,16,32,.06), 0 1px 2px rgba(11,16,32,.04);
+  --elevation-3: 0 6px 16px rgba(11,16,32,.08), 0 2px 4px rgba(11,16,32,.05);
+  --elevation-4: 0 12px 32px rgba(11,16,32,.10), 0 4px 8px rgba(11,16,32,.06);
+  --elevation-5: 0 24px 60px rgba(11,16,32,.16), 0 8px 16px rgba(11,16,32,.08);
+  /* نام‌های مستعارِ معنایی */
+  --sh-sm: var(--elevation-1);
+  --sh-md: var(--elevation-3);
+  --sh-lg: var(--elevation-4);
+  --sh-xl: var(--elevation-5);
+
+  /* ── لایه ۱: Primitive — Grid (۱۲ ستون، container، gutter) ── */
+  --grid-cols: 12;
+  --grid-gutter: var(--sp-6);
+  --container-sm:  640px;
+  --container-md:  768px;
+  --container-lg:  1024px;
+  --container-xl:  1280px;
+  --container-max: 1280px;
+
+  /* ── لایه ۱: Primitive — Breakpoints (به‌صورت مقدار برای ارجاع؛ در media query مستقیم) ── */
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
+  /* ── لایه ۱: Primitive — z-index scale (لایه‌بندیِ یکدست) ── */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-drawer: 300;
+  --z-overlay: 400;
+  --z-modal: 500;
+  --z-toast: 600;
+  --z-tooltip: 700;
+
+/* احترامِ سراسری به کاهشِ حرکت — یک‌بار، درست، برای همه */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── پلِ تم: پنل بیزنس (لایت) ── */
+:root {
+  --surface: #FFFFFF;
+  --surface-2: #F4F4F8;
+  --surface-hover: rgba(11,16,32,.04);
+  --text-1: #0B1020;
+  --text-2: #5A6172;
+  --text-3: #9AA0AE;
+  --skeleton-base: rgba(11,16,32,.05);
+  --skeleton-hi: rgba(11,16,32,.10);
+  --brand-500: #4F46E5;
+  --brand-600: #4338CA;
+}

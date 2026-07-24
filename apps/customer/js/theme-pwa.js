@@ -3,11 +3,13 @@
 //  بخشی از اپ کاستومر (Vanilla JS، بدون build). scope سراسری مشترک.
 //  ترتیبِ لود در index.html مهم است (این فایل به توابع/state قبلی وابسته است).
 // ═══════════════════════════════════════════════════════════
+import { icon } from './icons.js';
+
 export const _root=document.documentElement;
 try{ const saved=localStorage.getItem('rz_theme'); if(saved) _root.setAttribute('data-theme',saved);
   else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches) _root.setAttribute('data-theme','light'); }catch{}
 export function toggleTheme(){ const t=_root.getAttribute('data-theme')==='dark'?'light':'dark'; _root.setAttribute('data-theme',t); try{localStorage.setItem('rz_theme',t)}catch{}; updateThemeIcon(); buzz(); }
-export function updateThemeIcon(){ const k=document.getElementById('themeKnob'); if(k) k.textContent=_root.getAttribute('data-theme')==='dark'?'🌙':'☀️'; }
+export function updateThemeIcon(){ const k=document.getElementById('themeKnob'); if(k) k.innerHTML=icon(_root.getAttribute('data-theme')==='dark'?'moon':'sun',{size:16}); }
 export function buzz(ms){ try{ if(navigator.vibrate) navigator.vibrate(ms||8); }catch{} }  // پاسخِ لمسی روی موبایل
 // ورودِ متحرک هنگام اسکرول (کارت‌ها می‌پرن تو صفحه، مثل تیک‌تاک)
 let _io;
@@ -40,10 +42,10 @@ export function showInstallBanner(){
   const b=document.createElement('div');
   b.id='installBanner'; b.className='install-banner glass';
   b.innerHTML=`
-    <div class="ib-icon">🍽️</div>
+    <div class="ib-icon">${icon('utensils',{size:24})}</div>
     <div class="ib-txt"><div class="ib-title">رزرونو رو نصب کن</div><div class="ib-sub">دسترسیِ آنی، حتی آفلاین</div></div>
     <button class="ib-btn" onclick="doInstall()">نصب</button>
-    <button class="ib-close" onclick="dismissInstall()" aria-label="بستن">✕</button>`;
+    <button class="ib-close" onclick="dismissInstall()" aria-label="بستن">${icon('close',{size:18})}</button>`;
   document.body.appendChild(b);
   requestAnimationFrame(()=>b.classList.add('in'));
 }

@@ -13,6 +13,7 @@ import { GRAD, TRIPS, bk, favs } from './data/seed.js';
 import { addToCalendar, addToWallet, cancelTrip, repeatReservation, showCheckInQR } from './features/trips.js';
 import { R } from './init.js';
 import { armReveals, buzz } from './theme-pwa.js';
+import { icon } from './icons.js';
 export let WL=null; // ورودی فعلی لیست انتظار کاربر { id, position, ... }
 export let wlTimer=null;
 // پیشنهاد پیوستن به صف وقتی ظرفیت پر است
@@ -22,14 +23,14 @@ export function offerWaitlist(id, r){
     <div class="wl-join">
       <div class="wl-join-hero">
         <div class="wl-join-mesh"></div>
-        <span class="wl-join-emoji">📋</span>
+        <span class="wl-join-emoji">${icon('inbox',{size:28})}</span>
       </div>
       <div class="sheet-title" style="text-align:center">ظرفیت این ساعت پره</div>
       <div class="sheet-sub" style="text-align:center;margin-bottom:18px">${esc(r.n)} · ${bk.date} · ${bk.time}<br>به صف بپیوند — اگه میزی آزاد شه، <b>اول به تو</b> خبر می‌دیم</div>
       <div class="wl-benefits">
-        <div class="wl-benefit"><span class="wl-bene-ic">🔔</span><div><b>اطلاع فوری</b><small>پیامک + نوتیفیکیشن لحظه‌ای</small></div></div>
+        <div class="wl-benefit"><span class="wl-bene-ic">${icon('bell',{size:18})}</span><div><b>اطلاع فوری</b><small>پیامک + نوتیفیکیشن لحظه‌ای</small></div></div>
         <div class="wl-benefit"><span class="wl-bene-ic">⏱️</span><div><b>تخمین زمان</b><small>می‌دونی چقدر باید صبر کنی</small></div></div>
-        <div class="wl-benefit"><span class="wl-bene-ic">✓</span><div><b>کنترلِ کامل</b><small>آفر رو راحت قبول یا رد کن</small></div></div>
+        <div class="wl-benefit"><span class="wl-bene-ic">${icon('check',{size:18})}</span><div><b>کنترلِ کامل</b><small>آفر رو راحت قبول یا رد کن</small></div></div>
       </div>
       <button class="btn btn-primary btn-lg btn-block" style="margin-top:18px" onclick="buzz&&buzz();joinWaitlist(${id})">پیوستن به لیست انتظار</button>
       <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeSheet()">بی‌خیال</button>
@@ -44,7 +45,7 @@ export async function joinWaitlist(id){
   let entry;
   if(res.ok&&res.data?.id){ entry=res.data; }
   else if(res.offline){ entry={id:'wl_demo',position:Math.floor(Math.random()*3)+2,estimated_wait_minutes:25,is_vip:false,status:'waiting'}; }
-  else { toast('⚠️',res.error?.message||'پیوستن ناموفق بود'); closeSheet(); return; }
+  else { toast('',res.error?.message||'پیوستن ناموفق بود'); closeSheet(); return; }
   WL={...entry,rid:id,rname:r.n};
   showWaitlistStatus();
 }
@@ -58,13 +59,13 @@ export function showWaitlistStatus(){
       ${isOffered?`
         <div class="wl-offer-banner">
           <div class="wl-offer-mesh"></div>
-          <span class="wl-offer-emoji">🎉</span>
+          <span class="wl-offer-emoji">${icon('checkCircle',{size:32})}</span>
           <div class="sheet-title" style="text-align:center;color:#fff;position:relative">میزت آماده‌ست!</div>
           <div style="text-align:center;color:rgba(255,255,255,.92);font-size:14px;position:relative">میز ${faNum(WL.offered_table||'—')} · ${esc(WL.rname||'')}</div>
           <div class="wl-timer" id="wlTimer">۰۵:۰۰</div>
           <div style="text-align:center;color:rgba(255,255,255,.85);font-size:12px;position:relative">برای تأیید فرصت داری</div>
         </div>
-        <button class="btn btn-lg btn-block" style="background:#fff;color:#16A34A;margin-top:16px;font-weight:800" onclick="buzz&&buzz();acceptWL()">✓ قبول می‌کنم</button>
+        <button class="btn btn-lg btn-block" style="background:#fff;color:#16A34A;margin-top:16px;font-weight:800" onclick="buzz&&buzz();acceptWL()">${icon('check',{size:18})} قبول می‌کنم</button>
         <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="declineWL()">رد کردن</button>
       `:`
         <div style="text-align:center;padding:8px 0">
@@ -75,10 +76,10 @@ export function showWaitlistStatus(){
           </div>
           <div class="sheet-title" style="text-align:center;margin-top:18px">در صفِ ${esc(WL.rname||'')}</div>
           <div class="wl-eta"><span>⏱️</span> حدود <b>${faNum(WL.estimated_wait_minutes||'؟')}</b> دقیقه تا نوبتت</div>
-          ${WL.is_vip?'<div class="wl-vip-badge">⭐ اولویت VIP</div>':''}
-          <div class="wl-hint">🔔 به‌محضِ آزادشدنِ میز، با پیامک و نوتیفیکیشن خبرت می‌کنیم</div>
+          ${WL.is_vip?`<div class="wl-vip-badge">${icon('star',{size:13,fill:true})} اولویت VIP</div>`:''}
+          <div class="wl-hint">${icon('bell',{size:13})} به‌محضِ آزادشدنِ میز، با پیامک و نوتیفیکیشن خبرت می‌کنیم</div>
         </div>
-        <button class="btn btn-ghost btn-block" style="margin-top:16px" onclick="buzz&&buzz();refreshWL()">🔄 به‌روزرسانی وضعیت</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:16px" onclick="buzz&&buzz();refreshWL()">${icon('refresh',{size:16})} به‌روزرسانی وضعیت</button>
         <button class="btn btn-danger-ghost btn-block" style="margin-top:8px" onclick="leaveWL()">خروج از صف</button>
       `}
     </div>`;
@@ -102,10 +103,10 @@ export function startWlTimer(){
 export async function refreshWL(){
   if(!WL)return;
   const res=await API.get(`/waitlist/${WL.id}`);
-  if(res.ok&&res.data){WL={...WL,...res.data};showWaitlistStatus();toast('🔄','به‌روز شد');}
+  if(res.ok&&res.data){WL={...WL,...res.data};showWaitlistStatus();toast('','به‌روز شد');}
   else if(res.offline){ // دمو: شبیه‌سازی آفر
-    if(WL.position>1){WL.position--;toast('🔄',`نفر ${faNum(WL.position)} شدی`);}
-    else{WL.status='offered';WL.offered_table=7;toast('🎉','میزت آماده شد!');}
+    if(WL.position>1){WL.position--;toast('',`نفر ${faNum(WL.position)} شدی`);}
+    else{WL.status='offered';WL.offered_table=7;toast('','میزت آماده شد!');}
     showWaitlistStatus();
   }
 }
@@ -115,12 +116,12 @@ export async function acceptWL(){
   if(res.ok&&res.data){
     const code=res.data.reservation_code||'RZWL'+Math.random().toString(36).slice(2,6).toUpperCase();
     TRIPS.unshift({rid:WL.rid,date:bk.date,time:bk.time,party:bk.party,code,status:'up'});
-    toast('✅','رزروت ثبت شد!');WL=null;closeSheet();go('trips');
+    toast('','رزروت ثبت شد!');WL=null;closeSheet();go('trips');
   }else if(res.offline){
     const code='RZWL'+Math.random().toString(36).slice(2,6).toUpperCase();
     TRIPS.unshift({rid:WL.rid,date:bk.date,time:bk.time,party:bk.party,code,status:'up'});
-    toast('✅','رزروت ثبت شد!');WL=null;closeSheet();go('trips');
-  }else{toast('⚠️',res.error?.message||'خطا');}
+    toast('','رزروت ثبت شد!');WL=null;closeSheet();go('trips');
+  }else{toast('',res.error?.message||'خطا');}
 }
 export async function declineWL(){
   clearInterval(wlTimer);
@@ -184,7 +185,7 @@ export async function renderTrips(){
   }
 
   if(!trips.length){
-    listEl.innerHTML=`<div class="trips-empty"><div class="trips-empty-emoji">🗓️</div><div class="trips-empty-title">هنوز رزروی نداری</div><div class="trips-empty-sub">اولین تجربه‌ت رو رزرو کن</div><button class="btn btn-primary" style="margin-top:16px" onclick="go('discover')">کشف رستوران‌ها</button></div>`;
+    listEl.innerHTML=`<div class="empty-state"><div class="empty-state-icon">${icon('calendar',{size:44})}</div><div class="empty-state-title">هنوز رزروی نداری</div><div class="empty-state-desc">اولین تجربه‌ت رو رزرو کن</div><button class="btn btn-primary" style="margin-top:16px" onclick="go('discover')">کشف رستوران‌ها</button></div>`;
     return;
   }
   // شمارشِ خلاصه (حسِ دستاورد نسل‌Z)
@@ -197,7 +198,7 @@ export async function renderTrips(){
     const emoji=t._emoji||r?.e||'🍽️';
     const name=t._name||r?.n||'رستوران';
     const gradId=t._grad||t.rid||1;
-    const statusLabel=t.status==='up'?'🟢 پیش‌رو':t.status==='cancelled'?'✕ لغوشده':'✓ تجربه‌شده';
+    const statusLabel=t.status==='up'?`<span class="live-dot" aria-hidden="true"></span> پیش‌رو`:t.status==='cancelled'?`${icon('close',{size:12})} لغوشده`:`${icon('check',{size:12})} تجربه‌شده`;
     const acts=t.status==='up'
       ? `<button class="btn btn-sm btn-primary" onclick="buzz&&buzz();showCheckInQR('${esc(t.code)}','${esc(name)}')">QR ورود</button><button class="btn btn-sm btn-ghost" onclick="addToCalendar('${esc(t.code)}','${esc(name)}','${esc(t.date)}','${esc(t.time)}')">تقویم</button><button class="btn btn-sm btn-ghost" onclick="addToWallet('${esc(t.code)}','${esc(name)}','${esc(t.date)}','${esc(t.time)}','apple')">کیف پول</button><button class="btn btn-sm btn-ghost" onclick="cancelTrip('${esc(t.code)}',this)">لغو</button>`
       : t.status==='cancelled' ? ''
@@ -210,7 +211,7 @@ export async function renderTrips(){
       </div>
       <div class="trip-card-body">
         <div class="trip-card-name">${esc(name)}</div>
-        <div class="trip-card-meta"><span>📅 ${t.date}</span><span class="tcm-dot">·</span><span>🕐 ${t.time}</span><span class="tcm-dot">·</span><span>👥 ${t.party}</span></div>
+        <div class="trip-card-meta"><span>${icon('calendar',{size:13})} ${t.date}</span><span class="tcm-dot">·</span><span>${icon('clock',{size:13})} ${t.time}</span><span class="tcm-dot">·</span><span>${icon('users',{size:13})} ${t.party}</span></div>
         <div class="trip-card-code">کد رزرو: <b>${esc(t.code)}</b></div>
         ${acts?`<div class="trip-card-actions">${acts}</div>`:''}
       </div>

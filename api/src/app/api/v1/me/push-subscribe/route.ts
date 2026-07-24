@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { authFromRequest } from '@/lib/jwt';
 import { db } from '@/lib/db';
 import { Err, errorResponse } from '@/lib/errors';
-import { z } from '@/lib/validate';
+import { parseBody, z } from '@/lib/schemas';
 
 // ذخیره‌ی ترجیحِ اعلانِ push کاربر. زیرساختِ ارسالِ push هنوز راه‌اندازی نشده،
 // ولی این endpoint قرارداد را کامل می‌کند و ترجیح را ذخیره می‌کند تا وقتی
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   try {
     const auth = authFromRequest(req);
     if (auth.kind !== 'customer') throw Err.forbidden();
-    const body = subscribeSchema.parse(await req.json().catch(() => ({})));
+    const body = await parseBody(req, subscribeSchema);
 
     // ذخیره‌ی ترجیح روی کاربر: فعلاً no-op امن. وقتی جدولِ push_subscriptions
     // (یا ستونِ pushEnabled) اضافه شد، اینجا upsert می‌شود. عمداً روی User چیزی

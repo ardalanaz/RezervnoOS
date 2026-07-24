@@ -3,23 +3,23 @@
 function fa(n){return n.toLocaleString('fa-IR')}
 // ── چرخه‌ی حیات کامل رزرو: برچسب فارسی، آیکون، و رنگ هر وضعیت ──
 const STATUS_META={
-  pending:        {label:'در انتظار',     icon:'⏳', bg:'#FEF3C7', fg:'#92400E'},
-  waitlisted:     {label:'لیست انتظار',   icon:'📋', bg:'#FEF9C3', fg:'#854D0E'},
-  confirmed:      {label:'تأییدشده',      icon:'●',  bg:'#DBEAFE', fg:'#1D4ED8'},
-  auto_confirmed: {label:'تأیید خودکار',  icon:'⚡', bg:'#DBEAFE', fg:'#1D4ED8'},
-  preparing:      {label:'آماده‌سازی میز',icon:'🪑', bg:'#E0E7FF', fg:'#4338CA'},
-  checked_in:     {label:'حاضر شد',       icon:'✓',  bg:'#D1FAE5', fg:'#047857'},
-  arrived:        {label:'حاضر شد',       icon:'✓',  bg:'#D1FAE5', fg:'#047857'}, // قدیمی
-  running_late:   {label:'با تأخیر',      icon:'🕐', bg:'#FFEDD5', fg:'#C2410C'},
-  seated:         {label:'سر میز',        icon:'🍽️', bg:'#FEF3C7', fg:'#B45309'},
-  dining:         {label:'در حال صرف غذا',icon:'🍴', bg:'#FED7AA', fg:'#9A3412'},
-  completed:      {label:'انجام‌شده',     icon:'✓',  bg:'#DCFCE7', fg:'#15803D'},
-  no_show:        {label:'نیومد',         icon:'⚠️', bg:'#FEF3C7', fg:'#D97706'},
-  noshow:         {label:'نیومد',         icon:'⚠️', bg:'#FEF3C7', fg:'#D97706'}, // alias
-  cancelled:      {label:'لغوشده',        icon:'🚫', bg:'#FEE2E2', fg:'#B91C1C'},
-  auto_cancelled: {label:'لغو خودکار',    icon:'🚫', bg:'#FEE2E2', fg:'#B91C1C'},
-  rejected:       {label:'ردشده',         icon:'✕',  bg:'#FEE2E2', fg:'#991B1B'},
-  expired:        {label:'منقضی',         icon:'⌛', bg:'#F3F4F6', fg:'#6B7280'},
+  pending:        {label:'در انتظار',     icon:'clock', bg:'#FEF3C7', fg:'#92400E'},
+  waitlisted:     {label:'لیست انتظار',   icon:'inbox', bg:'#FEF9C3', fg:'#854D0E'},
+  confirmed:      {label:'تأییدشده',      icon:'checkCircle',  bg:'#DBEAFE', fg:'#1D4ED8'},
+  auto_confirmed: {label:'تأیید خودکار',  icon:'trending', bg:'#DBEAFE', fg:'#1D4ED8'},
+  preparing:      {label:'آماده‌سازی میز',icon:'utensils', bg:'#E0E7FF', fg:'#4338CA'},
+  checked_in:     {label:'حاضر شد',       icon:'check',  bg:'#D1FAE5', fg:'#047857'},
+  arrived:        {label:'حاضر شد',       icon:'check',  bg:'#D1FAE5', fg:'#047857'}, // قدیمی
+  running_late:   {label:'با تأخیر',      icon:'clock', bg:'#FFEDD5', fg:'#C2410C'},
+  seated:         {label:'سر میز',        icon:'utensils', bg:'#FEF3C7', fg:'#B45309'},
+  dining:         {label:'در حال صرف غذا',icon:'utensils', bg:'#FED7AA', fg:'#9A3412'},
+  completed:      {label:'انجام‌شده',     icon:'check',  bg:'#DCFCE7', fg:'#15803D'},
+  no_show:        {label:'نیومد',         icon:'alert', bg:'#FEF3C7', fg:'#D97706'},
+  noshow:         {label:'نیومد',         icon:'alert', bg:'#FEF3C7', fg:'#D97706'}, // alias
+  cancelled:      {label:'لغوشده',        icon:'close', bg:'#FEE2E2', fg:'#B91C1C'},
+  auto_cancelled: {label:'لغو خودکار',    icon:'close', bg:'#FEE2E2', fg:'#B91C1C'},
+  rejected:       {label:'ردشده',         icon:'close',  bg:'#FEE2E2', fg:'#991B1B'},
+  expired:        {label:'منقضی',         icon:'clock', bg:'#F3F4F6', fg:'#6B7280'},
 };
 // ── انتقال‌های مجاز چرخه‌ی حیات (همگام با بک‌اند lifecycle.ts) ──
 const STATUS_TRANSITIONS={
@@ -40,11 +40,11 @@ function openStatusMenu(i){
   const r=RES[i]; if(!r)return;
   const allowed=STATUS_TRANSITIONS[r.status]||[];
   if(!allowed.length){toast('','این رزرو در وضعیت نهایی است');return;}
-  const opts=allowed.map(s=>{const m=STATUS_META[s];return `<button class="status-opt" onclick="changeStatus(${i},'${s}')" style="--c:${m.fg};--bgc:${m.bg}"><span>${m.icon}</span> ${m.label}</button>`;}).join('');
+  const opts=allowed.map(s=>{const m=STATUS_META[s];return `<button class="status-opt" onclick="changeStatus(${i},'${s}')" style="--c:${m.fg};--bgc:${m.bg}"><span>${icon(m.icon,{size:13})}</span> ${m.label}</button>`;}).join('');
   openModal(`<div class="bs-head"><div class="bs-title">تغییر وضعیت</div><div class="bs-rest">${esc(r.name)} · میز ${fa(r.table)}</div></div>
     <div style="margin:8px 0 4px;font-size:13px;color:var(--t3)">وضعیت فعلی: ${STATUS_META[r.status]?.label||r.status}</div>
     <div class="status-opts">${opts}</div>
-    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="viewHistory(${i})">📜 تاریخچه‌ی تغییرات</button>`);
+    <button class="btn btn-ghost btn-block" style="margin-top:12px" onclick="viewHistory(${i})">${icon('inbox',{size:14})} تاریخچه‌ی تغییرات</button>`);
 }
 async function changeStatus(i,to){
   const r=RES[i]; if(!r)return;
@@ -55,11 +55,11 @@ async function changeStatus(i,to){
   r._events=r._events||[{toStatus:old,actor:'system',createdAt:new Date(Date.now()-3600000).toISOString(),isAutomatic:false}];
   r._events.push({toStatus:to,actor:'staff',createdAt:new Date().toISOString(),isAutomatic:false});
   renderResList();
-  toast(STATUS_META[to]?.icon||'✓',`وضعیت به «${STATUS_META[to]?.label||to}» تغییر کرد`);
+  toast('',`وضعیت به «${STATUS_META[to]?.label||to}» تغییر کرد`);
   // ارسال به بک‌اند؛ فقط اگر سرور آنلاین بود و خطای واقعی داد، برگردان
   if(r.code){
     const res=await API.request(`/restaurant/reservations/${r.code}/status`,{method:'PATCH',body:JSON.stringify({status:to})});
-    if(!res.ok&&!res.offline){ r.status=old; r._events.pop(); renderResList(); toast('⚠️','تغییر وضعیت ناموفق بود'); }
+    if(!res.ok&&!res.offline){ r.status=old; r._events.pop(); renderResList(); toast('','تغییر وضعیت ناموفق بود'); }
   }
 }
 async function viewHistory(i){
@@ -71,10 +71,10 @@ async function viewHistory(i){
     events=res.ok?res.data.events:[{toStatus:r.status,actor:'system',createdAt:new Date().toISOString(),isAutomatic:false}];
   }
   const rows=(events||[]).map(e=>{
-    const m=STATUS_META[e.toStatus]||{label:e.toStatus,icon:'•',fg:'#666'};
+    const m=STATUS_META[e.toStatus]||{label:e.toStatus,icon:'info',fg:'#666'};
     const who=e.actor==='system'||e.actor==='cron'?'سیستم':e.actor==='customer'?'مشتری':'کارمند';
     const t=new Date(e.createdAt).toLocaleString('fa-IR',{hour:'2-digit',minute:'2-digit',month:'short',day:'numeric'});
-    return `<div class="hist-row"><span class="hist-ic" style="color:${m.fg}">${m.icon}</span><div class="hist-body"><div class="hist-status">${m.label}${e.isAutomatic?' <span class="hist-auto">خودکار</span>':''}</div><div class="hist-meta">${who} · ${t}</div></div></div>`;
+    return `<div class="hist-row"><span class="hist-ic" style="color:${m.fg}">${icon(m.icon,{size:14})}</span><div class="hist-body"><div class="hist-status">${m.label}${e.isAutomatic?' <span class="hist-auto">خودکار</span>':''}</div><div class="hist-meta">${who} · ${t}</div></div></div>`;
   }).join('');
   openModal(`<div class="bs-head"><div class="bs-title">تاریخچه‌ی رزرو</div><div class="bs-rest">${esc(r.name)} · کد ${r.code||'—'}</div></div><div class="hist-list">${rows||'<div style="color:var(--t3);text-align:center;padding:20px">رویدادی ثبت نشده</div>'}</div>`);
 }
@@ -93,13 +93,25 @@ const API = {
   setToken(t){ this._token = t; try { if(t) localStorage.setItem('rz_biz_access', t); else localStorage.removeItem('rz_biz_access'); } catch {} },
   getToken(){ return this._token; },
   setRefresh(t){ this._refresh = t; try { if(t) localStorage.setItem('rz_biz_refresh', t); else localStorage.removeItem('rz_biz_refresh'); } catch {} },
-  restoreSession(){ try { this._token = localStorage.getItem('rz_biz_access')||null; this._refresh = localStorage.getItem('rz_biz_refresh')||null; } catch {} return !!this._token; },
+  restoreSession(){
+    try {
+      this._token = localStorage.getItem('rz_biz_access')||null;
+      this._refresh = localStorage.getItem('rz_biz_refresh')||null;
+      this._restaurantId = localStorage.getItem('rz_biz_restaurant_id')||null;
+    } catch {}
+    return !!this._token;
+  },
+  // ── شعبه‌ی فعال (چندشعبه‌ای): هدر X-Restaurant-Id، بدون نیاز به ورود دوباره ──
+  _restaurantId: null,
+  setActiveRestaurant(id){ this._restaurantId = id||null; try { if(id) localStorage.setItem('rz_biz_restaurant_id', id); else localStorage.removeItem('rz_biz_restaurant_id'); } catch {} },
+  getActiveRestaurant(){ return this._restaurantId; },
   async request(path, opts = {}, _retried = false){
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), this.timeout);
     try {
       const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
       if (this._token) headers['Authorization'] = `Bearer ${this._token}`;
+      if (this._restaurantId) headers['X-Restaurant-Id'] = this._restaurantId;
       const res = await fetch(this.base + '/api/v1' + path, { ...opts, headers, signal: ctrl.signal });
       clearTimeout(timer);
       const data = await res.json().catch(() => ({}));
@@ -133,17 +145,43 @@ const API = {
   get(path){ return this.request(path); },
   post(path, body){ return this.request(path, { method: 'POST', body: JSON.stringify(body || {}) }); },
   patch(path, body){ return this.request(path, { method: 'PATCH', body: JSON.stringify(body || {}) }); },
+  chatList(){ return this.get('/restaurant/chats'); },
+  chatMessages(id, after){ return this.get('/restaurant/chats/'+id+(after?('?after='+encodeURIComponent(after)):'')); },
+  chatSend(id, body){ return this.post('/restaurant/chats/'+id, { body }); },
   delete(path){ return this.request(path, { method: 'DELETE' }); },
   // ── احراز هویت کارمند ──
   async requestStaffOtp(phone){ return this.post('/auth/staff/request', { phone }); },
   async verifyStaffOtp(phone, code){
     const res = await this.post('/auth/staff/verify', { phone, code });
-    if (res.ok && res.data?.access) { this.setToken(res.data.access); this.setRefresh(res.data.refresh); }
+    if (res.ok && res.data?.access) {
+      this.setToken(res.data.access); this.setRefresh(res.data.refresh);
+      // مجوزهای مؤثر از سرور — پنل بر اساس همین‌ها منو را محدود می‌کند.
+      this.setPermissions(res.data.staff?.permissions || null);
+    }
     return res;
+  },
+  // ── مجوزها ──
+  // منبعِ حقیقت سرور است؛ این فقط برای پنهان‌کردنِ چیزی است که کاربر اجازه‌اش را ندارد،
+  // نه یک سازوکارِ امنیتی. بک‌اند مستقلاً روی هر روت اعمال می‌کند.
+  _perms: null,
+  setPermissions(p){
+    this._perms = p;
+    try { p ? localStorage.setItem('rz_perms', JSON.stringify(p)) : localStorage.removeItem('rz_perms'); } catch {}
+  },
+  getPermissions(){
+    if (this._perms) return this._perms;
+    try { const raw = localStorage.getItem('rz_perms'); if (raw) this._perms = JSON.parse(raw); } catch {}
+    return this._perms;
+  },
+  can(key){
+    const p = this.getPermissions();
+    // بدونِ اطلاعِ مجوز (آفلاین/دمو) چیزی را پنهان نمی‌کنیم؛ سرور تصمیم‌گیرِ نهایی است.
+    if (!p) return true;
+    return p[key] !== false;
   },
   async doLogout(){
     if (this._refresh) { await fetch(this.base + '/api/v1/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh: this._refresh }) }).catch(() => {}); }
-    this.setToken(null); this.setRefresh(null);
+    this.setToken(null); this.setRefresh(null); this.setPermissions(null);
   },
   // ارسال پیامک کمپین یا winback
   async sendSms(payload){ return this.post('/restaurant/sms', payload); },
@@ -155,6 +193,7 @@ const API = {
   setTableState(id, state){ return this.patch(`/restaurant/tables/${id}/state`, { state }); },
   // ── هوش مشتری (RFM/CLV/AI) ──
   customers(qs){ return this.get('/restaurant/customers'+(qs?'?'+qs:'')); },
+  customerDetail(userId){ return this.get('/restaurant/customers/'+encodeURIComponent(userId)); },
   rfm(){ return this.get('/restaurant/rfm'); },
   aiRecommendations(){ return this.get('/restaurant/ai'); },
   // ── ورود بدون رزرو (walk-in واقعی، با عضویت خودکار باشگاه) ──
@@ -174,6 +213,25 @@ const API = {
   updateEvent(body){ return this.patch('/restaurant/events', body); },
   deleteEvent(id){ return this.delete('/restaurant/events?id='+encodeURIComponent(id)); },
   campaignHistory(){ return this.get('/restaurant/campaigns'); },
+  // ── لیست انتظار (وصل به /restaurant/waitlist واقعی) ──
+  waitlistQueue(){ return this.get('/restaurant/waitlist'); },
+  waitlistAnalytics(days){ return this.get('/restaurant/waitlist/analytics'+(days?'?days='+days:'')); },
+  waitlistPromoteNext(){ return this.post('/restaurant/waitlist'); },
+  // ── کارکنان و دسترسی (وصل به /restaurant/staff واقعی) ──
+  staffList(){ return this.get('/restaurant/staff'); },
+  staffUpdate(body){ return this.patch('/restaurant/staff', body); },
+  // ── کوپن‌ها (وصل به /restaurant/coupons واقعی) ──
+  couponsList(){ return this.get('/restaurant/coupons'); },
+  couponCreate(body){ return this.post('/restaurant/coupons', body); },
+  // ── اتوماسیونِ مارکتینگ (وصل به /restaurant/automations واقعی) ──
+  automationsList(){ return this.get('/restaurant/automations'); },
+  automationCreate(body){ return this.post('/restaurant/automations', body); },
+  // ── ساعات کاری + تعطیلات (وصل به /restaurant/hours واقعی) ──
+  hoursGet(){ return this.get('/restaurant/hours'); },
+  hoursSave(body){ return this.request('/restaurant/hours', { method:'PUT', body: JSON.stringify(body||{}) }); },
+  // ── چندشعبه‌ای: لیست شعبه‌ها + ساخت شعبه‌ی جدید ──
+  branchesList(){ return this.get('/restaurant/branches'); },
+  branchCreate(body){ return this.post('/restaurant/branches', body); },
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -249,9 +307,9 @@ const Outbox = {
     this._updateBadge();
     // گزارش نتیجه به پرسنل
     if(synced > 0 && this._queue.length === 0 && conflicts.length === 0){
-      toast('✅', `${fa(synced)} عملیات آفلاین با موفقیت همگام شد`);
+      toast('', `${fa(synced)} عملیات آفلاین با موفقیت همگام شد`);
     } else if(synced > 0){
-      toast('✅', `${fa(synced)} عملیات همگام شد`);
+      toast('', `${fa(synced)} عملیات همگام شد`);
     }
     if(conflicts.length > 0){ this._reportConflicts(conflicts); }
     // اگر view فعال است، تازه‌سازی کن تا وضعیت درست دیده شود
@@ -263,12 +321,12 @@ const Outbox = {
     const list = conflicts.map(c => `<div style="padding:10px 12px;background:var(--amber-50);border-radius:10px;margin-bottom:8px;font-size:13px">
       <b>${esc(c.op.label||'عملیات')}</b><div style="color:var(--t2);margin-top:2px">${esc(c.error)}</div></div>`).join('');
     if(typeof openModal==='function'){
-      openModal(`<div class="modal-title">⚠️ ${fa(conflicts.length)} عملیات نیاز به بررسی دارد</div>
+      openModal(`<div class="modal-title">${icon('alert',{size:18})} ${fa(conflicts.length)} عملیات نیاز به بررسی دارد</div>
         <div class="modal-sub">این عملیات‌ها هنگام آفلاین ثبت شدند ولی سرور نپذیرفت (احتمالاً میز یا زمان قبلاً پر شده). لطفاً دستی بررسی کن:</div>
         <div style="margin-top:14px">${list}</div>
         <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="closeModal()">متوجه شدم</button>`);
     } else {
-      toast('⚠️', `${fa(conflicts.length)} عملیات آفلاین رد شد — بررسی کن`);
+      toast('', `${fa(conflicts.length)} عملیات آفلاین رد شد — بررسی کن`);
     }
   },
 
@@ -277,7 +335,7 @@ const Outbox = {
     if(!el) return;
     const n = this.count();
     if(customText){ el.textContent = customText; el.style.display='inline-flex'; return; }
-    if(n > 0){ el.innerHTML = `⏳ ${fa(n)} عملیات در انتظار همگام‌سازی`; el.style.display='inline-flex'; }
+    if(n > 0){ el.innerHTML = `${icon('clock',{size:13})} ${fa(n)} عملیات در انتظار همگام‌سازی`; el.style.display='inline-flex'; }
     else { el.style.display='none'; }
   },
 };
@@ -296,10 +354,10 @@ const Net = {
     this.online = on;
     this._render();
     if(on){
-      toast('🟢','اینترنت برگشت — در حال همگام‌سازی...');
+      toast('','اینترنت برگشت — در حال همگام‌سازی...');
       Outbox.sync();
     } else {
-      toast('🔴','اینترنت قطع شد — اپ در حالت آفلاین کار می‌کند');
+      toast('','اینترنت قطع شد — اپ در حالت آفلاین کار می‌کند');
     }
   },
   _render(){
@@ -324,7 +382,7 @@ function refreshActiveView(){
   const active = document.querySelector('.view.active');
   if(!active) return;
   const v = active.id.replace('v-','');
-  ({overview:rOverview,reservations:rReservations,waitlist:rWaitlist,floor:rFloor,customers:rCustomers,loyalty:rLoyalty,analytics:rAnalytics,cashback:rCashback,pricing:rPricing})[v]?.();
+  ({overview:rOverview,reservations:rReservations,waitlist:rWaitlist,floor:rFloor,profile:rProfile,customers:rCustomers,loyalty:rLoyalty,marketing:rMarketing,analytics:rAnalytics,cashback:rCashback,staff:rStaff,pricing:rPricing})[v]?.();
 }
 // ── Heartbeat: به سرور می‌گوید این رستوران آنلاین است ──
 // تا وقتی پنل به اینترنت وصل است، هر ۳۰ ثانیه یک سیگنال می‌فرستد. اگر اینترنت
@@ -345,7 +403,7 @@ const Heartbeat = {
 };
 // نشانگر منبع داده برای شفافیت (آیا داده واقعی است یا نمونه)
 function dataSourceNote(){
-  return API.online ? '' : '<div style="font-size:11px;color:var(--amber-600);background:var(--amber-50);padding:6px 12px;border-radius:8px;margin-bottom:14px;text-align:center">🔌 داده‌ی نمونه (بک‌اند متصل نیست)</div>';
+  return API.online ? '' : `<div style="font-size:11px;color:var(--amber-600);background:var(--amber-50);padding:6px 12px;border-radius:8px;margin-bottom:14px;text-align:center">${icon('info',{size:13})} داده‌ی نمونه (بک‌اند متصل نیست)</div>`;
 }
 // امنیت: escape کردن ورودی کاربر قبل از تزریق به HTML (جلوگیری از XSS)
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -384,10 +442,10 @@ async function loadTables(){
   return TABLES;
 }
 const GUESTS=[
-  {name:'کیان موسوی',ava:'👨‍💼',seg:'vip',visits:18,last:'۳ روز پیش',spent:'۶.۲م',vip:95,ret:92,churn:8,phone:'۰۹۱۲۵۵۵۶۶۷۷',birthday:'۱۵ خرداد',points:3400},
-  {name:'نیلوفر رضایی',ava:'👩',seg:'regular',visits:12,last:'امروز',spent:'۳.۸م',vip:62,ret:78,churn:20,phone:'۰۹۱۲۳۳۳۴۴۵۵',birthday:'۲ آبان',points:1900},
-  {name:'امیر حسینی',ava:'🧔',seg:'new',visits:3,last:'هفته پیش',spent:'۸۹۰ک',vip:30,ret:55,churn:45,phone:'۰۹۱۲۷۷۷۸۸۹۹',birthday:'۸ دی',points:300},
-  {name:'مریم احمدی',ava:'👩‍🦱',seg:'risk',visits:6,last:'۳۵ روز پیش',spent:'۱.۵م',vip:35,ret:30,churn:82},
+  {name:'کیان موسوی',ava:'',seg:'vip',visits:18,last:'۳ روز پیش',spent:'۶.۲م',vip:95,ret:92,churn:8,phone:'۰۹۱۲۵۵۵۶۶۷۷',birthday:'۱۵ خرداد',points:3400},
+  {name:'نیلوفر رضایی',ava:'',seg:'regular',visits:12,last:'امروز',spent:'۳.۸م',vip:62,ret:78,churn:20,phone:'۰۹۱۲۳۳۳۴۴۵۵',birthday:'۲ آبان',points:1900},
+  {name:'امیر حسینی',ava:'',seg:'new',visits:3,last:'هفته پیش',spent:'۸۹۰ک',vip:30,ret:55,churn:45,phone:'۰۹۱۲۷۷۷۸۸۹۹',birthday:'۸ دی',points:300},
+  {name:'مریم احمدی',ava:'',seg:'risk',visits:6,last:'۳۵ روز پیش',spent:'۱.۵م',vip:35,ret:30,churn:82},
 ];
 // باشگاه مشتریان — دیتای واقعی و زنده
 let CLUB=[
@@ -504,12 +562,7 @@ function enrollClub(name,phone){
   CLUB.unshift(member);
   return {enrolled:true,member};
 }
-const STAFF=[
-  {name:'سارا محمدی',ava:'س',role:'owner',roleL:'مالک',email:'sara@vista.com'},
-  {name:'رضا کاظمی',ava:'ر',role:'manager',roleL:'مدیر',email:'reza@vista.com'},
-  {name:'مینا تهرانی',ava:'م',role:'staff',roleL:'گارسون',email:'mina@vista.com'},
-  {name:'علی نوری',ava:'ع',role:'staff',roleL:'گارسون',email:'ali@vista.com'},
-];
-const TITLES={overview:'داشبورد',reservations:'مدیریت رزروها',waitlist:'لیست انتظار',floor:'پلان سالن',profile:'پروفایل و نظرات',customers:'مشتریان',loyalty:'باشگاه مشتریان',analytics:'آنالیتیکس',cashback:'تنظیم کش‌بک',staff:'کارکنان'};
+
+const TITLES={overview:'داشبورد',reservations:'مدیریت رزروها',waitlist:'لیست انتظار',floor:'پلان سالن',profile:'پروفایل و نظرات',customers:'مشتریان',loyalty:'باشگاه مشتریان',marketing:'بازاریابی',analytics:'آنالیتیکس',cashback:'تنظیم کش‌بک',staff:'کارکنان',pricing:'قیمت‌گذاری',chat:'پیام‌ها'};
 
 // ═══════════ ROUTING ═══════════

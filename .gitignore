@@ -12,3 +12,27 @@ api/prisma/*.db
 # بک‌آپ‌های دیتابیس (نباید در git بروند)
 backup/data/*.sql.gz
 backup/data/*.sql
+
+# ── تکمیل‌شده در آماده‌سازیِ گیت (۲۰۲۶-۰۷-۲۳) ──
+# ابزار Vercel (شاملِ لینکِ پروژه — نباید در مخزن باشد)
+.vercel
+
+# خروجیِ build و کش
+out/
+dist/
+build/
+*.tsbuildinfo
+.turbo
+.eslintcache
+.cache/
+coverage/
+
+# گزارش‌های تست
+e2e/playwright-report/
+e2e/test-results/
+playwright/.cache/
+
+# متغیرهای محیطیِ محیط‌های خاص (‎.env.example استثناست چون به *.env ختم نمی‌شود)
+.env.production
+.env.development
+.env.*.local

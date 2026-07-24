@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { dbRead as db } from '@/lib/db';
 import { cached, cacheKey } from '@/lib/cache';
 import { errorResponse } from '@/lib/errors';
+import { parseQuery, zUuid, z } from '@/lib/schemas';
 
 // ═══════════════════════════════════════════════════════════
 //  GET /api/v1/restaurants — لیست رستوران‌ها
@@ -13,11 +14,14 @@ import { errorResponse } from '@/lib/errors';
 
 const PAGE_SIZE = 24; // اندازه‌ی صفحه (مناسب grid موبایل)
 
+const querySchema = z.object({
+  vibe: z.string().min(1).max(50).optional(),
+  cursor: zUuid.optional(),
+});
+
 export async function GET(req: Request) {
   try {
-    const url = new URL(req.url);
-    const vibe = url.searchParams.get('vibe');
-    const cursor = url.searchParams.get('cursor'); // id آخرین آیتم صفحه‌ی قبل
+    const { vibe, cursor } = parseQuery(req, querySchema);
 
     // کلید cache بر اساس فیلتر و صفحه
     const key = cacheKey('restaurants', vibe || 'all', cursor || 'first');

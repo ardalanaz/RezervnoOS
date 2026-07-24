@@ -2,11 +2,14 @@ import { NextResponse } from 'next/server';
 import { dbRead as db } from '@/lib/db';
 import { cached } from '@/lib/cache';
 import { errorResponse } from '@/lib/errors';
+import { parseQuery, zUuid, z } from '@/lib/schemas';
+
+const querySchema = z.object({ restaurant_id: zUuid.optional() });
 
 /** GET /api/v1/events?restaurant_id=... — رویدادهای ویژه‌ی پیش‌رو */
 export async function GET(req: Request) {
   try {
-    const rid = new URL(req.url).searchParams.get('restaurant_id');
+    const { restaurant_id: rid } = parseQuery(req, querySchema);
     const key = `events:${rid || 'all'}`;
     const events = await cached(key, 120, async () => {
       return db.specialEvent.findMany({

@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
+import { parseQuery, zReservationCode, z } from '@/lib/schemas';
+
+const querySchema = z.object({
+  date: z.enum(['today', 'tomorrow', 'upcoming', 'past', 'all']).default('today'),
+  limit: z.number().int().min(1).max(200).default(100),
+  cursor: zReservationCode.optional(),
+});
 
 /** GET ?date=today|tomorrow|upcoming|past|all — رزروهای رستوران. مهاجرت‌شده به wrapper. */
 export const GET = withRestaurantAuth(
   { rateLimit: 'search' },
   async (req, ctx) => {
     const restaurant = ctx.restaurant;
-    const url = new URL(req.url);
-    const filter = url.searchParams.get('date') || 'today';
+    const { date: filter, limit, cursor } = parseQuery(req, querySchema);
 
     const now = new Date();
     const startToday = new Date(now); startToday.setHours(0, 0, 0, 0);
@@ -23,8 +29,6 @@ export const GET = withRestaurantAuth(
 
     // ── صفحه‌بندیِ Cursor (نه Offset) — برای مقیاسِ ۱۰k+ رزرو ──
     // cursor = code آخرین رزروِ صفحه‌ی قبل. limit+1 می‌گیریم تا بفهمیم صفحه‌ی بعدی هست.
-    const limit = Math.min(Number(url.searchParams.get('limit')) || 100, 200);
-    const cursor = url.searchParams.get('cursor');
 
     const rows = await db.reservation.findMany({
       where: { restaurantId: restaurant.id, ...slotWhere },

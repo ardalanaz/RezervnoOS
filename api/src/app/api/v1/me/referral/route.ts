@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { authFromRequest } from '@/lib/jwt';
 import { getReferralStats, createReferral } from '@/lib/loyalty';
 import { Err, errorResponse } from '@/lib/errors';
-import { safeJson } from '@/lib/security';
+import { parseBody, zPhone, z } from '@/lib/schemas';
+
+const inviteSchema = z.object({ phone: zPhone });
 
 /** GET — آمار و کد دعوت کاربر */
 export async function GET(req: Request) {
@@ -18,8 +20,7 @@ export async function POST(req: Request) {
   try {
     const auth = authFromRequest(req);
     if (auth.kind !== 'customer') throw Err.forbidden();
-    const { phone } = await safeJson(req);
-    if (!phone) throw Err.validation('شماره الزامی است');
+    const { phone } = await parseBody(req, inviteSchema);
     return NextResponse.json(await createReferral(auth.sub, phone));
   } catch (e) { return errorResponse(e); }
 }

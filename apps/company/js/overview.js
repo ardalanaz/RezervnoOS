@@ -18,28 +18,28 @@ function rOverview(){
   const alerts=RESTAURANTS.filter(r=>r.status==='expiring'||r.status==='expired'||r.status==='trial'||r.status==='trial_expired');
   const sub = PLATFORM_STATS?.subscription_breakdown || {active:0,expiring:0,expired:0,trial:0,trial_expired:0};
   const health = PLATFORM_STATS?.system_health || (API.online ? '—' : null);
-  const healthMeta = {healthy:['🟢','سالم','green'],warning:['🟡','نیاز به بررسی','amber'],critical:['🔴','بحرانی','red']}[health] || ['⚪','نامشخص','s-400'];
+  const healthMeta = {healthy:['checkCircle','سالم','green'],warning:['alert','نیاز به بررسی','amber'],critical:['alert','بحرانی','red']}[health] || ['info','نامشخص','s-400'];
   const clv = PLATFORM_STATS?.platform_clv_toman;
   const fnl=n=>n==null?'—':n>=1000000?fa(+(n/1000000).toFixed(1))+'م':n>=1000?fa(Math.round(n/1000))+'ک':fa(n);
 
   document.getElementById('v-overview').innerHTML=`
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">🏪</div></div><div class="kpi-val">${fa(total)}</div><div class="kpi-label">رستوران در پلتفرم</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">👥</div></div><div class="kpi-val">${fa(totalMembers)}</div><div class="kpi-label">کل اعضای باشگاه (همه)</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">📅</div></div><div class="kpi-val">${fa(totalRes)}</div><div class="kpi-label">کل رزروها (تجمعی)</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">✉️</div></div><div class="kpi-val">${fa(totalSms)}</div><div class="kpi-label">کل پیامک ارسالی</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ${lowBalanceCount>0?'red':'green'}">📲</div>${lowBalanceCount>0?`<span class="kpi-delta" style="background:var(--red-50);color:var(--red-600)">${fa(lowBalanceCount)} کم‌موجودی</span>`:''}</div><div class="kpi-val">${fa(totalSmsBalance)}</div><div class="kpi-label">موجودی پیامک (باقی‌مانده)</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">${icon('store',{size:17})}</div></div><div class="kpi-val">${fa(total)}</div><div class="kpi-label">رستوران در پلتفرم</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">${icon('users',{size:17})}</div></div><div class="kpi-val">${fa(totalMembers)}</div><div class="kpi-label">کل اعضای باشگاه (همه)</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">${icon('calendar',{size:17})}</div></div><div class="kpi-val">${fa(totalRes)}</div><div class="kpi-label">کل رزروها (تجمعی)</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">${icon('mail',{size:17})}</div></div><div class="kpi-val">${fa(totalSms)}</div><div class="kpi-label">کل پیامک ارسالی</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ${lowBalanceCount>0?'red':'green'}">${icon('phone',{size:17})}</div>${lowBalanceCount>0?`<span class="kpi-delta" style="background:var(--red-50);color:var(--red-600)">${fa(lowBalanceCount)} کم‌موجودی</span>`:''}</div><div class="kpi-val">${fa(totalSmsBalance)}</div><div class="kpi-label">موجودی پیامک (باقی‌مانده)</div></div>
     </div>
 
     <div class="row-2">
       <div class="panel" style="cursor:pointer" onclick="nav('systemhealth')">
         <div class="panel-head"><div><div class="panel-title">سلامت سیستم</div><div class="panel-sub">صف پردازش، webhook، خطاهای ۲۴ ساعت اخیر</div></div></div>
         <div style="display:flex;align-items:center;gap:14px;padding:8px 0">
-          <div style="font-size:38px">${healthMeta[0]}</div>
+          <div style="color:var(--${healthMeta[2]}-600,var(--t1))">${icon(healthMeta[0],{size:38})}</div>
           <div><div style="font-size:18px;font-weight:800;color:var(--${healthMeta[2]}-600,var(--t1))">${healthMeta[1]}</div>
           <div style="font-size:12.5px;color:var(--t2);margin-top:2px">${clv!=null?`ارزش مهمانان پلتفرم (CLV): ${fnl(clv)} تومان · ${fa(PLATFORM_STATS?.total_vips||0)} مهمان VIP`:'برای جزئیات کلیک کن'}</div></div>
         </div>
-        <button class="btn btn-ghost btn-block" style="margin-top:8px">جزئیات سلامت سیستم ←</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px">جزئیات سلامت سیستم ${icon('arrowL',{size:13})}</button>
       </div>
       <div class="panel">
         <div class="panel-head"><div class="panel-title">وضعیت اشتراک‌ها</div></div>
@@ -47,7 +47,7 @@ function rOverview(){
           ${[['فعال',sub.active,'var(--green)'],['رو به اتمام',sub.expiring,'var(--amber)'],['آزمایشی',(sub.trial||0)+(sub.trial_expired||0),'var(--ink)'],['منقضی',sub.expired,'var(--red)']].map(([l,c,col])=>`
             <div style="display:flex;align-items:center;gap:12px"><span style="width:100px;font-size:13px;font-weight:600">${l}</span><div style="flex:1;height:10px;background:var(--s-100);border-radius:5px;overflow:hidden"><div style="height:100%;width:${total?c/total*100:0}%;background:${col};border-radius:5px;transition:width .8s"></div></div><span style="font-weight:800;font-size:14px;width:24px;text-align:left">${fa(c)}</span></div>`).join('')}
         </div>
-        <button class="btn btn-ghost btn-block" style="margin-top:20px" onclick="nav('restaurants')">دیدن همه‌ی رستوران‌ها ←</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:20px" onclick="nav('restaurants')">دیدن همه‌ی رستوران‌ها ${icon('arrowL',{size:13})}</button>
       </div>
     </div>
 
@@ -66,10 +66,10 @@ function rOverview(){
         ${alerts.length?alerts.map(r=>{
           const isExpired=r.status==='expired'||r.status==='trial_expired';const isTrial=r.status==='trial';
           return `<div class="alert-item">
-            <div class="alert-ic ${isExpired?'danger':isTrial?'info':'warn'}">${isExpired?'🚫':isTrial?'🎁':'⏰'}</div>
+            <div class="alert-ic ${isExpired?'danger':isTrial?'info':'warn'}">${isExpired?icon('close',{size:15}):isTrial?icon('gift',{size:15}):icon('clock',{size:15})}</div>
             <div><b>${esc(r.name)}</b> ${isExpired?(r.daysLeft!=null?`اشتراکش ${fa(Math.abs(r.daysLeft))} روزه منقضی شده`:'اشتراکش منقضی شده'):isTrial?`${fa(r.daysLeft)} روز تا پایان دوره آزمایشی`:`${fa(r.daysLeft)} روز تا انقضای اشتراک`}<div style="margin-top:6px"><button class="btn btn-sm ${isExpired?'btn-primary':'btn-ghost'}" onclick="event.stopPropagation();openRenew('${r.id}')">${isExpired?'تمدید فوری':isTrial?'تبدیل به اشتراک':'تمدید'}</button></div></div>
           </div>`;
-        }).join(''):'<div style="text-align:center;color:var(--t2);padding:24px">همه‌ی اشتراک‌ها فعالن 🎉</div>'}
+        }).join(''):`<div class="empty-state"><div class="empty-state-icon">${icon('checkCircle',{size:34})}</div><div class="empty-state-desc">همه‌ی اشتراک‌ها فعالن</div></div>`}
       </div>
     </div>`;
 }
@@ -81,10 +81,10 @@ function rRestaurants(){
       <div class="panel-head"><div><div class="panel-title">همه‌ی رستوران‌ها</div><div class="panel-sub">${fa(RESTAURANTS.length)} رستوران در پلتفرم</div></div></div>
       <div class="rest-controls">
         <button class="filter-chip ${restFilter==='all'?'active':''}" onclick="setRestFilter('all')">همه (${fa(RESTAURANTS.length)})</button>
-        <button class="filter-chip ${restFilter==='active'?'active':''}" onclick="setRestFilter('active')">✅ فعال (${fa(RESTAURANTS.filter(r=>r.status==='active').length)})</button>
-        <button class="filter-chip ${restFilter==='expiring'?'active':''}" onclick="setRestFilter('expiring')">⏰ رو به اتمام (${fa(RESTAURANTS.filter(r=>r.status==='expiring').length)})</button>
-        <button class="filter-chip ${restFilter==='expired'?'active':''}" onclick="setRestFilter('expired')">🚫 منقضی (${fa(RESTAURANTS.filter(r=>r.status==='expired').length)})</button>
-        <button class="filter-chip ${restFilter==='trial'?'active':''}" onclick="setRestFilter('trial')">🎁 آزمایشی (${fa(RESTAURANTS.filter(r=>r.status==='trial').length)})</button>
+        <button class="filter-chip ${restFilter==='active'?'active':''}" onclick="setRestFilter('active')">${icon('check',{size:13})} فعال (${fa(RESTAURANTS.filter(r=>r.status==='active').length)})</button>
+        <button class="filter-chip ${restFilter==='expiring'?'active':''}" onclick="setRestFilter('expiring')">${icon('clock',{size:13})} رو به اتمام (${fa(RESTAURANTS.filter(r=>r.status==='expiring').length)})</button>
+        <button class="filter-chip ${restFilter==='expired'?'active':''}" onclick="setRestFilter('expired')">${icon('close',{size:13})} منقضی (${fa(RESTAURANTS.filter(r=>r.status==='expired').length)})</button>
+        <button class="filter-chip ${restFilter==='trial'?'active':''}" onclick="setRestFilter('trial')">${icon('gift',{size:13})} آزمایشی (${fa(RESTAURANTS.filter(r=>r.status==='trial').length)})</button>
       </div>
       <div class="rest-head">
         <div>رستوران</div>
@@ -119,7 +119,7 @@ function renderRestList(){
       <div class="rest-metric rest-col-hide">${fa(r.members)}<small>عضو</small></div>
       <div class="rest-metric rest-col-hide">${fa(r.reservations)}<small>رزرو</small></div>
       <div><span class="badge ${statusCls==='trial_expired'?'expired':statusCls}"><span class="bdot"></span>${statusText}</span></div>
-      <div class="rest-arrow">←</div>
+      <div class="rest-arrow">${icon('arrowL',{size:15})}</div>
     </div>`;
   }).join('');
 }

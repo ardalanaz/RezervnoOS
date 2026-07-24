@@ -3,6 +3,9 @@ import { acceptOffer } from '@/lib/waitlist';
 import { verifyAccess } from '@/lib/jwt';
 import { enforceRateLimit, clientIp, RULES } from '@/lib/ratelimit';
 import { errorResponse } from '@/lib/errors';
+import { parseParams, zUuid, z } from '@/lib/schemas';
+
+const paramsSchema = z.object({ id: zUuid });
 
 // استخراج userId از توکن (اگر باشد). مشتری احراز‌هویت‌شده فقط روی ورودی خودش.
 function callerId(req: Request): string | undefined {
@@ -16,7 +19,8 @@ function callerId(req: Request): string | undefined {
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
     await enforceRateLimit(clientIp(req), RULES.auth);
-    const result = await acceptOffer(params.id, 'customer', callerId(req));
+    const { id } = parseParams(params, paramsSchema);
+    const result = await acceptOffer(id, 'customer', callerId(req));
     return NextResponse.json(result);
   } catch (e) { return errorResponse(e); }
 }

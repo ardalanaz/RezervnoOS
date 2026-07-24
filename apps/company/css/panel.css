@@ -315,3 +315,8 @@ button{font-family:inherit;cursor:pointer}
 .login-back{background:none;border:none;color:var(--ink);font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;margin-top:16px}
 .login-hint{background:var(--amber-50);border:1px solid #FDE68A;border-radius:10px;padding:10px 13px;font-size:12px;color:#92400E;margin-top:14px;line-height:1.5}
 .login-foot{font-size:11.5px;color:var(--t3);margin-top:18px;line-height:1.6}
+/* نشانگرهای وضعیت — رنگ semantic از Design System (جایگزین emoji) */
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent)}
+.dot-closed{width:7px;height:7px;border-radius:50%;background:var(--danger);display:inline-block;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent)}

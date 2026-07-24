@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>رزرونو | رزرو آنلاین بهترین رستوران‌های شهر</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <!-- ── SEO ── -->
 <meta name="description" content="رزرونو — رزرو آنلاین میز در بهترین رستوران‌های شهر در چند ثانیه. کشف رستوران، لیست انتظار هوشمند، باشگاه مشتریان و امتیاز وفاداری.">
 <meta name="keywords" content="رزرو رستوران, رزرو آنلاین میز, رستوران تهران, رزرونو, reservation">
@@ -29,10 +30,15 @@
 {"@context":"https://schema.org","@type":"WebApplication","name":"رزرونو","description":"رزرو آنلاین میز در بهترین رستوران‌های شهر","applicationCategory":"FoodEstablishmentReservation","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"IRR"}}
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/foundation.css">
 <link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/ds-bridge.css">
 </style>
 </head>
 <body>
+<a href="#app-main" class="skip-link">پرش به محتوای اصلی</a>
+<div id="a11y-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <!-- ═══════════ NAV ═══════════ -->
 <nav class="nav" aria-label="ناوبری بالا">
@@ -43,6 +49,7 @@
     <button class="nav-link active" data-nav="discover" onclick="go('discover')">کشف</button>
     <button class="nav-link" data-nav="favorites" onclick="go('favorites')">علاقه‌مندی‌ها</button>
     <button class="nav-link" data-nav="trips" onclick="go('trips')">رزروهای من</button>
+    <button class="nav-link" data-nav="chats" onclick="go('chats')">پیام‌ها</button>
     <button class="nav-link" data-nav="loyalty" onclick="go('loyalty')">باشگاه</button>
   </div>
   <div class="nav-right">
@@ -55,7 +62,7 @@
 </nav>
 
 <!-- ═══════════ DISCOVER ═══════════ -->
-<main id="app-main">
+<main id="app-main" tabindex="-1">
 <div id="page-discover" class="page active" role="region" aria-label="کشف رستوران‌ها">
   <button class="theme-fab glass" onclick="toggleTheme()" aria-label="تغییر تم روشن/تاریک"><span id="themeKnob">🌙</span></button>
   <section class="hero">
@@ -200,6 +207,8 @@
 
 <!-- ═══════════ PROFILE ═══════════ -->
 <div id="page-profile" class="page"></div>
+<div id="page-chats" class="page"></div>
+<div id="page-chat" class="page"></div>
 </main>
 
 <!-- ═══════════ BOOKING SHEET ═══════════ -->

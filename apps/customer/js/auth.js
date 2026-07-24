@@ -4,13 +4,14 @@
 //  ترتیبِ لود در index.html مهم است (این فایل به توابع/state قبلی وابسته است).
 // ═══════════════════════════════════════════════════════════
 import { API, USER, refreshAuthUI, setUSER } from './api.js';
+import { icon } from './icons.js';
 import { faTime } from './data/detail.js';
 import { renderProfile } from './features/food-dna.js';
 export let _loginPhone = '';
 export function openLogin(){
   _loginPhone = '';
   openSheet(`
-    <div class="login-icon">🔐</div>
+    <div class="login-icon">${icon('lock',{size:36})}</div>
     <div style="text-align:center;margin-bottom:6px"><div class="sheet-title" style="font-size:20px;font-weight:800">ورود به رزرونو</div></div>
     <div style="text-align:center;color:var(--t2);font-size:14px;margin-bottom:22px">شماره موبایلت رو وارد کن تا کد ورود برات بفرستیم</div>
     <div class="field-label">شماره موبایل</div>
@@ -25,7 +26,7 @@ export async function sendOtp(){
   const phone = (phoneEl?.value||'').trim();
   // اعتبارسنجی سمت کلاینت
   const normalized = phone.replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/\D/g,'');
-  if (!/^09\d{9}$/.test(normalized)) { toast('⚠️','شماره موبایل معتبر وارد کن (مثل ۰۹۱۲۳۴۵۶۷۸۹)'); return; }
+  if (!/^09\d{9}$/.test(normalized)) { toast('','شماره موبایل معتبر وارد کن (مثل ۰۹۱۲۳۴۵۶۷۸۹)'); return; }
   _loginPhone = normalized;
   const btn = phoneEl.nextElementSibling;
   if (btn) { btn.disabled = true; btn.textContent = 'در حال ارسال...'; }
@@ -33,7 +34,7 @@ export async function sendOtp(){
   const res = await API.requestOtp(normalized);
   if (!res.ok && !res.offline) {
     // خطای واقعی از سرور (مثلاً ریت‌لیمیت)
-    toast('⚠️', res.error?.message || 'خطا در ارسال کد');
+    toast('', res.error?.message || 'خطا در ارسال کد');
     if (btn) { btn.disabled = false; btn.textContent = 'ارسال کد ورود'; }
     return;
   }
@@ -43,21 +44,21 @@ export async function sendOtp(){
 }
 export function showOtpStep(devCode, offline){
   openSheet(`
-    <div class="login-icon">✉️</div>
+    <div class="login-icon">${icon('mail',{size:36})}</div>
     <div style="text-align:center;margin-bottom:6px"><div class="sheet-title" style="font-size:20px;font-weight:800">کد ورود رو وارد کن</div></div>
-    <div style="text-align:center;color:var(--t2);font-size:14px;margin-bottom:22px">کد ۴ رقمی به شماره‌ی ${faNum(_loginPhone)} ارسال شد</div>
+    <div style="text-align:center;color:var(--t2);font-size:14px;margin-bottom:22px">کد ورود به شماره‌ی ${faNum(_loginPhone)} ارسال شد</div>
     <div class="field-label">کد ورود</div>
-    <input class="otp-input" id="otpCode" inputmode="numeric" maxlength="4" placeholder="····" onkeydown="if(event.key==='Enter')confirmOtp()">
+    <input class="otp-input" id="otpCode" inputmode="numeric" maxlength="6" placeholder="······" onkeydown="if(event.key==='Enter')confirmOtp()">
     <button class="btn btn-primary btn-lg btn-block" style="margin-top:18px" onclick="confirmOtp()">تأیید و ورود</button>
     <div class="resend">کد نیومد؟ <button onclick="openLogin()">تغییر شماره</button></div>
-    ${devCode ? `<div class="dev-hint">${offline?'🔌 حالت دمو (بک‌اند متصل نیست):':'🔑 حالت توسعه:'} کد ورود <b>${faNum(devCode)}</b> است</div>` : ''}
+    ${devCode ? `<div class="dev-hint">${offline?'حالت دمو (بک‌اند متصل نیست):':'حالت توسعه:'} کد ورود <b>${faNum(devCode)}</b> است</div>` : ''}
   `);
   setTimeout(()=>document.getElementById('otpCode')?.focus(),200);
 }
 export async function confirmOtp(){
   const codeEl = document.getElementById('otpCode');
   const code = (codeEl?.value||'').trim().replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-  if (!/^\d{4}$/.test(code)) { toast('⚠️','کد ۴ رقمی رو کامل وارد کن'); return; }
+  if (!/^\d{4,6}$/.test(code)) { toast('','کد ورود رو کامل وارد کن'); return; }
   const btn = codeEl.nextElementSibling;
   if (btn) { btn.disabled = true; btn.textContent = 'در حال بررسی...'; }
 
@@ -78,19 +79,19 @@ export async function confirmOtp(){
       setUSER({ phone: _loginPhone });
       showRegisterStep(true);
     } else {
-      toast('⚠️','در حالت دمو، کد ۱۲۳۴ است');
+      toast('','در حالت دمو، کد ۱۲۳۴ است');
       if (btn) { btn.disabled = false; btn.textContent = 'تأیید و ورود'; }
     }
   } else {
     // کد اشتباه از سرور
-    toast('⚠️', res.error?.message || 'کد اشتباه است');
+    toast('', res.error?.message || 'کد اشتباه است');
     if (btn) { btn.disabled = false; btn.textContent = 'تأیید و ورود'; }
   }
 }
 // مرحله‌ی ثبت‌نام: گرفتن نام برای کاربر جدید
 export function showRegisterStep(demo){
   openSheet(`
-    <div class="login-icon">🎉</div>
+    <div class="login-icon">${icon('checkCircle',{size:36})}</div>
     <div style="text-align:center;margin-bottom:6px"><div class="sheet-title" style="font-size:20px;font-weight:800">به رزرونو خوش اومدی!</div></div>
     <div style="text-align:center;color:var(--t2);font-size:14px;margin-bottom:22px">برای تکمیل ثبت‌نام، اسمت رو بهمون بگو</div>
     <div class="field-label">نام</div>
@@ -163,7 +164,7 @@ export function toApiDateTime(faDate, faTime){
 export function openSheet(html){document.getElementById('sheetBody').innerHTML=html;document.getElementById('sheet').classList.add('show')}
 export function closeSheet(){document.getElementById('sheet').classList.remove('show')}
 let tt;
-export function toast(icon,msg){document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMsg').textContent=msg;const t=document.getElementById('toast');t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400)}
+export function toast(icon,msg){document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMsg').textContent=msg;const t=document.getElementById('toast');t.classList.add('show');t.classList.remove('toast-enter');void t.offsetWidth;t.classList.add('toast-enter');const live=document.getElementById('a11y-live');if(live)live.textContent=msg;clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400)}
 
 // ═══════════ شروع اپ (فاز ۳: نمایش فوری + به‌روزرسانی از API) ═══════════
 
