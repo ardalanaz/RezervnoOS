@@ -21,29 +21,37 @@ echo "✓ دیتابیس آماده است"
 #  ستون/داده‌ی production را حذف کند. حالا migrate deploy فقط migrationهای
 #  ثبت‌شده را به‌ترتیب اعمال می‌کند و چیزی drop نمی‌کند.
 # ═══════════════════════════════════════════════════════════
+# ── baseline: دیتابیسِ موجود بدونِ تاریخچه‌ی migration ──
+# بدونِ این، migrate deploy روی یک DB پرِ ازقبل‌موجود با P3005 می‌شکند.
+has_tables=0; has_history=0
+npx prisma db execute --schema=prisma/schema.prisma --stdin >/dev/null 2>&1 <<'SQL' && has_tables=1
+SELECT 1 FROM reservations LIMIT 1;
+SQL
+npx prisma db execute --schema=prisma/schema.prisma --stdin >/dev/null 2>&1 <<'SQL' && has_history=1
+SELECT 1 FROM _prisma_migrations LIMIT 1;
+SQL
+if [ "$has_tables" = "1" ] && [ "$has_history" = "0" ]; then
+  echo "→ دیتابیسِ موجود بدونِ تاریخچه — baseline کردنِ 0_init..."
+  npx prisma migrate resolve --applied 0_init || true
+fi
+
 echo "→ اعمال migrationها (prisma migrate deploy)..."
 if ! npx prisma migrate deploy; then
-  echo "✗ migrate deploy ناموفق بود — استارت متوقف شد (برای جلوگیری از اجرای ناقص)"
+  echo "✗ migrate deploy ناموفق بود — استارت متوقف شد"
   exit 1
 fi
 
 # ═══════════════════════════════════════════════════════════
-#  اعمال constraintهای خارج از توان Prisma (EXCLUDE + generated column).
-#  C4: قبلاً اینجا یک کانسترینت اشتباه (tstzrange + slot_end بدون زمان نظافت +
-#  مجموعه‌ی وضعیت ناقص) ساخته می‌شد. حالا فایل canonical که تست‌شده و درست است
-#  اجرا می‌شود (tsrange + block_end + مجموعه‌ی کامل وضعیت‌های فعال).
-#  این فایل idempotent است (DROP IF EXISTS / ADD COLUMN IF NOT EXISTS).
+#  اعمالِ SQLهایی که Prisma نمی‌تواند بیان کند (پارتیشنینگ، EXCLUDE،
+#  uniqueهای جزئی، RLS، ایندکس‌های عبارتی).
+#  P1 (۲۴ ژوئیه ۲۰۲۶): این پوشه قبلاً prisma/migrations/manual/ بود، یعنی
+#  داخلِ پوشه‌ی migrations بدونِ migration.sql — که migrate deploy را با
+#  P3015 می‌شکست و چون خطِ بالا exit 1 می‌کند، کانتینر اصلاً بوت نمی‌شد.
+#  ضمناً هیچ‌جا این فایل‌ها اعمال نمی‌شدند، پس یک نصبِ تازه بدونِ ایندکس‌های
+#  عملکرد و بدونِ RLS بالا می‌آمد.
 # ═══════════════════════════════════════════════════════════
-echo "→ اعمال constraint قفل دو-لایه و ستون block_end (canonical)..."
-if [ -f prisma/migrations/0_init/EXTRA-after-prisma-migrate.sql ]; then
-  npx prisma db execute --schema=prisma/schema.prisma \
-    --file prisma/migrations/0_init/EXTRA-after-prisma-migrate.sql \
-    || { echo "✗ اعمال EXTRA constraint ناموفق — استارت متوقف شد"; exit 1; }
-  echo "✓ constraint و ستون block_end اعمال شد"
-else
-  echo "✗ فایل EXTRA-after-prisma-migrate.sql یافت نشد — استارت متوقف شد"
-  exit 1
-fi
+echo "→ اعمال SQLهای دستی (prisma/sql)..."
+sh prisma/apply-sql.sh || { echo "✗ اعمال SQL ناموفق — استارت متوقف شد"; exit 1; }
 
 # seed خودکار فقط اگر RUN_SEED=true باشد (برای اولین راه‌اندازی)
 if [ "$RUN_SEED" = "true" ]; then
