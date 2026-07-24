@@ -1,143 +1,193 @@
-# رزرونو (RezervoNo) — سیستم کامل رزرو رستوران
+# RezervoNo (رزرونو)
 
-پلتفرم SaaS رزرو رستوران — سه اپلیکیشن + بک‌اند مشترک، آماده‌ی راه‌اندازی روی سرور.
+**Restaurant-reservation SaaS for Iran's Gen‑Z market.** A multi-tenant platform
+with three front-ends (customer, restaurant, platform admin) on top of a single
+Next.js API. Persian / RTL, PWA, production-grade.
 
----
-
-## معماری (مدل اوبر)
-
-سه فرانت‌اند مجزا که به یک بک‌اند مشترک وصل‌اند:
-- **اپ مشتری** — رزرو، باشگاه مشتریان، پروفایل
-- **پنل رستوران** — مدیریت رزرو، میز، باشگاه، آنالیز، کمپین پیامکی
-- **پنل شرکت** — مدیریت کل پلتفرم (super-admin)
-
-**Stack:** Next.js 14 + Prisma + PostgreSQL 16 + Redis + JWT
+> 📚 **Full technical documentation is in [`/docs`](./docs).** Start with
+> [`docs/PROJECT_KNOWLEDGE.md`](./docs/PROJECT_KNOWLEDGE.md).
 
 ---
 
-## 🚀 راه‌اندازی
+## Overview
 
-نیاز: سرور لینوکس با **Docker** و **Docker Compose**.
+Three separate front-ends connected to one shared backend (an "Uber-style" split):
 
-### قدم مشترک: تنظیمات
+| Piece | Path | Stack |
+|---|---|---|
+| Customer app | `apps/customer` | Vanilla JS ES modules, PWA, RTL |
+| Business panel (restaurant) | `apps/business` | Vanilla JS single-page panel |
+| Company panel (platform admin) | `apps/company` | Vanilla JS single-page panel |
+| API | `api` | Next.js 14 · Prisma · PostgreSQL 16 · Redis · JWT |
+| Design system (source) | `shared` | CSS tokens / foundation / bridge + icons |
+
+Auth is **Bearer JWT** (no cookies). Architecture: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+## Features
+
+- ⚡ **Book in seconds** — discovery feed, availability, instant booking, optional
+  deposits (Zarinpal). Double-booking prevented by a **two-layer lock** (Redis
+  slot-lock + PostgreSQL exclusion constraint).
+- 🪑 **Restaurant ops** — real-time table state + floor plan, smart allocation,
+  priority waitlist with offers, full reservation lifecycle state machine.
+- 🎯 **CRM & marketing** — RFM/CLV segments, no-show risk, coupons, trigger-based
+  automations, SMS campaigns (Kavenegar).
+- 🏆 **Loyalty** — points ledger, referrals, gift cards, tiered clubs, cashback.
+- 💬 **Chat** — customer ↔ restaurant messaging.
+- 🏢 **Platform console** — tenants, plans/billing, SMS balance, security audit,
+  runtime settings (editable without redeploy).
+- 🛡️ **Hardened** — OTP login, sliding-window rate limiting + auto-ban,
+  CSRF/CORS, strict security headers, RBAC, idempotency, audit log, job queue.
+
+## Installation
+
+Requires a Linux host with **Docker** + **Docker Compose** (recommended), or
+Node 20+ with your own Postgres/Redis.
+
 ```bash
+git clone <repo> && cd RezervnoOS
 cp .env.example .env
-nano .env
-#   - POSTGRES_PASSWORD: یک رمز قوی
-#   - JWT_SECRET و JWT_REFRESH_SECRET: با  openssl rand -base64 48  بساز
-#   - RUN_SEED=true  (برای اولین راه‌اندازی)
+# In .env set at least:
+#   POSTGRES_PASSWORD  — a strong password
+#   REDIS_PASSWORD     — a strong password
+#   JWT_SECRET / JWT_REFRESH_SECRET  — openssl rand -base64 48 (≥32 chars each)
+#   RUN_SEED=true      — for the first boot (creates demo tenant/users)
 ```
 
-سپس یکی از دو حالت زیر:
-
-### حالت A — تست محلی (HTTP، بدون دامنه)
-برای امتحان روی سیستم خودت یا آی‌پی سرور:
+### Option A — local (HTTP, no domain)
 ```bash
 docker compose --profile http up -d --build
+# Customer:  http://<server-ip>/
+# Business:  http://<server-ip>/business/
+# Company:   http://<server-ip>/company/
 ```
-- اپ مشتری: `http://آی‌پی‌سرور/`
-- پنل رستوران: `http://آی‌پی‌سرور/business/`
-- پنل شرکت: `http://آی‌پی‌سرور/company/`
 
-### حالت B — تولید (HTTPS خودکار، با دامنه) ✅ برای فروش
-نیاز: دامنه‌ای که به آی‌پی سرور اشاره کند (رکورد A) + پورت‌های ۸۰ و ۴۴۳ باز.
+### Option B — production (auto HTTPS via Caddy, needs a domain)
 ```bash
-# دامنه را در .env بگذار:  DOMAIN=رستوران‌تو.ir
+# set DOMAIN=yourdomain.ir in .env, then:
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
-Caddy خودکار گواهی SSL از Let's Encrypt می‌گیرد و هر ۹۰ روز تمدید می‌کند. صفر تنظیم دستی.
-- اپ مشتری: `https://دامنه‌ات/`
-- پنل رستوران: `https://دامنه‌ات/business/`
-- پنل شرکت: `https://دامنه‌ات/company/`
+Caddy obtains and renews Let's Encrypt TLS automatically.
 
-### قدم آخر (هر دو حالت): مدیر پلتفرم
+### Final step (both): platform admin
 ```bash
 docker compose logs api | grep PLATFORM_ADMIN_TENANT_ID
-#   خط چاپ‌شده را در .env بگذار، RUN_SEED=false کن، و دوباره up بزن
+# put the printed id into .env, set RUN_SEED=false, and `up` again.
 ```
 
----
+### Without Docker (backend only)
+```bash
+cd api
+cp .env.example .env          # fill DATABASE_URL, REDIS_URL, JWT secrets, ALLOWED_ORIGINS
+npm install                   # runs `prisma generate`
+npx prisma db push            # create schema (dev)
+for f in prisma/migrations/manual/*.sql; do psql "$DATABASE_URL" -f "$f"; done
+npm run db:seed
+```
 
-## 🔑 ورود به سیستم (داده‌ی seed)
-
-| پنل | شماره ورود | توضیح |
+### Seed logins (`OTP_DEV_MODE=true` returns the code in the API response)
+| Panel | Login phone | Notes |
 |---|---|---|
-| اپ مشتری | هر شماره‌ای | کاربر جدید فرم ثبت‌نام می‌بیند |
-| پنل رستوران | `09121111111` | مدیر رستوران نمونه |
-| پنل شرکت | `09120000000` | مدیر پلتفرم |
+| Customer app | any number | new users see a sign-up form |
+| Business panel | `09121111111` | sample restaurant manager |
+| Company panel | `09120000000` | platform admin |
 
-در حالت `OTP_DEV_MODE=true`، کد ورود در پاسخ API برمی‌گردد (برای تست بدون پیامک واقعی). برای محصول واقعی `false` بگذار و `KAVENEGAR_API_KEY` را تنظیم کن.
+Set `OTP_DEV_MODE=false` and configure `KAVENEGAR_API_KEY` for real SMS in
+production (dev mode is rejected in production).
 
----
-
-## 📁 ساختار
-
-```
-rezervno-deploy/
-├── docker-compose.yml      ← ارکستراسیون کل سیستم
-├── .env.example            ← تنظیمات
-├── README.md · LAUNCH-GUIDE.md
-├── apps/
-│   ├── customer/index.html ← اپ مشتری
-│   ├── business/index.html ← پنل رستوران
-│   └── company/index.html  ← پنل شرکت
-├── api/                    ← بک‌اند Next.js
-│   ├── Dockerfile + docker-entrypoint.sh
-│   ├── prisma/ (schema + seed + migration)
-│   └── src/ (app/api/v1 + lib + middleware)
-└── deploy/nginx/nginx.conf
-```
-
----
-
-## 🛠 دستورهای مفید
+## Development
 
 ```bash
-docker compose logs -f api      # لاگ بک‌اند
-docker compose logs -f          # لاگ همه
-docker compose restart api      # ری‌استارت بک‌اند
-docker compose down             # توقف
-docker compose down -v          # توقف + پاک‌کردن داده (احتیاط!)
+# Backend
+cd api && npm run dev                 # http://localhost:3000
 
-# seed دستی (اگر RUN_SEED نگذاشتی)
-docker compose exec api npx prisma db seed
+# Front-ends (static; assets use absolute /paths)
+npx serve apps/customer -l 8080
+npx serve apps/business -l 8081
+npx serve apps/company  -l 8082
 
-# اتصال به دیتابیس
-docker compose exec postgres psql -U rezervno rezervno
+# E2E (customer app, mocked API)
+cd e2e && npm install && npx playwright install --with-deps chromium webkit
+BASE_URL=http://localhost:8080 npm test
 ```
 
----
+**Conventions** (see [`docs/PROJECT_KNOWLEDGE.md`](./docs/PROJECT_KNOWLEDGE.md) §7):
+surgical changes; Persian commit messages stating *what / why / tested-vs-only-
+type-checked*; enums over free strings; domain errors via `Err`; bump
+`CACHE_VERSION` in `sw.js` when `js/`/`css/` change; never break demo mode.
 
-## 💾 بک‌آپ خودکار
+## Deployment
 
-سیستم بک‌آپ **داخل بسته** است — سرویس `backup` خودکار هر شب از دیتابیس بک‌آپ می‌گیرد.
+- **Managed (Vercel)** — deploy `api` as its own project (**Root Directory `api`**);
+  cron endpoints are wired in `api/vercel.json`. Front-ends are static (one
+  Vercel project per app). The root `.vercelignore` must keep ignoring `api` +
+  infra folders.
+- **Self-host (Docker Compose)** — `docker-compose.yml` (local),
+  `docker-compose.prod.yml` (Caddy + TLS), `docker-compose.observability.yml`
+  (Prometheus + Grafana).
 
+Full guide + rollback: [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
+Env vars: [`docs/ENVIRONMENT.md`](./docs/ENVIRONMENT.md).
+
+## Commands
+
+### API (`cd api`)
+| Command | Description |
+|---|---|
+| `npm run dev` | Next dev server. |
+| `npm run build` | `prisma generate && next build`. |
+| `npm start` | Production server. |
+| `npm test` | Unit tests (`tsx --test --test-force-exit`). |
+| `npm run typecheck` | `tsc --noEmit`. |
+| `npm run lint` | ESLint. |
+| `npm run db:migrate` / `db:seed` | Migrate (dev) / seed. |
+
+### Docker & tooling
 ```bash
-docker compose exec backup /scripts/backup.sh    # بک‌آپ فوری
-docker compose exec backup /scripts/list.sh      # لیست بک‌آپ‌ها
-docker compose exec backup /scripts/restore.sh   # بازیابی از آخرین بک‌آپ
+docker compose logs -f api            # backend logs
+docker compose restart api            # restart backend
+docker compose down                   # stop
+docker compose down -v                # stop + wipe data (careful!)
+docker compose exec api npx prisma db seed          # manual seed
+docker compose exec postgres psql -U rezervno rezervno   # DB shell
+
+# Backups (built-in `backup` service)
+docker compose exec backup /scripts/backup.sh       # backup now
+docker compose exec backup /scripts/list.sh         # list backups
+docker compose exec backup /scripts/restore.sh      # restore latest
+
+# Build offline single-file bundles from apps/*
+python3 tools/build-standalone.py
 ```
 
-تنظیمات در `.env`: `BACKUP_CRON` (زمان‌بندی)، `BACKUP_KEEP` (تعداد)، و `S3_*` برای آپلود به آبجکت‌استوریج.
+## CI/CD
 
-**جزئیات کامل (مهم — شامل بازیابی و بک‌آپ خارج از سرور): `BACKUP-GUIDE.md`**
+GitHub Actions (`.github/workflows/ci.yml`): **build** (type-check + next build),
+**test** (unit tests vs real Postgres + Redis), **security** (`npm audit`),
+**e2e** (Playwright, 3 browsers, mocked API). Push to `main` → Vercel
+auto-deploy. Details: [`docs/PROJECT_KNOWLEDGE.md`](./docs/PROJECT_KNOWLEDGE.md) §11.
 
----
+## Troubleshooting
 
-## 🔒 قبل از فروش/لانچ واقعی
+| Symptom | Cause / fix |
+|---|---|
+| First prod request errors about `ALLOWED_ORIGINS` | Set `ALLOWED_ORIGINS` (comma-separated front-end origins). |
+| `JWT_SECRET باید حداقل ۳۲ کاراکتر باشد` | Secrets must be ≥ 32 chars. |
+| `prisma migrate deploy` → **P3015** | Expected — `migrations/manual/` isn't a Prisma migration. Use `prisma db push` + the `psql` loop ([`docs/DATABASE.md`](./docs/DATABASE.md)). |
+| CI `test` job hangs | `npm test` must use `--test-force-exit` (a Redis client keeps the loop alive). |
+| E2E reload doesn't re-run app | Playwright must set `serviceWorkers: 'block'`. |
+| Returning users see stale UI | Bump `CACHE_VERSION` in the app's `sw.js`. |
+| Cron endpoints 401 | Expected without `CRON_SECRET`/`MAINTENANCE_KEY` — that's the protection. |
+| Company/admin panel forbids everyone | Set `PLATFORM_ADMIN_TENANT_ID` (fail-closed by design). |
+| `prepared statement already exists` | Behind a transaction pooler: append `?pgbouncer=true&connection_limit=1` and use a separate direct URL for migrations. |
 
-فایل **`LAUNCH-GUIDE.md`** را بخوان — راهنمای کامل:
-1. **HTTPS** (Caddy یا certbot) — ضروری
-2. **CDN/WAF** (ArvanCloud / Cloudflare) — دفاع DDoS
-3. **بک‌آپ خودکار دیتابیس** (cron + pg_dump)
-4. **کلید Kavenegar** برای پیامک واقعی
+## Documentation index
 
----
+- [PROJECT_KNOWLEDGE](./docs/PROJECT_KNOWLEDGE.md) · [ARCHITECTURE](./docs/ARCHITECTURE.md) · [DATABASE](./docs/DATABASE.md) · [API_REFERENCE](./docs/API_REFERENCE.md)
+- [FRONTEND](./docs/FRONTEND.md) · [BACKEND](./docs/BACKEND.md) · [DEPLOYMENT](./docs/DEPLOYMENT.md) · [ENVIRONMENT](./docs/ENVIRONMENT.md)
+- [SECURITY](./docs/SECURITY.md) · [KNOWN_LIMITATIONS](./docs/KNOWN_LIMITATIONS.md)
+- Operational guides (existing): `LAUNCH-GUIDE.md`, `BACKUP-GUIDE.md`, `SECURITY-GUIDE.md`, `DATABASE-OPS.md`, `SCALING.md`, `OBSERVABILITY.md`.
 
-## ✅ امکانات
+## License
 
-**مشتری:** کشف رستوران، رزرو با جلوگیری از تداخل (قفل دو-لایه)، ثبت‌نام، باشگاه مشتریان، تاریخچه
-**رستوران:** داشبورد، رزروها، پلان سالن (میز با اسم دلخواه)، باشگاه، آنالیز رفتار مشتری، کش‌بک، کمپین پیامکی
-**شرکت:** مدیریت رستوران‌ها، آمار کلی پلتفرم، اشتراک‌ها
-
-همه‌ی پنل‌ها: ورود با OTP، پیامک واقعی (Kavenegar)، RTL فارسی، ریت‌لیمیت، محافظت XSS.
+See [LICENSE](./LICENSE).
