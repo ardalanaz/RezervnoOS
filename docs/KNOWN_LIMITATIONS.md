@@ -13,12 +13,15 @@
   wiring the three front-ends. Each app must be configured as its own Vercel
   project with its own **Root Directory** (`apps/customer`, `apps/business`,
   `apps/company`). This is a dashboard task, not code. **(follow-up)**
-- **`prisma migrate deploy` is unusable as-is.** The `prisma/migrations/manual/`
-  folder is not a valid Prisma migration dir, so `migrate deploy` fails with
-  **P3015**. CI uses `prisma db push` + a `psql` loop; production applies schema
-  out-of-band. **The Docker `docker-entrypoint.sh` runs `migrate deploy`** —
-  verify it tolerates/handles `manual/` for self-host, or it may fail on boot.
-  **(caution)**
+- **`prisma migrate deploy` P3015 — resolved.** The hand-written SQL scripts used
+  to live under `prisma/migrations/manual/`, a folder inside `migrations/` with
+  no `migration.sql`, so `migrate deploy` failed with **P3015** — which also
+  meant `docker-entrypoint.sh` (it runs `migrate deploy` with `exit 1` on
+  failure) never booted the container. They were moved to `prisma/sql/` (outside
+  `migrations/`) and are now applied by `prisma/apply-sql.sh` (`prisma db
+  execute`, no `psql`). The entrypoint runs `migrate deploy` (baselining a
+  pre-existing DB via `migrate resolve --applied 0_init`) then `apply-sql.sh`;
+  CI uses the same script.
 - **Manual migrations are forward-only** and must be committed the instant they
   are applied (past DB↔schema drift required the `022` reconciliation).
 
@@ -74,9 +77,17 @@ See [SECURITY.md](./SECURITY.md) §11 for the full list.
 - **`schema.prisma` had real drift from the live DB** (fields/FKs that existed
   only in Postgres) — reconciled in `022`, but the pattern (raw-SQL tables added
   without Prisma models) can recur. Keep every table represented in the schema.
-- **Partitioning** (`reservations`, migration `011`) requires ongoing partition
-  creation via the monthly `ensure-partitions` cron — a missed run eventually
-  breaks inserts. **(operational)**
+- **Partitioning is not enabled** (`reservations`, guide `011`). `011` is a
+  `-- @manual-only` scaffold — its data-copy and table-rename steps are commented
+  out and it guards itself with a `RAISE EXCEPTION` unless
+  `rezervno.allow_partitioning` is set. It has never been applied: on production
+  `reservations` is a plain table (`relkind='r'`), and `POST /v1/maintenance/
+  ensure-partitions` is a no-op that returns `{ok:false, reason:'partitioning not
+  enabled'}` because the `ensure_reservation_partition` function does not exist.
+  A missed cron run therefore **cannot** break inserts. If partitioning is ever
+  adopted, note that `011`'s partition constraint was aligned to the canonical
+  `no_table_overlap` (`tsrange(slot_start, block_end)` + active-status filter).
+  **(future)**
 
 ## 6. Observability
 

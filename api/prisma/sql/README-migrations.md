@@ -11,19 +11,17 @@ psql "$DATABASE_URL" -f 0_init/migration.sql
 ۲۷ جدول + ۱۲ enum + ۴۹ ایندکس + ۲۵ کلید خارجی می‌سازد.
 **تأییدشده:** کل این فایل روی Supabase واقعی بدون خطا اجرا شد.
 
-### ۲. constraintهای EXCLUDE (ضد double-booking)
+### ۲. اسکریپت‌های SQL افزایشی + constraintِ EXCLUDE
 ```bash
-psql "$DATABASE_URL" -f 0_init/EXTRA-after-prisma-migrate.sql
+sh ../apply-sql.sh   # همه‌ی prisma/sql/*.sql را به‌ترتیب اعمال می‌کند
 ```
-ستون محاسبه‌شده‌ی `block_end` + EXCLUDE constraint `no_table_overlap`.
-این لایه «منبع حقیقت» جلوگیری از تداخل رزرو است (Redis lock فقط بهینه‌سازی).
-**تأییدشده:** روی base migration اجرا شد و کار می‌کند.
+`apply-sql.sh` هر فایلِ `prisma/sql/*.sql` را با `prisma db execute` (نه `psql`)
+اعمال می‌کند و فایل‌های `-- @manual-only` (راهنماها) را رد می‌کند. این شامل
+`026-consolidate-exclusion-constraint.sql` است که ستون محاسبه‌شده‌ی `block_end`
+و EXCLUDE constraint `no_table_overlap` را می‌سازد — همان لایه‌ی «منبع حقیقت»
+جلوگیری از تداخل رزرو (Redis lock فقط بهینه‌سازی).
 
-### ۳. migrationهای افزایشی (به‌ترتیب شماره)
-```bash
-for f in manual/0*.sql; do psql "$DATABASE_URL" -f "$f"; done
-```
-این‌ها `IF NOT EXISTS` دارند، پس امن‌اند و با جداول پایه تداخل نمی‌کنند.
+این فایل‌ها `IF NOT EXISTS` دارند، پس امن‌اند و با جداول پایه تداخل نمی‌کنند.
 شامل: lifecycle events، waitlist، loyalty، customer-intelligence، audit،
 jobs queue، enterprise (idempotency/webhooks)، CRM (RFM/GuestProfile)،
 و رفع‌های همزمانی پول (013).
@@ -35,17 +33,16 @@ jobs queue، enterprise (idempotency/webhooks)، CRM (RFM/GuestProfile)،
 - **migration پایه قبلاً وجود نداشت** — این بزرگ‌ترین تله‌ی deploy بود: بدون آن
   `prisma migrate deploy` هیچ جدولی نمی‌ساخت و migrationهای دستی (که به
   `reservations`، `coupons` و... ارجاع می‌دهند) با خطا fail می‌شدند.
-- **EXTRA باید بعد از base و قبل از داده اجرا شود** — چون ستون generated و
+- **026 باید بعد از base و قبل از داده اجرا شود** — چون ستون generated و
   EXCLUDE constraint روی جدول `reservations` ساخته‌شده در base تکیه دارند.
-- **CREATE EXTENSION btree_gist** در EXTRA است و باید پیش از EXCLUDE اجرا شود.
+- **CREATE EXTENSION btree_gist** در 026 است و باید پیش از EXCLUDE اجرا شود.
 
 ## جایگزین: Prisma migrate
 
 اگر از Prisma migrate استفاده می‌کنی:
 ```bash
 npx prisma migrate deploy   # 0_init/migration.sql را اجرا می‌کند
-psql "$DATABASE_URL" -f 0_init/EXTRA-after-prisma-migrate.sql
-for f in manual/0*.sql; do psql "$DATABASE_URL" -f "$f"; done
+sh ../apply-sql.sh          # سپس prisma/sql/*.sql (شاملِ 026)
 ```
 
 ---

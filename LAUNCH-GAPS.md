@@ -32,7 +32,7 @@
 
 | # | شکاف | فایل | اندازه |
 |---|------|------|--------|
-| 8 | **پارتیشن‌بندیِ reservations اجرا نشده:** تابع `ensure_reservation_partition` ساخته نشده؛ فقط در مقیاسِ میلیون‌ها ردیف لازم است و روت `ensure-partitions` الان تمیز skip می‌کند. | `api/prisma/migrations/manual/011-reservations-partitioning.sql` | L |
+| 8 | **پارتیشن‌بندیِ reservations اجرا نشده:** تابع `ensure_reservation_partition` ساخته نشده؛ فقط در مقیاسِ میلیون‌ها ردیف لازم است و روت `ensure-partitions` الان تمیز skip می‌کند. | `api/prisma/sql/011-reservations-partitioning.sql` | L |
 | 9 | **Read replica بدون replica:** `dbRead` پیکربندی شده ولی بدون `DATABASE_REPLICA_URL` به primary برمی‌گردد (degrade تمیز). برای بار خواندنیِ بالا بعداً. | `api/src/lib/db.ts` | L |
 | 10 | **CRUD عمیق‌ترِ پنل‌ها:** بخش‌های reviews/photos/notes/campaigns پایه‌اند و جای پولیش دارند (فیلتر، صفحه‌بندی، حالتِ خالی). | `business/js/*` | M |
 

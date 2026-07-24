@@ -87,14 +87,10 @@ jobs:
 
       - name: Run migrations
         run: |
-          # db push اسکیمای تست را مستقیم از schema.prisma می‌سازد و پوشه‌ی
-          # migrations/ (که manual/ داخلش است) را اسکن نمی‌کند؛ migrate deploy
-          # روی manual/ خطای P3015 می‌داد. prod اصلاً migrate deploy اجرا نمی‌کند.
+          # db push اسکیمای تست را مستقیم از schema.prisma می‌سازد.
           npx prisma db push --skip-generate
-          # اجرای migrationهای دستی (partitioning/extra constraints)
-          for f in prisma/migrations/manual/*.sql; do
-            PGPASSWORD=test psql -h localhost -U test -d rezervno_test -f "$f" || echo "skip $f"
-          done
+          # اجرای SQLهای دستی (prisma/sql) با همان مسیرِ کدِ Docker.
+          sh prisma/apply-sql.sh
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/rezervno_test
           DATABASE_DIRECT_URL: postgresql://test:test@localhost:5432/rezervno_test

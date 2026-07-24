@@ -111,8 +111,8 @@ Supabase فقط **host مدیریت‌شده‌ی Postgres** است — نه cli
 
 ## ۹. Migrationها
 
-`prisma/migrations/manual/*.sql` — **خودکار اجرا نمی‌شوند** (فقط `prisma migrate deploy` خودکار است؛
-فایل‌های manual باید دستی با `psql` یا `Supabase:apply_migration` اجرا شوند). آخرین شماره: **۰۲۳**.
+`prisma/sql/*.sql` — از طریق `prisma/apply-sql.sh` (با `prisma db execute`) در entrypoint و CI
+**خودکار اجرا می‌شوند**؛ فایل‌های `-- @manual-only` (راهنماهای پارتیشنینگ ۰۰۲/۰۱۱) رد می‌شوند. آخرین شماره: **۰۲۶**.
 قبل از هر کارِ جدید روی schema، با connector Supabase (`list_tables`/`execute_sql`) چک کن آخرین migration
 واقعاً روی DB زنده اعمال شده. همه idempotent‌اند (`IF NOT EXISTS` / `DO $$ ... EXCEPTION`).
 

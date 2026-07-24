@@ -125,7 +125,7 @@ fire-and-forget به Sentry فرستاده می‌شوند (با traceId و scop
    هدیه/کوپن، تلاش IDOR، و غیره.
 
 جدول `audit_logs` با traceId، actor، target، ip، و detail (JSONB) — قابل‌جستجو
-برای تحقیقات. migration: `prisma/migrations/manual/008-audit-logs.sql`
+برای تحقیقات. migration: `prisma/sql/008-audit-logs.sql`
 (تست‌شده روی PostgreSQL واقعی). هر رویداد هم در DB ماندگار می‌شود هم لاگ
 ساختاریافته (برای alerting بلادرنگ).
 

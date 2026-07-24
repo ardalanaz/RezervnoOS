@@ -185,7 +185,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full breakdown.
 cd api
 cp .env.example .env          # fill DATABASE_URL, REDIS_URL, JWT secrets, ...
 npm install                   # runs `prisma generate` via postinstall
-npx prisma db push            # or migrate; then apply prisma/migrations/manual/*.sql
+npx prisma db push            # or migrate; then `sh prisma/apply-sql.sh` (prisma/sql/*.sql)
 npm run db:seed               # optional demo data
 npm run dev                   # next dev on :3000
 
@@ -285,7 +285,7 @@ Details + rollback: [DEPLOYMENT.md](./DEPLOYMENT.md).
 | Job | What it does |
 |-----|--------------|
 | **build** | `npm ci` → `prisma generate` → `tsc --noEmit` → `next build` (with dummy env). |
-| **test** | Spins up **Postgres 17 + Redis 7** services; `prisma db push` + applies `prisma/migrations/manual/*.sql`; runs `npm test` (unit tests via `tsx --test --test-force-exit`). |
+| **test** | Spins up **Postgres 17 + Redis 7** services; `prisma db push` + `sh prisma/apply-sql.sh` (applies `prisma/sql/*.sql`); runs `npm test` (unit tests via `tsx --test --test-force-exit`). |
 | **security** | `npm audit --audit-level=critical` (fails on critical) + `--audit-level=high` (warns only). |
 | **e2e** | Installs Playwright (chromium + webkit), runs the customer-app E2E suite against a locally-served `apps/customer` with a **fully mocked API** (3 device projects: mobile-safari, mobile-chrome, desktop-chrome). Uploads the Playwright report artifact. |
 
@@ -294,7 +294,8 @@ deployments for the API + front-end projects).
 
 > **CI history worth knowing** (fixed, but instructive):
 > - `test` job used `prisma migrate deploy`, which choked on the non-migration
->   `prisma/migrations/manual/` folder (P3015). Switched to `prisma db push`.
+>   `prisma/migrations/manual/` folder (P3015). That folder was moved to
+>   `prisma/sql/` and is now applied via `prisma/apply-sql.sh`.
 > - The test process hung because a Redis client (from the queue module) kept
 >   the event loop alive → added `--test-force-exit`.
 > - E2E needed `serviceWorkers: 'block'` so reloads re-run the app bootstrap.

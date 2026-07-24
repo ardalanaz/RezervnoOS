@@ -58,9 +58,13 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_table THEN null; END $$;
 
 -- ── ایندکس‌های جدید ──
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tables_restaurant_state
+-- نکته: CONCURRENTLY حذف شد چون داخل transaction کار نمی‌کند و apply-sql.sh
+-- (prisma db execute) فایلِ چندجمله‌ای را در یک transaction ضمنی اجرا می‌کند؛
+-- روی جدول tables در راه‌اندازی قفل بی‌اهمیت است. برای افزودن روی جدولِ پر در
+-- production، این دو را جدا با CREATE INDEX CONCURRENTLY اجرا کن.
+CREATE INDEX IF NOT EXISTS idx_tables_restaurant_state
   ON tables (restaurant_id, state);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tables_restaurant_zone
+CREATE INDEX IF NOT EXISTS idx_tables_restaurant_zone
   ON tables (restaurant_id, zone);
 
 ANALYZE tables;

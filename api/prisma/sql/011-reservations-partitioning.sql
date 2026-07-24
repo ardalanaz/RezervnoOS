@@ -1,3 +1,4 @@
+-- @manual-only
 -- ═══════════════════════════════════════════════════════════════════════
 --  رزرونو — Migration پارتیشن‌بندی جدول reservations
 --
@@ -94,9 +95,12 @@ BEGIN
       'CREATE TABLE %I PARTITION OF reservations_partitioned FOR VALUES FROM (%L) TO (%L)',
       partition_name, start_date, end_date
     );
-    -- EXCLUDE ضد double-booking روی همین پارتیشن
+    -- EXCLUDE ضد double-booking روی همین پارتیشن (canonical — مطابقِ no_table_overlap)
     EXECUTE format(
-      'ALTER TABLE %I ADD CONSTRAINT %I EXCLUDE USING gist (table_id WITH =, tsrange(slot_start, slot_end) WITH &&)',
+      'ALTER TABLE %I ADD CONSTRAINT %I EXCLUDE USING gist ('
+        || 'table_id WITH =, tsrange(slot_start, block_end) WITH &&) '
+        || 'WHERE (status IN (''pending'',''confirmed'',''auto_confirmed'',''preparing'',''checked_in'',''running_late'',''arrived'',''seated'',''dining'') '
+        || 'AND table_id IS NOT NULL)',
       partition_name, 'no_overlap_' || to_char(start_date, 'YYYY_MM')
     );
     RETURN 'created: ' || partition_name;
