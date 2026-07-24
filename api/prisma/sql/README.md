@@ -107,6 +107,8 @@ psql "$DATABASE_URL" -f 022-audit-fixes-2026-07-19.sql
 
 ## نکته‌ی مهم درباره‌ی constraint جلوگیری از تداخل
 
-فایل `../0_init/EXTRA-after-prisma-migrate.sql` شامل EXCLUDE constraint و
+فایل `026-consolidate-exclusion-constraint.sql` شامل EXCLUDE constraint و
 generated column (`block_end`) است که برای جلوگیری از double-booking حیاتی است.
-**حتماً بعد از `prisma db push` اجرا شود** (در entrypoint خودکار است).
+این فایل canonical و idempotent است و توسط `../apply-sql.sh` بعد از
+`prisma migrate deploy` خودکار اعمال می‌شود (در entrypoint). پیش‌تر این تعریف در
+`0_init/EXTRA-after-prisma-migrate.sql` بود که حذف شده و جایش را 026 گرفته است.

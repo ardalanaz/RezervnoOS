@@ -135,7 +135,7 @@ report/image هنوز نوشته نشده چون به تصمیم‌های محص
 
 ## migration
 
-`prisma/migrations/manual/009-jobs-queue.sql` — idempotent، تست‌شده روی
+`prisma/sql/009-jobs-queue.sql` — idempotent، تست‌شده روی
 PostgreSQL واقعی. راه‌اندازی جدید با `prisma db push` خودکار است.
 
 ## نگه‌داری (retention)

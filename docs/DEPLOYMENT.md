@@ -16,8 +16,8 @@ cp .env.example .env         # fill DATABASE_URL, REDIS_URL, JWT_SECRET, JWT_REF
 npm install                  # postinstall runs `prisma generate`
 # create schema (dev): either
 npx prisma db push
-# then apply manual SQL (partitioning, exclusion constraint, RLS, ...)
-for f in prisma/migrations/manual/*.sql; do psql "$DATABASE_URL" -f "$f"; done
+# then apply the hand-written SQL (partitioning, exclusion constraint, RLS, ...)
+sh prisma/apply-sql.sh       # runs prisma/sql/*.sql via prisma db execute
 npm run db:seed              # optional demo data (prints platform tenant id)
 npm run dev                  # http://localhost:3000
 
@@ -41,11 +41,12 @@ or serving them behind the same origin as the API (nginx/Caddy do this).
   generated client. Exposes `3000`; `docker-entrypoint.sh` runs migrations then
   `next start`.
 
-> **(caution)** the container entrypoint runs `prisma migrate deploy`. Because of
-> the `prisma/migrations/manual/` folder this can fail (P3015) the same way CI
-> did before switching to `db push`. For self-host, verify the entrypoint
-> handles `manual/` (apply it via the `psql` loop) — see
-> [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md).
+> **Migrations on boot.** The entrypoint runs `prisma migrate deploy` (baselining
+> a pre-existing DB with `migrate resolve --applied 0_init` first, to avoid
+> P3005), then `prisma/apply-sql.sh` to apply `prisma/sql/*.sql`. The
+> hand-written SQL lives outside `migrations/`, so the old P3015 failure no
+> longer happens. `apply-sql.sh` uses `prisma db execute` (the runtime image has
+> no `psql`).
 
 ---
 
@@ -145,10 +146,10 @@ curl -s -o /dev/null -w "%{http_code}\n" https://<domain>/api/v1/maintenance/exp
   (`?pgbouncer=true&connection_limit=...`) for `DATABASE_URL` and a **direct**
   connection for `DATABASE_DIRECT_URL` (migrations only).
 - **Schema**: the app build only `prisma generate`s. Apply schema via
-  `prisma db push` / migrate against the direct URL, then apply
-  `prisma/migrations/manual/*.sql` (via the Supabase connector / `psql`). Verify:
-  `npx prisma migrate status`.
-- **RLS** is defined for newer tables (`manual/023`).
+  `prisma migrate deploy` (or `db push`) against the direct URL, then apply
+  `prisma/sql/*.sql` with `sh prisma/apply-sql.sh` (or the Supabase connector).
+  Verify: `npx prisma migrate status`.
+- **RLS** is defined for newer tables (`prisma/sql/023`).
 
 ---
 

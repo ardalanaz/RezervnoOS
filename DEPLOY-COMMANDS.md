@@ -67,7 +67,7 @@ vercel --prod
 ## ۳) Supabase
 
 اسکیمای پایگاه‌داده از قبل اعمال شده (۳۷ جدول، RLS روی همه، ۱۳ migration).
-پس از استقرار فقط بررسی کنید که migration جدیدی در `api/prisma/migrations/manual/`
+پس از استقرار فقط بررسی کنید که SQL جدیدی در `api/prisma/sql/`
 اضافه نشده باشد:
 
 ```bash

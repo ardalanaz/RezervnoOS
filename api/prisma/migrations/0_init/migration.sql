@@ -4,8 +4,9 @@
 --
 --  ⚠️ این فایل تله‌ی deploy را حل می‌کند: بدون آن `prisma migrate deploy`
 --     هیچ جدولی نمی‌ساخت و migrationهای بعدی fail می‌شدند.
---  ترتیب اجرا: ۱) همین فایل  ۲) 0_init/EXTRA-after-prisma-migrate.sql
---             ۳) manual/001..013 (که حالا IF NOT EXISTS دارند، امن)
+--  ترتیب اجرا: ۱) همین فایل (prisma migrate deploy)
+--             ۲) prisma/sql/*.sql از طریق prisma/apply-sql.sh
+--                (شاملِ 026 = block_end + EXCLUDE، که جایگزینِ EXTRA شد)
 --
 --  ✅ کامل روی PostgreSQL 17 واقعی (Supabase) تست شد.
 -- ═══════════════════════════════════════════════════════════════════════

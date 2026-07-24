@@ -81,7 +81,7 @@ cd api
 cp .env.example .env          # fill DATABASE_URL, REDIS_URL, JWT secrets, ALLOWED_ORIGINS
 npm install                   # runs `prisma generate`
 npx prisma db push            # create schema (dev)
-for f in prisma/migrations/manual/*.sql; do psql "$DATABASE_URL" -f "$f"; done
+sh prisma/apply-sql.sh        # apply prisma/sql/*.sql via prisma db execute
 npm run db:seed
 ```
 
@@ -173,7 +173,7 @@ auto-deploy. Details: [`docs/PROJECT_KNOWLEDGE.md`](./docs/PROJECT_KNOWLEDGE.md)
 |---|---|
 | First prod request errors about `ALLOWED_ORIGINS` | Set `ALLOWED_ORIGINS` (comma-separated front-end origins). |
 | `JWT_SECRET باید حداقل ۳۲ کاراکتر باشد` | Secrets must be ≥ 32 chars. |
-| `prisma migrate deploy` → **P3015** | Expected — `migrations/manual/` isn't a Prisma migration. Use `prisma db push` + the `psql` loop ([`docs/DATABASE.md`](./docs/DATABASE.md)). |
+| `prisma migrate deploy` → **P3015** | Fixed — the hand-written SQL moved out of `migrations/` to `prisma/sql/`, applied by `prisma/apply-sql.sh` ([`docs/DATABASE.md`](./docs/DATABASE.md)). |
 | CI `test` job hangs | `npm test` must use `--test-force-exit` (a Redis client keeps the loop alive). |
 | E2E reload doesn't re-run app | Playwright must set `serviceWorkers: 'block'`. |
 | Returning users see stale UI | Bump `CACHE_VERSION` in the app's `sw.js`. |
