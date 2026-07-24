@@ -27,24 +27,35 @@ export async function openFirstRestaurant(page: Page) {
  *  شیتِ ورود را با openLogin باز می‌کند، شماره و کد را پر می‌کند و منتظرِ
  *  ورودِ موفق می‌ماند؛ سپس هر شیتِ بازمانده (فرمِ ثبت‌نام) را با Escape می‌بندد. */
 export async function login(page: Page, phone = '09123456789') {
-  await page.evaluate(() => (window as unknown as { openLogin: () => void }).openLogin());
+  type W = {
+    openLogin: () => void;
+    sendOtp: () => void;
+    confirmOtp: () => void;
+    isLoggedIn?: () => boolean;
+    closeSheet?: () => void;
+  };
+  await page.evaluate(() => (window as unknown as W).openLogin());
   const phoneInput = page.locator('#loginPhone');
   await expect(phoneInput).toBeVisible();
   await phoneInput.fill(phone);
-  await page.getByRole('button', { name: /ارسال کد ورود/ }).click();
+
+  // توابع را مستقیم صدا می‌زنیم (نه کلیک): روی webkit/iPhone دکمه‌های btn-block زیرِ
+  // fold قرار می‌گیرند و کلیک با اسکرول قابل‌اتکا نیست؛ فراخوانیِ مستقیم مستقل از
+  // موتور و ویوپورت است. sendOtp خودش مقدارِ #loginPhone را می‌خواند.
+  await page.evaluate(() => (window as unknown as W).sendOtp());
 
   const otp = page.locator('#otpCode');
-  await expect(otp).toBeVisible();
+  await expect(otp).toBeVisible({ timeout: 8000 });
   await otp.fill('123456');
-  await page.getByRole('button', { name: /تأیید و ورود|تایید و ورود/ }).click();
+  await page.evaluate(() => (window as unknown as W).confirmOtp());
 
   // بعد از verify، USER ست می‌شود (isLoggedIn=true) حتی اگر فرمِ ثبت‌نام باز بماند.
   await page.waitForFunction(
-    () => (window as unknown as { isLoggedIn?: () => boolean }).isLoggedIn?.() === true,
+    () => (window as unknown as W).isLoggedIn?.() === true,
     undefined,
     { timeout: 8000 },
   );
-  await page.keyboard.press('Escape').catch(() => {});
+  await page.evaluate(() => (window as unknown as W).closeSheet?.());
 }
 
 /** رفتن به یک تبِ ناوبری.
