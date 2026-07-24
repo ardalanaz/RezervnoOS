@@ -65,7 +65,7 @@ erDiagram
 |---|---|---|
 | `Tenant` / `tenants` | `plan` (SubscriptionPlan), `planExpiresAt`, `trialEndsAt`, **`version`** | `version` = optimistic lock (prevents lost updates). |
 | `User` / `users` | `phone` (unique), `email?`, `referralCode?`, `referredById?` | Diner identity; `guestProfile` 1:1. |
-| `Staff` / `staff` | `tenantId`, `phone`, `role` (StaffRole), `isActive`, `restaurantId?` | `restaurantId=NULL` → all-branch access; set → locked to one branch. Unique `(tenantId, phone)`. |
+| `Staff` / `staff` | `tenantId`, `phone`, `name?`, `role` (StaffRole), `isActive`, `restaurantId?` | `name` is the optional display name (business panel). `restaurantId=NULL` → all-branch access; set → locked to one branch. Unique `(tenantId, phone)`. |
 | `StaffPermission` / `staff_permissions` | 9 `can*` booleans | Modular RBAC override for `role='staff'`. |
 
 ### Restaurant & inventory
@@ -147,7 +147,7 @@ Two layers (both applied in CI):
 
 1. **`prisma/migrations/0_init`** — the baseline Prisma migration
    (`migration.sql`). Applied by `prisma migrate deploy`.
-2. **`prisma/sql/*.sql`** — hand-written SQL scripts (`001` … `026`) for things
+2. **`prisma/sql/*.sql`** — hand-written SQL scripts (`001` … `028`) for things
    Prisma can't express: partitioning, exclusion constraints, partial unique
    indexes, RLS, expression indexes, FK/index back-fills. These are **not**
    Prisma migrations — they live outside `migrations/` (so they never trip
@@ -167,8 +167,12 @@ Two layers (both applied in CI):
 | `018-staff-branch-scoping` | Per-branch staff scoping. |
 | `019-payments-deposit`, `020-platform-settings-payment-toggle` | Zarinpal deposits + runtime settings. |
 | `021-restaurant-closures`, `024-chat`, `025-reviews-fk-indexes` | Later features + index back-fills. |
+| `021b-sms-transactions-table` | Creates `sms_transactions` — a table `schema.prisma` declares but no script built (only `db push` did). Idempotent; runs before `022`'s FK. |
 | `022-audit-fixes-2026-07-19` | Reconciled DB↔schema drift (FKs/`@map` that existed only in the live DB). |
 | `023-rls-new-tables` | Row-Level Security for new tables. |
+| `026-consolidate-exclusion-constraint` | Canonical `block_end` + `no_table_overlap` (idempotent); replaced `0_init/EXTRA`. |
+| `027-staff-name` | Adds `staff.name` (business-panel display name). |
+| `028-enum-columns-staff-plan` | Upgrades `staff.role` and `tenants.plan` from `TEXT` to their enums (`staff_role`, `subscription_plan`). Same schema-vs-`migrate deploy` drift family as `021b`/`sms_transactions`: `0_init` builds them as `TEXT` but `schema.prisma` declares enums. **No-op on the live DB** (already enum via `db push`); only realigns a fresh Docker install. |
 
 > **Important operational note:** the hand-written SQL scripts were previously
 > under `prisma/migrations/manual/`, which made `prisma migrate deploy` fail with
