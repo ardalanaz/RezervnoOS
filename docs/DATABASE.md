@@ -146,12 +146,17 @@ erDiagram
 Two layers (both applied in CI):
 
 1. **`prisma/migrations/0_init`** — the baseline Prisma migration
-   (`migration.sql` + a companion `EXTRA-after-prisma-migrate.sql`).
-2. **`prisma/migrations/manual/*.sql`** — 25 hand-written SQL scripts
-   (`001` … `025`) for things Prisma can't express: partitioning, exclusion
-   constraints, partial unique indexes, RLS, expression indexes, FK/index
-   back-fills. These are **not** Prisma migrations — they are applied by
-   iterating the folder with `psql` (CI) or via the Supabase connector (prod).
+   (`migration.sql`). Applied by `prisma migrate deploy`.
+2. **`prisma/sql/*.sql`** — hand-written SQL scripts (`001` … `026`) for things
+   Prisma can't express: partitioning, exclusion constraints, partial unique
+   indexes, RLS, expression indexes, FK/index back-fills. These are **not**
+   Prisma migrations — they live outside `migrations/` (so they never trip
+   `migrate deploy` with P3015) and are applied by `prisma/apply-sql.sh`, which
+   iterates the folder with `prisma db execute` and skips files marked
+   `-- @manual-only` (the partitioning guides `002`/`011`). The canonical
+   `block_end` column + `no_table_overlap` EXCLUDE constraint now live in
+   `026-consolidate-exclusion-constraint.sql` (idempotent; it replaced the old
+   `0_init/EXTRA-after-prisma-migrate.sql`).
 
 | Notable manual migration | Purpose |
 |---|---|
@@ -165,18 +170,21 @@ Two layers (both applied in CI):
 | `022-audit-fixes-2026-07-19` | Reconciled DB↔schema drift (FKs/`@map` that existed only in the live DB). |
 | `023-rls-new-tables` | Row-Level Security for new tables. |
 
-> **Important operational note (from the code + CI history):** `prisma migrate
-> deploy` fails on the `manual/` subfolder (P3015, it isn't a valid migration
-> dir). **Production does not run `migrate deploy`** — the app build only runs
-> `prisma generate`, and manual SQL is applied via the Supabase connector. CI
-> uses `prisma db push` + the `psql` loop.
+> **Important operational note:** the hand-written SQL scripts were previously
+> under `prisma/migrations/manual/`, which made `prisma migrate deploy` fail with
+> P3015 (a folder inside `migrations/` with no `migration.sql`). They now live in
+> `prisma/sql/` — outside `migrations/` — so `migrate deploy` runs cleanly. Both
+> the Docker entrypoint and CI apply them the same way: `migrate deploy`, then
+> `prisma/apply-sql.sh` (which uses `prisma db execute`, since the runtime image
+> has no `psql`). The entrypoint also baselines a pre-existing database with
+> `prisma migrate resolve --applied 0_init` to avoid P3005.
 
 ---
 
 ## 6. Indexes
 
 Indexes are defined inline in `schema.prisma` (`@@index`) plus additional ones in
-`manual/001` and elsewhere. High-value composite indexes on `reservations`:
+`prisma/sql/001` and elsewhere. High-value composite indexes on `reservations`:
 
 - `(restaurantId, status, slotStart)` — restaurant dashboard.
 - `(tableId, status, slotStart, slotEnd)` — table-conflict / availability.
@@ -239,13 +247,17 @@ There is **no global soft-delete column**. Instead:
 
 ## 10. Future Migration Notes
 
-- **Consolidate `manual/` SQL into first-class migrations** so `prisma migrate
-  deploy` works end-to-end (currently blocked by the `manual/` folder). Until
-  then, keep the "db push + psql loop" pattern and apply manual SQL via the
-  Supabase connector in prod. Every new manual migration **must be committed the
-  moment it is applied** (past drift caused the `022` reconciliation).
+- **Optionally fold `prisma/sql/*.sql` into first-class migrations.** The P3015
+  blocker is gone (they no longer sit inside `migrations/`), and both Docker and
+  CI apply them via `prisma/apply-sql.sh`. Every new script **must be committed
+  the moment it is applied** (past drift caused the `022` reconciliation).
 - **RLS** exists for newer tables (`023`); ensure new tables also get RLS.
-- **Partitioning** (`011`) requires periodic partition creation — wired via
-  `POST /v1/maintenance/ensure-partitions` (monthly cron).
+- **Partitioning is not enabled.** `011` is a `-- @manual-only` scaffold (guarded
+  by `RAISE EXCEPTION`, with the data-copy/rename steps commented out) and has
+  never been applied — `reservations` is a plain table (`relkind='r'`) on
+  production, and `POST /v1/maintenance/ensure-partitions` returns
+  `{ok:false, reason:'partitioning not enabled'}` because
+  `ensure_reservation_partition` does not exist. It is a future scale option, not
+  a live requirement; a skipped cron run does not break inserts.
 - Keep `schema.prisma` in sync with the live DB — the `⚠️ همگام‌سازی‌شده`
   comments mark fields that previously existed only in the DB.
