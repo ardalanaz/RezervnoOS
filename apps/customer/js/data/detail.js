@@ -2,13 +2,13 @@
 import { API, isLoggedIn } from '../api.js';
 import { closeSheet, esc, openLogin, openSheet, toApiDateTime, toast } from '../auth.js';
 import { detailSocialProof, fmtFa, go, toggleRestFav } from './discover.js';
-import { GRAD, TRIPS, bk, curRest, favs, pts } from './seed.js';
+import { GRAD, TRIPS, bk, curRest, favs, pts, setCurRest, setBk } from './seed.js';
 import { R } from '../init.js';
 import { offerWaitlist } from '../reservation.js';
 import { armReveals, buzz } from '../theme-pwa.js';
 import { icon } from '../icons.js';
 export function openRest(id){
-  curRest=id;const r=R.find(x=>x.id===id);
+  setCurRest(id);const r=R.find(x=>x.id===id);
   const stars=n=>Array.from({length:5},(_,i)=>icon('star',{size:13,fill:i<Math.round(n)})).join('');
   document.getElementById('page-rest').innerHTML=`
     <div class="rp-hero" style="background:${GRAD[id]}">
@@ -121,13 +121,13 @@ export function dateValToISO(v){
   return d.toISOString().slice(0,10);
 }
 export function faTime(t){return (t||'').replace(/[0-9]/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);}
-export function quickBook(id,slot){bk={id,date:'امروز',time:slot,party:'۲ نفر'};openSheet(bookStep2(R.find(x=>x.id===id)))}
+export function quickBook(id,slot){setBk({id,date:'امروز',time:slot,party:'۲ نفر'});openSheet(bookStep2(R.find(x=>x.id===id)))}
 export function startBook(id){
   const t=document.getElementById('bwTime').value;
   if(!t){toast('','برای این روز ساعت خالی نیست — روز دیگه‌ای انتخاب کن');return;}
   const dateSel=document.getElementById('bwDate');
   const dateLabel=dateSel.options[dateSel.selectedIndex].text;
-  bk={id,date:dateLabel,dateVal:dateSel.value,time:faTime(t),timeRaw:t,party:document.getElementById('bwParty').value};
+  setBk({id,date:dateLabel,dateVal:dateSel.value,time:faTime(t),timeRaw:t,party:document.getElementById('bwParty').value});
   openSheet(bookStep2(R.find(x=>x.id===id)));
 }
 export function bookStep2(r){

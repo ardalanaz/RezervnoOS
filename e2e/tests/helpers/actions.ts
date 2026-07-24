@@ -14,8 +14,9 @@ export async function gotoApp(page: Page) {
 
 /** بازکردنِ اولین رستوران از فید. */
 export async function openFirstRestaurant(page: Page) {
-  // کارت‌های رستوران با کلاس rc هستند
-  const firstCard = page.locator('.rc').first();
+  // کارت‌های واقعیِ رستوران onclick دارند؛ اسکلت‌های بارگذاری (div.rc) ندارند —
+  // پس روی [onclick] فیلتر می‌کنیم تا تا آمدنِ کارتِ واقعی صبر شود، نه اسکلت.
+  const firstCard = page.locator('.rc[onclick]').first();
   await expect(firstCard).toBeVisible();
   await firstCard.click();
   // صفحه‌ی جزئیاتِ رستوران باید باز شود

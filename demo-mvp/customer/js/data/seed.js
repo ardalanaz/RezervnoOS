@@ -53,6 +53,8 @@ export const BADGES=[['🍽️','اولین رزرو',1],['🔥','۵ هفته پ
 
 export let pts=340, favs=new Set(), curRest=null, bk={};
 export function setPts(v){ pts=v; }
+export function setCurRest(v){ curRest=v; }
+export function setBk(v){ bk=v; }
 export const TRIPS=[
   {rid:1,date:'پنجشنبه ۱۵ خرداد',time:'۲۰:۰۰',party:'۲ نفر',code:'RZ8K2M',status:'up'},
   {rid:3,date:'۲۸ اردیبهشت',time:'۱۳:۰۰',party:'۴ نفر',code:'RZ4A1C',status:'done'},
