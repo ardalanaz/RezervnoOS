@@ -46,5 +46,10 @@ async function syncRestaurants(){
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', boot);
 } else {
-  boot();
+  // اسکریپت‌های module معمولاً وقتی اجرا می‌شوند که DOM آماده است؛ اگر boot را
+  // همین‌جا همزمان صدا بزنیم، حین ارزیابیِ گرافِ ماژول (importهای حلقوی) اجرا می‌شود
+  // و به bindingهای هنوز‌مقداردهی‌نشده (API، SAMPLE_EVENTS) برمی‌خورد → خطای TDZ که
+  // restoreSession و syncRestaurants را بی‌صدا از کار می‌انداخت. با defer به تیکِ بعد،
+  // گرافِ ماژول کامل می‌شود و چرخه‌ی load-time واقعاً شکسته می‌شود.
+  setTimeout(boot, 0);
 }

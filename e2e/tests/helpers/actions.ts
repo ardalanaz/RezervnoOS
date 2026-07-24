@@ -23,39 +23,40 @@ export async function openFirstRestaurant(page: Page) {
   await expect(page.locator('#page-rest')).toBeVisible();
 }
 
-/** ورود کامل با شماره و کدِ OTP (کدِ dev از mock = 123456).
- *  شیتِ ورود را با openLogin باز می‌کند، شماره و کد را پر می‌کند و منتظرِ
- *  ورودِ موفق می‌ماند؛ سپس هر شیتِ بازمانده (فرمِ ثبت‌نام) را با Escape می‌بندد. */
+/** ورود مستقل از UI و موتورِ مرورگر.
+ *  به‌جای درایوِ فلوی OTP (که روی webkit مرحله‌ی کد را قابل‌اتکا رندر نمی‌کرد)، از
+ *  مسیرِ «بازیابیِ نشست» اپ استفاده می‌کنیم: init.js اگر توکنِ ذخیره‌شده ببیند،
+ *  /me را می‌خواند و کاربر را set می‌کند. پس توکنِ دمو در localStorage می‌گذاریم،
+ *  پاسخِ /me را به کاربرِ دمو override می‌کنیم و صفحه را reload می‌کنیم. */
 export async function login(page: Page, phone = '09123456789') {
-  type W = {
-    openLogin: () => void;
-    sendOtp: () => void;
-    confirmOtp: () => void;
-    isLoggedIn?: () => boolean;
-    closeSheet?: () => void;
-  };
-  await page.evaluate(() => (window as unknown as W).openLogin());
-  const phoneInput = page.locator('#loginPhone');
-  await expect(phoneInput).toBeVisible();
-  await phoneInput.fill(phone);
-
-  // توابع را مستقیم صدا می‌زنیم (نه کلیک): روی webkit/iPhone دکمه‌های btn-block زیرِ
-  // fold قرار می‌گیرند و کلیک با اسکرول قابل‌اتکا نیست؛ فراخوانیِ مستقیم مستقل از
-  // موتور و ویوپورت است. sendOtp خودش مقدارِ #loginPhone را می‌خواند.
-  await page.evaluate(() => (window as unknown as W).sendOtp());
-
-  const otp = page.locator('#otpCode');
-  await expect(otp).toBeVisible({ timeout: 8000 });
-  await otp.fill('123456');
-  await page.evaluate(() => (window as unknown as W).confirmOtp());
-
-  // بعد از verify، USER ست می‌شود (isLoggedIn=true) حتی اگر فرمِ ثبت‌نام باز بماند.
+  type W = { isLoggedIn?: () => boolean };
+  // این override بعد از mockِ beforeEach ثبت می‌شود، پس برای GET /me اولویت دارد.
+  await page.route('**/api/v1/me', (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user: { id: 'user-demo', phone: '+989123456789', first_name: 'کاربر', last_name: 'دمو' },
+        }),
+      });
+    }
+    return route.fallback();
+  });
+  await page.evaluate(() => {
+    try {
+      localStorage.setItem('rz_access', 'demo-access-token');
+      localStorage.setItem('rz_refresh', 'demo-refresh-token');
+    } catch { /* ignore */ }
+  });
+  await page.reload();
+  await expect(page.locator('#page-discover')).toBeVisible();
   await page.waitForFunction(
     () => (window as unknown as W).isLoggedIn?.() === true,
     undefined,
     { timeout: 8000 },
   );
-  await page.evaluate(() => (window as unknown as W).closeSheet?.());
+  void phone;
 }
 
 /** رفتن به یک تبِ ناوبری.
