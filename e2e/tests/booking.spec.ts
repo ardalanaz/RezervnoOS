@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockApi } from './helpers/mock-api';
-import { gotoApp, openFirstRestaurant } from './helpers/actions';
+import { gotoApp, openFirstRestaurant, login } from './helpers/actions';
 
 // ═══ مسیرِ حیاتیِ رزرو (مسیرِ پول) ═══
 // این مهم‌ترین جریانِ کلِ اپ است: اگر رزرو کار نکند، کسب‌وکار کار نمی‌کند.
@@ -23,37 +23,29 @@ test('کاربر می‌تواند رستوران را باز کند و صفحه
 
 test('جریانِ کاملِ رزرو تا تأییدیه (با کدِ رزرو)', async ({ page }) => {
   await gotoApp(page);
+  await login(page);                 // رزرو نیاز به ورود دارد (confirmBook این را چک می‌کند)
   await openFirstRestaurant(page);
 
-  // باز کردنِ شیتِ رزرو
+  // باز کردنِ شیتِ رزرو (مرحله ۱: انتخابِ تاریخ/ساعت/نفرات)
   await page.getByRole('button', { name: /رزرو میز/ }).click();
   await expect(page.locator('#sheet')).toBeVisible();
 
-  // انتخابِ یک اسلاتِ باز (۱۹:۰۰ یا ۲۰:۰۰ در mock باز هستند)
-  const slot = page.getByText('19:00', { exact: false }).first();
-  if (await slot.isVisible().catch(() => false)) {
-    await slot.click();
-  }
+  // صبر تا بارگذاریِ ساعت‌های واقعی از availability (mock: ۱۹:۰۰/۲۰:۰۰ باز)
+  await page.waitForFunction(() => {
+    const s = document.getElementById('bwTime') as HTMLSelectElement | null;
+    return !!s && [...s.options].some((o) => o.value && o.value !== '');
+  }, undefined, { timeout: 5000 });
 
-  // پیش‌رفتن در مراحل تا دکمه‌ی «تأیید رزرو»
-  const nextBtn = page.getByRole('button', { name: /ادامه|بعدی/ });
-  if (await nextBtn.isVisible().catch(() => false)) {
-    await nextBtn.click();
-  }
-
-  // پر کردنِ نام و شماره اگر خواسته شد
-  const nameInput = page.locator('#bkName');
-  if (await nameInput.isVisible().catch(() => false)) {
-    await nameInput.fill('کاربر تست');
-    await page.locator('#bkPhone').fill('09123456789');
-  }
-
-  // تأییدِ نهایی
+  // مرحله ۱ → ۲
+  await page.getByRole('button', { name: /بررسی میزهای موجود/ }).click();
+  // مرحله ۲ → ۳ (پیش‌سفارشِ اختیاری)
+  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
+  // مرحله ۳: تأییدِ نهایی
   await page.getByRole('button', { name: /تأیید رزرو|تایید رزرو/ }).click();
 
   // ── نتیجه‌ی حیاتی: کدِ رزرو باید نمایش داده شود (RZDEMO12 از mock) ──
   // اگر باگِ contract برگردد (خواندنِ reservation.code به‌جای code)، این می‌شکند.
-  await expect(page.locator('#sheet, #page-rest')).toContainText(/RZDEMO12|رزرو.*(ثبت|تأیید|موفق)/, { timeout: 5000 });
+  await expect(page.locator('#sheetBody')).toContainText(/RZDEMO12|رزرو.*(ثبت|تأیید|موفق)/, { timeout: 8000 });
 });
 
 test('پارتی‌سایز و تاریخ در شیتِ رزرو قابلِ تنظیم است', async ({ page }) => {

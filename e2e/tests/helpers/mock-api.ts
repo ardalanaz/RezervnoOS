@@ -15,6 +15,9 @@ import { Page, Route } from '@playwright/test';
 export interface MockOptions {
   /** آیا اسلات‌ها پر باشند (برای تستِ مسیرِ لیست انتظار)؟ */
   slotsFull?: boolean;
+  /** آیا ثبتِ رزرو با خطای SLOT_FULL رد شود (شبیه‌سازیِ پرشدنِ ظرفیت هنگامِ تأیید)؟
+   *  اسلات‌ها باز می‌مانند تا کاربر بتواند زمان انتخاب کند و تا مرحله‌ی تأیید پیش برود. */
+  reserveFull?: boolean;
   /** آیا کاربر از قبل وارد باشد؟ */
   loggedIn?: boolean;
 }
@@ -69,6 +72,10 @@ export async function mockApi(page: Page, opts: MockOptions = {}) {
 
     // ── ساختِ رزرو (مسیرِ حیاتی) — code در سطحِ بالا (طبقِ قرارداد) ──
     if (path === '/reservations' && method === 'POST') {
+      if (opts.reserveFull) {
+        // ظرفیت هنگامِ تأیید پر شد → فرانت باید پیشنهادِ لیست انتظار بدهد
+        return json({ error: { code: 'SLOT_FULL', message: 'ظرفیت این ساعت پر شد' } }, 409);
+      }
       return json({
         code: 'RZDEMO12',
         status: 'confirmed',

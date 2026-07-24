@@ -1,35 +1,48 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { mockApi } from './helpers/mock-api';
-import { gotoApp, openFirstRestaurant } from './helpers/actions';
+import { gotoApp, openFirstRestaurant, login } from './helpers/actions';
 
 // ═══ جریانِ لیست انتظار ═══
-// وقتی همه‌ی اسلات‌ها پر است، کاربر باید بتواند به لیست انتظار بپیوندد.
-// این مسیرِ «نجاتِ درآمد» است: به‌جای از دست دادنِ کاربر، در صف نگهش می‌داریم.
+// وقتی هنگامِ تأییدِ رزرو ظرفیت پر می‌شود (پاسخِ SLOT_FULL از سرور)، فرانت باید
+// به‌جای از دست دادنِ کاربر، پیشنهادِ پیوستن به لیست انتظار بدهد — «مسیرِ نجاتِ درآمد».
 
 test.beforeEach(async ({ page }) => {
-  await mockApi(page, { slotsFull: true });   // همه‌ی اسلات‌ها پر
+  // اسلات‌ها باز نمایش داده می‌شوند تا کاربر بتواند تا مرحله‌ی تأیید پیش برود،
+  // ولی POST رزرو با SLOT_FULL رد می‌شود (شبیه‌سازیِ پرشدنِ ظرفیت در لحظه‌ی تأیید).
+  await mockApi(page, { reserveFull: true });
 });
 
-test('وقتی اسلات‌ها پر است، گزینه‌ی لیست انتظار پیشنهاد می‌شود', async ({ page }) => {
-  await gotoApp(page);
-  await openFirstRestaurant(page);
-
+/** پیش‌رفتن در شیتِ رزرو تا کلیکِ «تأیید رزرو». */
+async function advanceToConfirm(page: Page) {
   await page.getByRole('button', { name: /رزرو میز/ }).click();
   await expect(page.locator('#sheet')).toBeVisible();
+  await page.waitForFunction(() => {
+    const s = document.getElementById('bwTime') as HTMLSelectElement | null;
+    return !!s && [...s.options].some((o) => o.value && o.value !== '');
+  }, undefined, { timeout: 5000 });
+  await page.getByRole('button', { name: /بررسی میزهای موجود/ }).click();
+  await page.getByRole('button', { name: 'ادامه', exact: true }).click();
+  await page.getByRole('button', { name: /تأیید رزرو|تایید رزرو/ }).click();
+}
 
-  // چون همه پر است، باید پیشنهادِ لیست انتظار ظاهر شود
-  await expect(page.locator('#sheet, #sheetBody')).toContainText(/لیست انتظار|صف|پر/, { timeout: 5000 });
+test('وقتی هنگامِ تأیید ظرفیت پر می‌شود، گزینه‌ی لیست انتظار پیشنهاد می‌شود', async ({ page }) => {
+  await gotoApp(page);
+  await login(page);
+  await openFirstRestaurant(page);
+  await advanceToConfirm(page);
+
+  // POST رزرو با SLOT_FULL رد می‌شود → پیشنهادِ لیست انتظار باید ظاهر شود
+  await expect(page.locator('#sheetBody')).toContainText(/لیست انتظار|ظرفیت.*پر/, { timeout: 8000 });
 });
 
 test('کاربر می‌تواند به لیست انتظار بپیوندد و موقعیتش را ببیند', async ({ page }) => {
   await gotoApp(page);
+  await login(page);
   await openFirstRestaurant(page);
-  await page.getByRole('button', { name: /رزرو میز/ }).click();
+  await advanceToConfirm(page);
 
-  const joinBtn = page.getByRole('button', { name: /پیوستن به لیست انتظار|لیست انتظار/ });
-  if (await joinBtn.isVisible().catch(() => false)) {
-    await joinBtn.click();
-    // بعد از پیوستن، موقعیت در صف باید نمایش داده شود (position=2 از mock)
-    await expect(page.locator('#sheet, #sheetBody, #page-trips')).toContainText(/موقعیت|صف|۲|2|انتظار/, { timeout: 5000 });
-  }
+  // پیوستن به صف
+  await page.getByRole('button', { name: /پیوستن به لیست انتظار/ }).click();
+  // بعد از پیوستن، موقعیت در صف باید نمایش داده شود (position=2 از mock)
+  await expect(page.locator('#sheetBody')).toContainText(/موقعیت|صف|۲|2|انتظار/, { timeout: 8000 });
 });

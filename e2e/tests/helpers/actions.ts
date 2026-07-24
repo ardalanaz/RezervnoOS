@@ -23,23 +23,36 @@ export async function openFirstRestaurant(page: Page) {
   await expect(page.locator('#page-rest')).toBeVisible();
 }
 
-/** ورود با شماره‌ی دمو و کدِ OTP. */
+/** ورود کامل با شماره و کدِ OTP (کدِ dev از mock = 123456).
+ *  شیتِ ورود را با openLogin باز می‌کند، شماره و کد را پر می‌کند و منتظرِ
+ *  ورودِ موفق می‌ماند؛ سپس هر شیتِ بازمانده (فرمِ ثبت‌نام) را با Escape می‌بندد. */
 export async function login(page: Page, phone = '09123456789') {
-  // فرضِ باز بودنِ شیتِ ورود؛ اگر نه، فراخوانی‌کننده باید بازش کند
+  await page.evaluate(() => (window as unknown as { openLogin: () => void }).openLogin());
   const phoneInput = page.locator('#loginPhone');
   await expect(phoneInput).toBeVisible();
   await phoneInput.fill(phone);
-  await page.getByRole('button', { name: /ورود|ادامه|تایید/ }).first().click();
+  await page.getByRole('button', { name: /ارسال کد ورود/ }).click();
 
-  // مرحله‌ی کد — کدِ دمو 123456 (از mock)
-  const otp = page.locator('input').filter({ hasText: '' }).first();
-  // بسیاری از پیاده‌سازی‌ها یک input کد دارند؛ پرش می‌کنیم اگر خودکار باشد
-  await page.waitForTimeout(300);
+  const otp = page.locator('#otpCode');
+  await expect(otp).toBeVisible();
+  await otp.fill('123456');
+  await page.getByRole('button', { name: /تأیید و ورود|تایید و ورود/ }).click();
+
+  // بعد از verify، USER ست می‌شود (isLoggedIn=true) حتی اگر فرمِ ثبت‌نام باز بماند.
+  await page.waitForFunction(
+    () => (window as unknown as { isLoggedIn?: () => boolean }).isLoggedIn?.() === true,
+    undefined,
+    { timeout: 8000 },
+  );
+  await page.keyboard.press('Escape').catch(() => {});
 }
 
-/** رفتن به یک تبِ ناوبریِ پایین. */
+/** رفتن به یک تبِ ناوبری.
+ *  نکته: data-nav هم روی navِ پایین (موبایل) و هم navِ بالا (دسکتاپ) هست و فقط یکی
+ *  در هر ویوپورت دیده می‌شود؛ با :visible همان قابل‌مشاهده را می‌زنیم تا strict-mode
+ *  نشکند و روی هر دو ویوپورت کار کند. */
 export async function navTo(page: Page, tab: 'discover' | 'favorites' | 'trips' | 'loyalty') {
-  await page.locator(`[data-nav="${tab}"]`).click();
+  await page.locator(`[data-nav="${tab}"]:visible`).first().click();
   await expect(page.locator(`#page-${tab}`)).toBeVisible();
 }
 

@@ -2,7 +2,7 @@
 import { API, isLoggedIn } from '../api.js';
 import { closeSheet, esc, openLogin, openSheet, toApiDateTime, toast } from '../auth.js';
 import { detailSocialProof, fmtFa, go, toggleRestFav } from './discover.js';
-import { GRAD, TRIPS, bk, curRest, favs, pts, setCurRest, setBk } from './seed.js';
+import { GRAD, TRIPS, bk, curRest, favs, pts, setCurRest, setBk, setPts } from './seed.js';
 import { R } from '../init.js';
 import { offerWaitlist } from '../reservation.js';
 import { armReveals, buzz } from '../theme-pwa.js';
@@ -134,8 +134,11 @@ export function bookStep2(r){
     <div class="steps"><div class="step-bar done"></div><div class="step-bar now"></div><div class="step-bar"></div></div>
     <div class="field-label">پیش‌سفارش (اختیاری) — <span style="color:var(--teal-600)">+۲۰ امتیاز</span></div>
     <div class="opt-row">${r.menu.map(m=>`<div class="opt" onclick="this.classList.toggle('sel')">${m[0]} ${m[1]}</div>`).join('')}</div>
-    <button class="btn btn-primary btn-lg btn-block" onclick="openSheet(bookStep3(R.find(x=>x.id===${r.id})))">ادامه</button>`;
+    <button class="btn btn-primary btn-lg btn-block" onclick="toBookStep3(${r.id})">ادامه</button>`;
 }
+// wrapperِ سراسری: onclick در scope سراسری اجرا می‌شود و به R (ماژولی) دسترسی ندارد،
+// پس lookup را اینجا (با دسترسی به R) انجام می‌دهیم.
+export function toBookStep3(id){ openSheet(bookStep3(R.find(x=>x.id===id))); }
 export function bookStep3(r){
   return `<div class="sheet-title">تأیید اطلاعات</div><div class="sheet-sub">یه قدم تا رزرو</div>
     <div class="steps"><div class="step-bar done"></div><div class="step-bar done"></div><div class="step-bar now"></div></div>
@@ -189,7 +192,7 @@ export async function confirmBook(id){
   }
 
   // موفقیت (واقعی یا دمو)
-  pts+=50;document.getElementById('navPts').textContent=fmtFa(pts);
+  setPts(pts+50);document.getElementById('navPts').textContent=fmtFa(pts);
   TRIPS.unshift({rid:id,date:bk.date,time:bk.time,party:bk.party,code,status:'up'});
   sheetBody.innerHTML=`
     <div class="success">
@@ -213,5 +216,6 @@ window.openBookSheet = openBookSheet;
 window.quickBook = quickBook;
 window.startBook = startBook;
 window.bookStep3 = bookStep3;
+window.toBookStep3 = toBookStep3;
 window.confirmBook = confirmBook;
 window.copyCode = copyCode;
