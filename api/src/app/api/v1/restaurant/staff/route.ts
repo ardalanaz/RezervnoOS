@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { withStaffAuth } from '@/lib/with-restaurant-auth';
-import { getEffectivePermissions } from '@/lib/permissions';
+import { getEffectivePermissions, effectivePermissionsFrom, type PermissionKey } from '@/lib/permissions';
 import { normalizePhone } from '@/lib/otp';
 import type { AccessPayload } from '@/lib/jwt';
 import { ApiError, Err } from '@/lib/errors';
@@ -56,18 +56,27 @@ function assertManagerOrOwner(auth: AccessPayload): asserts auth is StaffPayload
   if (auth.role !== 'owner' && auth.role !== 'manager') throw Err.forbidden('فقط مدیر می‌تواند کارکنان را مدیریت کند');
 }
 
-async function toItem(s: { id: string; name: string | null; phone: string; role: string; isActive: boolean; restaurantId: string | null }) {
+function shapeStaff(
+  s: { id: string; name: string | null; phone: string; role: string; isActive: boolean; restaurantId: string | null },
+  permissions: Record<PermissionKey, boolean>,
+) {
   return {
     id: s.id, name: s.name, phone: s.phone, role: s.role,
     is_active: s.isActive, restaurant_id: s.restaurantId,
-    permissions: await getEffectivePermissions(s.id, s.role),
+    permissions,
   };
 }
 
 export const GET = withStaffAuth({}, async (_req, auth) => {
   assertManagerOrOwner(auth);
-  const staff = await db.staff.findMany({ where: { tenantId: auth.tenantId }, orderBy: { role: 'asc' } });
-  const items = await Promise.all(staff.map(toItem));
+  // با include یک کوئری می‌گیریم و مجوز را در حافظه می‌سازیم — بدونِ N+1
+  // (قبلاً برای هر staff یک findUnique جدا زده می‌شد).
+  const staff = await db.staff.findMany({
+    where: { tenantId: auth.tenantId },
+    orderBy: { role: 'asc' },
+    include: { permission: true },
+  });
+  const items = staff.map(s => shapeStaff(s, effectivePermissionsFrom(s.role, s.permission)));
   return NextResponse.json({ items });
 });
 
@@ -103,7 +112,7 @@ export const POST = withStaffAuth({ rateLimit: 'auth' }, async (req, auth) => {
     await db.staffPermission.create({ data: { staffId: created.id, ...b.permissions } });
   }
 
-  return NextResponse.json({ item: await toItem(created) }, { status: 201 });
+  return NextResponse.json({ item: shapeStaff(created, await getEffectivePermissions(created.id, created.role)) }, { status: 201 });
 });
 
 // PATCH — به‌روزرسانی دسترسی/شعبه‌ی یک عضو staff · بدنه: { staff_id, permissions?, restaurant_id? }
