@@ -39,18 +39,8 @@ const handlers: Record<string, (payload: any) => Promise<Record<string, unknown>
     await sendPush(p.userId, p.title, p.body);
   },
   webhook: async (p: any) => { await deliverWebhook(p); },
-  // report و image هنوز پیاده‌سازی نشده‌اند. مهم: به‌جای «موفقیت خاموش» (که کاربر را
-  // فریب می‌دهد که کار انجام شده)، صریح fail می‌کنند تا در صف retry/dead-letter بروند
-  // و در متریک‌ها دیده شوند. هیچ مسیری فعلاً این نوع‌ها را enqueue نمی‌کند؛ وقتی منطق
-  // واقعی اضافه شد، این throwها با پیاده‌سازی جایگزین می‌شوند.
-  report: async (p: any) => {
-    log.warn('کار report دریافت شد ولی handler هنوز پیاده‌سازی نشده', { payload: p });
-    throw new Error('report handler not implemented — job parked for retry');
-  },
-  image: async (p: any) => {
-    log.warn('کار image دریافت شد ولی handler هنوز پیاده‌سازی نشده', { payload: p });
-    throw new Error('image handler not implemented — job parked for retry');
-  },
+  // نکته: نوعِ کاری که handler ندارد (مثلاً یک kind قدیمی در صف) توسط runWorker
+  // مستقیم به dead-letter می‌رود و در متریک‌ها دیده می‌شود — بدونِ retryِ بی‌فایده.
 };
 
 /** یک batch را پردازش می‌کند. حداکثر `max` کار. خروجی: شمارش نتایج. */

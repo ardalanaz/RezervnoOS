@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { dbRead as db } from '@/lib/db';
 import { cached, cacheKey } from '@/lib/cache';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
+import { parseQuery, zUuid, z } from '@/lib/schemas';
+
+const querySchema = z.object({
+  segment: z.enum(['new_customer', 'active', 'at_risk', 'churned', 'vip']).optional(),
+  sort: z.enum(['clv', 'churn', 'visits']).default('clv'),
+  limit: z.number().int().min(1).max(50).default(24),
+  cursor: zUuid.optional(),
+});
 
 // ═══════════════════════════════════════════════════════════
 //  GET /restaurant/customers — لیست مشتریان با CLV، ریسک no-show، سگمنت
@@ -10,11 +18,7 @@ import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 // ═══════════════════════════════════════════════════════════
 
 export const GET = withRestaurantAuth({ permission: 'canViewAnalytics' }, async (req, ctx) => {
-  const url = new URL(req.url);
-  const segment = url.searchParams.get('segment');
-  const sort = url.searchParams.get('sort') || 'clv';
-  const limit = Math.min(50, Number(url.searchParams.get('limit')) || 24);
-  const cursor = url.searchParams.get('cursor');
+  const { segment, sort, limit, cursor } = parseQuery(req, querySchema);
 
   const orderBy = sort === 'churn' ? { churnRiskScore: 'desc' as const }
     : sort === 'visits' ? { totalVisits: 'desc' as const }

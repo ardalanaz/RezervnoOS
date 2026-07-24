@@ -9,24 +9,24 @@ function rDetail(){
   else statusText=`آزمایشی · ${fa(r.daysLeft)} روز`;
   const badgeCls = r.status==='trial_expired' ? 'expired' : r.status;
   document.getElementById('v-detail').innerHTML=`
-    <button class="back-btn" onclick="nav('restaurants')">→ بازگشت به لیست</button>
+    <button class="back-btn" onclick="nav('restaurants')">${icon('arrowR',{size:15})} بازگشت به لیست</button>
     <div class="detail-hero">
       <div class="detail-logo" style="background:${r.grad}">${r.logo}</div>
       <div class="detail-info">
         <div class="detail-name">${esc(r.name)}</div>
-        <div class="detail-meta">عضو از ${r.joined} · <span class="plan-badge ${r.plan}">${PLAN_LABEL[r.plan]}</span> · ${r.isOpen?'🟢 باز':'🔴 بسته'}</div>
+        <div class="detail-meta">عضو از ${r.joined} · <span class="plan-badge ${r.plan}">${PLAN_LABEL[r.plan]}</span> · ${r.isOpen?`<span class="live-dot" aria-hidden="true"></span> باز`:`<span class="dot-closed" aria-hidden="true"></span> بسته`}</div>
       </div>
       <div class="detail-actions">
         <span class="badge ${badgeCls}" style="align-self:center"><span class="bdot"></span>${statusText}</span>
-        <button class="btn btn-ghost btn-sm" onclick="toggleRestOpen('${r.id}')">${r.isOpen?'🔒 غیرفعال کردن':'✅ فعال کردن'}</button>
-        <button class="btn btn-primary btn-sm" onclick="openRenew('${r.id}')">🔄 مدیریت اشتراک</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleRestOpen('${r.id}')">${r.isOpen?`${icon('lock',{size:14})} غیرفعال کردن`:`${icon('check',{size:14})} فعال کردن`}</button>
+        <button class="btn btn-primary btn-sm" onclick="openRenew('${r.id}')">${icon('refresh',{size:14})} مدیریت اشتراک</button>
       </div>
     </div>
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">👥</div></div><div class="kpi-val">${fa(r.members)}</div><div class="kpi-label">عضو باشگاه</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">📅</div></div><div class="kpi-val">${fa(r.reservations)}</div><div class="kpi-label">کل رزروها</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">✉️</div></div><div class="kpi-val">${fa(r.sms)}</div><div class="kpi-label">پیامک ارسالی</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">📲</div></div><div class="kpi-val">${fa(r.smsBalance)}</div><div class="kpi-label">موجودی پیامک</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">${icon('users',{size:17})}</div></div><div class="kpi-val">${fa(r.members)}</div><div class="kpi-label">عضو باشگاه</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">${icon('calendar',{size:17})}</div></div><div class="kpi-val">${fa(r.reservations)}</div><div class="kpi-label">کل رزروها</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">${icon('mail',{size:17})}</div></div><div class="kpi-val">${fa(r.sms)}</div><div class="kpi-label">پیامک ارسالی</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">${icon('phone',{size:17})}</div></div><div class="kpi-val">${fa(r.smsBalance)}</div><div class="kpi-label">موجودی پیامک</div></div>
     </div>
     <div class="panel">
       <div class="panel-head"><div><div class="panel-title">جزئیات بیشتر</div></div></div>
@@ -35,7 +35,7 @@ function rDetail(){
         <b style="color:var(--t1)">پنل خودِ همان رستوران</b> شوی — این داده‌ها برای حفظ حریم خصوصی مشتری‌ها در پنل شرکت به‌صورت جزء‌به‌جزء نمایش داده نمی‌شن.
         خلاصه‌ی تجمیعی (RFM/CLV) همه‌ی رستوران‌ها رو می‌تونی توی صفحه‌ی «هوش تجاری مشتریان» ببینی.
       </div>
-      <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="nav('customers')">رفتن به هوش تجاری مشتریان ←</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="nav('customers')">رفتن به هوش تجاری مشتریان ${icon('arrowL',{size:13})}</button>
     </div>`;
 }
 async function toggleRestOpen(id){
@@ -44,10 +44,10 @@ async function toggleRestOpen(id){
   const res = await API.control(id, { action });
   if(res.ok){
     r.isOpen = res.data.is_open;
-    toast('✅', r.isOpen?'رستوران فعال شد':'رستوران غیرفعال شد');
+    toast('', r.isOpen?'رستوران فعال شد':'رستوران غیرفعال شد');
     rDetail();
   } else {
-    toast('⚠️', res.error?.message || 'عملیات ناموفق بود');
+    toast('', res.error?.message || 'عملیات ناموفق بود');
   }
 }
 
@@ -61,10 +61,10 @@ function rAnalytics(){
   const planDist={};RESTAURANTS.forEach(r=>{planDist[r.plan]=(planDist[r.plan]||0)+1});
   document.getElementById('v-analytics').innerHTML=`
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">👥</div></div><div class="kpi-val">${fa(totalMembers)}</div><div class="kpi-label">کل اعضای باشگاه</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">📅</div></div><div class="kpi-val">${fa(totalRes)}</div><div class="kpi-label">کل رزروها</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">📲</div></div><div class="kpi-val">${fa(totalSmsBalance)}</div><div class="kpi-label">موجودی پیامک کل</div></div>
-      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">🏪</div></div><div class="kpi-val">${fa(RESTAURANTS.length)}</div><div class="kpi-label">رستوران فعال در پلتفرم</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic ink">${icon('users',{size:17})}</div></div><div class="kpi-val">${fa(totalMembers)}</div><div class="kpi-label">کل اعضای باشگاه</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic violet">${icon('calendar',{size:17})}</div></div><div class="kpi-val">${fa(totalRes)}</div><div class="kpi-label">کل رزروها</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic amber">${icon('phone',{size:17})}</div></div><div class="kpi-val">${fa(totalSmsBalance)}</div><div class="kpi-label">موجودی پیامک کل</div></div>
+      <div class="kpi"><div class="kpi-top"><div class="kpi-ic green">${icon('store',{size:17})}</div></div><div class="kpi-val">${fa(RESTAURANTS.length)}</div><div class="kpi-label">رستوران فعال در پلتفرم</div></div>
     </div>
     <div class="panel" style="margin-bottom:20px">
       <div class="panel-head"><div><div class="panel-title">توزیع پلن‌ها</div><div class="panel-sub">چند رستوران روی هر پلن هستن</div></div></div>

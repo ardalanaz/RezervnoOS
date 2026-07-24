@@ -3,6 +3,9 @@ import { authFromRequest } from '@/lib/jwt';
 import { db } from '@/lib/db';
 import { enforceRateLimit, clientIp, RULES } from '@/lib/ratelimit';
 import { Err, errorResponse } from '@/lib/errors';
+import { parseParams, zReservationCode, z } from '@/lib/schemas';
+
+const paramsSchema = z.object({ code: zReservationCode });
 
 // GET /reservations/[code] — جزئیات یک رزرو
 // ⚠️ امنیت (رفع IDOR): قبلاً این endpoint بدون احراز هویت و بدون چک مالکیت،
@@ -16,9 +19,10 @@ export async function GET(req: Request, { params }: { params: { code: string } }
   try {
     await enforceRateLimit(clientIp(req), RULES.search);
     const auth = authFromRequest(req);
+    const { code } = parseParams(params, paramsSchema);
 
     const r = await db.reservation.findUnique({
-      where: { code: params.code },
+      where: { code },
       include: {
         restaurant: { select: { name: true, slug: true, tenantId: true } },
         table: { select: { number: true } },

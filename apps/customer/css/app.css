@@ -194,13 +194,14 @@ img{display:block;max-width:100%}
 .rc-emoji{position:absolute;top:16px;right:18px;z-index:3;font-size:46px;filter:drop-shadow(0 4px 14px rgba(0,0,0,.5));
   transition:transform .3s var(--spring)}
 .rc:hover .rc-emoji{transform:scale(1.12) rotate(6deg)}
-.rc-fav{position:absolute;top:16px;left:18px;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.3);
+.rc-fav{position:absolute;top:var(--sp-3);inset-inline-end:var(--sp-3);width:var(--touch-min);height:var(--touch-min);border-radius:50%;background:rgba(0,0,0,.3);
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:none;cursor:pointer;display:grid;place-items:center;
-  font-size:15px;z-index:3;transition:transform .2s var(--spring)}
-.rc-fav:active{transform:scale(.8)}
-.rc-hotbadge{position:absolute;top:18px;left:62px;z-index:3;font-size:11.5px;font-weight:800;color:#fff;padding:6px 12px;
-  border-radius:20px;display:flex;align-items:center;gap:4px;background:var(--grad-warm);box-shadow:0 6px 16px rgba(255,75,122,.5)}
-.rc-hotbadge.ai{background:var(--grad);left:18px}
+  color:#fff;z-index:3;transition:transform var(--motion-base) var(--ease-spring)}
+.rc-fav:active{transform:scale(.88)}
+.rc-fav[aria-pressed="true"]{color:#FF4B7A}
+.rc-hotbadge{position:absolute;top:var(--sp-5);inset-inline-end:calc(var(--touch-min) + var(--sp-5));z-index:3;font-size:var(--fs-2xs);font-weight:800;color:#fff;padding:var(--sp-1) var(--sp-3);
+  border-radius:var(--radius-full);display:flex;align-items:center;gap:var(--sp-1);background:var(--grad-warm);box-shadow:0 6px 16px rgba(255,75,122,.5)}
+.rc-hotbadge.ai{background:var(--grad);inset-inline-end:var(--sp-3)}
 /* پنلِ شیشه‌ی شناور پایینِ کارت */
 .rc-panel{position:relative;z-index:2;margin:0 12px 12px;border-radius:20px;padding:15px 16px;overflow:hidden;isolation:isolate;
   background:rgba(14,10,26,.38);-webkit-backdrop-filter:blur(22px) saturate(200%);backdrop-filter:blur(22px) saturate(200%);
@@ -768,3 +769,38 @@ button,[role="button"],.botnav-item,a{min-height:0}
 .wl-eta b{color:var(--t1);font-size:16px}
 .wl-vip-badge{display:inline-block;margin-top:12px;background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#3D2E00;font-weight:800;font-size:12px;padding:6px 14px;border-radius:100px}
 .wl-hint{font-size:12px;color:var(--t3);margin-top:16px;line-height:1.6;padding:0 12px}
+
+/* ═══════════ چت مشتری ↔ رستوران ═══════════ */
+.chat-list-head,.chat-head{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;background:var(--bg,#0b0b12);z-index:5}
+.chat-list-head h2{font-size:18px;font-weight:800;margin:0}
+.icon-btn{background:rgba(255,255,255,.06);border:none;color:inherit;width:38px;height:38px;border-radius:12px;font-size:18px;cursor:pointer;display:grid;place-items:center}
+.chat-list{padding:8px 0}
+.chat-row{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;transition:background .15s}
+.chat-row:active{background:rgba(255,255,255,.05)}
+.chat-row-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--teal));display:grid;place-items:center;font-weight:800;font-size:18px;color:#fff;flex-shrink:0}
+.chat-row-main{flex:1;min-width:0}
+.chat-row-top{display:flex;align-items:center;gap:8px}
+.chat-row-name{font-weight:700;font-size:15px}
+.chat-row-tag{font-size:11px;color:var(--blue);background:rgba(106,75,255,.12);padding:2px 8px;border-radius:8px}
+.chat-row-preview{font-size:13px;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
+.chat-badge{background:var(--red);color:#fff;font-size:12px;font-weight:800;min-width:22px;height:22px;border-radius:11px;display:grid;place-items:center;padding:0 6px}
+.chat-empty,.chat-empty-thread{text-align:center;color:rgba(255,255,255,.45);padding:48px 20px;font-size:14px;line-height:1.9}
+/* thread */
+#page-chat{display:flex;flex-direction:column;height:100vh;height:100dvh}
+.chat-head-title{font-weight:800;font-size:16px}
+.chat-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.chat-bubble{max-width:78%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.6;word-break:break-word}
+.chat-bubble.mine{align-self:flex-start;background:linear-gradient(135deg,var(--blue),#5a3fe0);color:#fff;border-bottom-right-radius:4px}
+.chat-bubble.theirs{align-self:flex-end;background:rgba(255,255,255,.09);border-bottom-left-radius:4px}
+.chat-bubble.pending{opacity:.6}
+.chat-bubble-time{font-size:10px;opacity:.7;margin-top:4px;text-align:left}
+.chat-input-bar{display:flex;gap:8px;padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);background:var(--bg,#0b0b12)}
+.chat-input{flex:1;background:rgba(255,255,255,.07);border:none;border-radius:22px;padding:11px 16px;color:inherit;font-size:14px;font-family:inherit}
+.chat-input:focus{outline:2px solid var(--blue)}
+.chat-send{width:44px;height:44px;border-radius:50%;border:none;background:var(--blue);color:#fff;font-size:18px;cursor:pointer;flex-shrink:0}
+.rp-msg-btn{width:52px;flex-shrink:0;font-size:20px;padding:0}
+
+/* نشانگرِ وضعیتِ «باز» — رنگِ semantic از Design System (جایگزینِ emoji) */
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--success) 25%, transparent);animation:live-pulse 2s var(--ease-out) infinite}
+@keyframes live-pulse{0%,100%{opacity:1}50%{opacity:.55}}

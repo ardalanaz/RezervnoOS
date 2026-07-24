@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 import { Err } from '@/lib/errors';
+import { parseBody, parseQuery, zUuid, z } from '@/lib/schemas';
+
+const listQuerySchema = z.object({
+  filter: z.enum(['unanswered', 'low', 'all']).optional(),
+  limit: z.number().int().min(1).max(100).default(50),
+});
+const replySchema = z.object({ id: zUuid, reply: z.string().min(1).max(1000).trim() });
 
 /** GET — نظرات رستوران + آمار تجمیعی (میانگین، توزیع ستاره، تعداد بی‌پاسخ) */
 export const GET = withRestaurantAuth({ rateLimit: 'search' }, async (req, ctx) => {
-  const url = new URL(req.url);
-  const filter = url.searchParams.get('filter'); // unanswered | low (1-2 ستاره) | all
-  const limit = Math.min(100, Number(url.searchParams.get('limit')) || 50);
+  const { filter, limit } = parseQuery(req, listQuerySchema);
 
   const where: Record<string, unknown> = { restaurantId: ctx.restaurant.id };
   if (filter === 'unanswered') where.reply = null;
@@ -42,14 +47,11 @@ export const GET = withRestaurantAuth({ rateLimit: 'search' }, async (req, ctx) 
 
 /** PATCH — پاسخ به یک نظر. بدنه: { id, reply } */
 export const PATCH = withRestaurantAuth({ rateLimit: 'auth', permission: 'canManageSettings' }, async (req, ctx) => {
-  const b = await req.json();
-  if (!b.id) throw Err.validation('شناسه‌ی نظر الزامی است');
-  const reply = String(b.reply || '').trim();
-  if (!reply) throw Err.validation('متن پاسخ خالی است');
+  const b = await parseBody(req, replySchema);
 
   const review = await db.review.findUnique({ where: { id: b.id }, select: { restaurantId: true } });
   if (!review || review.restaurantId !== ctx.restaurant.id) throw Err.notFound('نظر');
 
-  await db.review.update({ where: { id: b.id }, data: { reply, repliedAt: new Date() } });
+  await db.review.update({ where: { id: b.id }, data: { reply: b.reply, repliedAt: new Date() } });
   return NextResponse.json({ ok: true });
 });

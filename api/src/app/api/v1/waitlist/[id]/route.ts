@@ -4,6 +4,9 @@ import { verifyAccess } from '@/lib/jwt';
 import { enforceRateLimit, clientIp, RULES } from '@/lib/ratelimit';
 import { db } from '@/lib/db';
 import { errorResponse } from '@/lib/errors';
+import { parseParams, zUuid, z } from '@/lib/schemas';
+
+const paramsSchema = z.object({ id: zUuid });
 
 function callerId(req: Request): string | undefined {
   const h = req.headers.get('authorization');
@@ -19,13 +22,14 @@ function callerId(req: Request): string | undefined {
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     await enforceRateLimit(clientIp(req), RULES.search);
-    const e = await db.waitlistEntry.findUnique({ where: { id: params.id } });
+    const { id } = parseParams(params, paramsSchema);
+    const e = await db.waitlistEntry.findUnique({ where: { id } });
     if (!e) return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'پیدا نشد' } }, { status: 404 });
     const cid = callerId(req);
     if (cid && e.userId && e.userId !== cid) {
       return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'پیدا نشد' } }, { status: 404 });
     }
-    const position = await getPosition(params.id);
+    const position = await getPosition(id);
     return NextResponse.json({
       id: e.id, status: e.status, position,
       party_size: e.partySize, is_vip: e.isVip,
@@ -41,7 +45,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     await enforceRateLimit(clientIp(req), RULES.auth);
-    const result = await leaveWaitlist(params.id, callerId(req));
+    const { id } = parseParams(params, paramsSchema);
+    const result = await leaveWaitlist(id, callerId(req));
     return NextResponse.json(result);
   } catch (e) { return errorResponse(e); }
 }

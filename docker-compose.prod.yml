@@ -13,6 +13,14 @@
 #  این override سرویس nginx را با caddy جایگزین می‌کند.
 # ═══════════════════════════════════════════════════════════
 services:
+  api:
+    environment:
+      # ⚠️ فیکسِ حسابرسیِ ۲۰۲۶-۰۷-۱۹ (FINAL-PRODUCTION-AUDIT.md بخشِ ۶): در docker-compose.yml
+      # پایه این متغیر پیش‌فرضِ خالی داشت (${ALLOWED_ORIGINS:-}) — یعنی اگر تیمِ عملیات آن را
+      # در .env می‌گذاشت، middleware.ts چکِ CSRF/Origin را بی‌صدا و بدونِ هیچ خطایی غیرفعال
+      # می‌کرد. این override برای production آن را اجباری می‌کند؛ بدونش کانتینر بالا نمی‌آید.
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?ALLOWED_ORIGINS را در .env تنظیم کن (مثلاً https://rezervno.ir,https://business.rezervno.ir,https://admin.rezervno.ir)}
+
   caddy:
     build:
       context: ./deploy/caddy
@@ -20,6 +28,12 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     ports:
       - "80:80"
       - "443:443"

@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 import { Err } from '@/lib/errors';
+import { parseBody, z } from '@/lib/schemas';
+
+const pct = () => z.number().min(0).max(50).optional();
+const cashbackSchema = z.object({
+  base_pct: pct(), preorder_pct: pct(), vip_pct: pct(), winback_pct: pct(),
+});
 
 /** GET — درصدهای فعلی کش‌بک (مهاجرت‌شده به wrapper: rate-limit/auth/metric/trace خودکار) */
 export const GET = withRestaurantAuth(
@@ -22,18 +28,13 @@ export const GET = withRestaurantAuth(
 export const PATCH = withRestaurantAuth(
   { permission: 'canManageSettings', rateLimit: 'auth' },
   async (req, ctx) => {
-    const b = await req.json();
-    const clamp = (v: unknown): number | undefined => {
-      if (v === undefined || v === null) return undefined;
-      const n = Number(v);
-      if (!Number.isFinite(n) || n < 0 || n > 50) throw Err.validation('درصد کش‌بک باید بین ۰ تا ۵۰ باشد');
-      return Math.round(n);
-    };
+    const b = await parseBody(req, cashbackSchema);
+    const round = (v?: number) => v === undefined ? undefined : Math.round(v);
     const data: Record<string, number> = {};
-    const base = clamp(b.base_pct); if (base !== undefined) data.cbBasePct = base;
-    const pre = clamp(b.preorder_pct); if (pre !== undefined) data.cbPreorderPct = pre;
-    const vip = clamp(b.vip_pct); if (vip !== undefined) data.cbVipPct = vip;
-    const win = clamp(b.winback_pct); if (win !== undefined) data.cbWinbackPct = win;
+    const base = round(b.base_pct); if (base !== undefined) data.cbBasePct = base;
+    const pre = round(b.preorder_pct); if (pre !== undefined) data.cbPreorderPct = pre;
+    const vip = round(b.vip_pct); if (vip !== undefined) data.cbVipPct = vip;
+    const win = round(b.winback_pct); if (win !== undefined) data.cbWinbackPct = win;
     if (Object.keys(data).length === 0) throw Err.validation('حداقل یک مقدار لازم است');
 
     const updated = await db.restaurant.update({

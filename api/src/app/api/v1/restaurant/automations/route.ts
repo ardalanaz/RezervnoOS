@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
-import { Err } from '@/lib/errors';
+import { parseBody, z } from '@/lib/schemas';
 
-const TRIGGERS = ['birthday', 'winback', 'post_visit', 'vip_milestone', 'no_show_followup'];
+const TRIGGERS = ['birthday', 'winback', 'post_visit', 'vip_milestone', 'no_show_followup'] as const;
+const automationSchema = z.object({
+  name: z.string().min(1).max(100),
+  trigger: z.enum(TRIGGERS),
+  trigger_config: z.record().optional(),
+  message_template: z.string().min(1).max(1000),
+  coupon_id: z.string().uuid().optional(),
+});
 
 export const GET = withRestaurantAuth({ permission: 'canManageCampaigns' }, async (_req, ctx) => {
   const items = await db.marketingAutomation.findMany({ where: { restaurantId: ctx.restaurant.id }, orderBy: { createdAt: 'desc' } });
@@ -19,14 +27,12 @@ export const GET = withRestaurantAuth({ permission: 'canManageCampaigns' }, asyn
 
 // POST — ساخت قانون خودکار جدید · بدنه: { name, trigger, trigger_config?, message_template, coupon_id? }
 export const POST = withRestaurantAuth({ rateLimit: 'auth', permission: 'canManageCampaigns' }, async (req, ctx) => {
-  const b = await req.json();
-  if (!TRIGGERS.includes(b.trigger)) throw Err.validation('نوع trigger نامعتبر است');
-  if (!b.name || !b.message_template) throw Err.validation('نام و متن پیام الزامی است');
+  const b = await parseBody(req, automationSchema);
 
   const automation = await db.marketingAutomation.create({
     data: {
       restaurantId: ctx.restaurant.id, name: b.name, trigger: b.trigger,
-      triggerConfig: b.trigger_config || {}, messageTemplate: b.message_template,
+      triggerConfig: (b.trigger_config || {}) as Prisma.InputJsonValue, messageTemplate: b.message_template,
       couponId: b.coupon_id || null,
     },
   });

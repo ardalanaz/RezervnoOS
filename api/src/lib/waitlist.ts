@@ -33,6 +33,19 @@ export type JoinWaitlistInput = {
   note?: string;
 };
 
+/** آیا این tier عضویت، VIP محسوب می‌شود؟ (تابع خالص — قابل‌تست بدون DB) */
+export function isVipTier(tier: string): boolean {
+  return tier === 'gold' || tier === 'platinum' || tier === 'vip';
+}
+
+/** امتیاز اولویتِ صف بر اساس tier عضویت. (تابع خالص — قابل‌تست بدون DB) */
+export function tierToPriority(tier: string): number {
+  if (tier === 'platinum' || tier === 'vip') return VIP_PRIORITY;
+  if (tier === 'gold') return CLUB_GOLD_PRIORITY;
+  if (tier === 'silver') return 20;
+  return 0;
+}
+
 // ── محاسبه‌ی اولویت ورودی (VIP + باشگاه) ──
 async function computePriority(restaurantId: string, userId?: string): Promise<{ priority: number; isVip: boolean }> {
   if (!userId) return { priority: 0, isVip: false };
@@ -41,12 +54,7 @@ async function computePriority(restaurantId: string, userId?: string): Promise<{
     select: { tier: true },
   });
   const tier = member?.tier ?? 'bronze';
-  const isVip = tier === 'gold' || tier === 'platinum' || tier === 'vip';
-  let priority = 0;
-  if (tier === 'platinum' || tier === 'vip') priority = VIP_PRIORITY;
-  else if (tier === 'gold') priority = CLUB_GOLD_PRIORITY;
-  else if (tier === 'silver') priority = 20;
-  return { priority, isVip };
+  return { priority: tierToPriority(tier), isVip: isVipTier(tier) };
 }
 
 // ── تخمین زمان انتظار (دقیقه) بر اساس موقعیت در صف و ظرفیت ──

@@ -6,6 +6,7 @@ import { API, USER, isLoggedIn, logout, userInitial, userName } from '../api.js'
 import { esc, faNum, openLogin, toast } from '../auth.js';
 import { fmtFa } from '../data/discover.js';
 import { TRIPS, favs, pts } from '../data/seed.js';
+import { icon } from '../icons.js';
 import { armReveals, buzz } from '../theme-pwa.js';
 import { openNotifPrefs } from '../user-profile.js';
 export let _dnaData = null, _dnaSlide = 0, _dnaTimer = null;
@@ -75,7 +76,7 @@ export function buildDNASlides(p){
       ${s.big?`<div class="dna-slide-big">${s.big}</div>`:''}
       <div class="dna-slide-label">${esc(s.label)}</div>
       <div class="dna-slide-desc">${esc(s.desc)}</div>
-      ${s.persona?`<div class="dna-badge-persona">${p._demo?'✦ نمونه':'✦ منحصر به تو'}</div>`:''}
+      ${s.persona?`<div class="dna-badge-persona">${icon('sparkle',{size:12,fill:true})} ${p._demo?'نمونه':'منحصر به تو'}</div>`:''}
     </div>`).join('') + `
     <div class="dna-slide" data-i="${slides.length}">
       <div class="dna-share-card">
@@ -136,8 +137,8 @@ export async function shareFoodDNA(){
   if(navigator.share){
     try{ await navigator.share({title:'DNA غذایی من', text}); return; }catch{}
   }
-  try{ await navigator.clipboard.writeText(text); toast('📋','متن کپی شد — تو استوری پیستش کن!'); }
-  catch{ toast('✨','اسکرین‌شات بگیر و استوری بذار!'); }
+  try{ await navigator.clipboard.writeText(text); toast('','متن کپی شد — تو استوری پیستش کن!'); }
+  catch{ toast('','اسکرین‌شات بگیر و استوری بذار!'); }
 }
 
 export function renderProfile(){
@@ -145,23 +146,23 @@ export function renderProfile(){
   if (!isLoggedIn()) {
     document.getElementById('page-profile').innerHTML=`<div class="wrap section">
       <div style="text-align:center;padding:40px 20px">
-        <div class="login-icon" style="margin-bottom:20px">👤</div>
+        <div class="login-icon" style="margin-bottom:var(--sp-5)">${icon('user',{size:40})}</div>
         <div style="font-size:20px;font-weight:800;margin-bottom:8px">هنوز وارد نشدی</div>
         <div style="color:var(--t2);font-size:14px;margin-bottom:24px;line-height:1.6">برای رزرو، دیدن تاریخچه و استفاده از باشگاه مشتریان وارد شو</div>
         <button class="btn btn-primary btn-lg btn-block" onclick="openLogin()">ورود / ثبت‌نام</button>
       </div>
       <div class="dna-entry" role="button" tabindex="0" onclick="openFoodDNA()">
-        <span class="dna-entry-badge">🧬 امتحان کن</span>
+        <span class="dna-entry-badge">${icon('sparkle',{size:13,fill:true})} امتحان کن</span>
         <div class="dna-entry-title">DNA غذایی چیه؟</div>
         <div class="dna-entry-sub">یه نگاه به تجربه‌ای که منتظرته بنداز — بعد از چند رزرو، DNA غذایی خودت رو می‌سازی</div>
-        <div class="dna-entry-cta">نمونه رو ببین ✦</div>
+        <div class="dna-entry-cta">نمونه رو ببین ${icon('arrowL',{size:14})}</div>
       </div>
     </div>`;
     return;
   }
   // کاربر وارد شده → اطلاعات واقعی
   const tier = pts>=1000?'طلایی':pts>=300?'نقره‌ای':'برنزی';
-  const tierEmoji = pts>=1000?'🏆':pts>=300?'🥈':'🥉';
+  const tierEmoji = icon('star',{size:13,fill:true});
   document.getElementById('page-profile').innerHTML=`<div class="wrap section">
     <div class="prof-card">
       <div class="prof-card-mesh"></div>
@@ -182,17 +183,17 @@ export function renderProfile(){
       </div>
     </div>
     <div class="dna-entry reveal" role="button" tabindex="0" onclick="buzz&&buzz();openFoodDNA()">
-      <span class="dna-entry-badge">🧬 جدید</span>
+      <span class="dna-entry-badge">${icon('sparkle',{size:13,fill:true})} جدید</span>
       <div class="dna-entry-title">DNA غذایی تو آماده‌ست</div>
       <div class="dna-entry-sub">ببین امسال چطور غذا خوردی، شخصیت غذاییت چیه، و با دوستات به اشتراک بذار</div>
-      <div class="dna-entry-cta">کشفش کن ✦</div>
+      <div class="dna-entry-cta">کشفش کن ${icon('arrowL',{size:14})}</div>
     </div>
     <div class="settings-list reveal">
-      <div class="set-item" role="button" tabindex="0" onclick="toast('✏️','ویرایش پروفایل')"><div class="set-icon">👤</div><div class="set-label">ویرایش پروفایل</div><span class="set-arrow">‹</span></div>
-      <div class="set-item" role="button" tabindex="0" onclick="toast('💳','کیف پول کش‌بک')"><div class="set-icon">💳</div><div class="set-label">کیف پول کش‌بک</div><span class="set-arrow">‹</span></div>
-      <div class="set-item" role="button" tabindex="0" onclick="openNotifPrefs()"><div class="set-icon">🔔</div><div class="set-label">اعلان‌ها</div><span class="set-arrow">‹</span></div>
-      <div class="set-item" role="button" tabindex="0" onclick="toast('💬','پشتیبانی')"><div class="set-icon">💬</div><div class="set-label">پشتیبانی</div><span class="set-arrow">‹</span></div>
-      <div class="set-item" role="button" tabindex="0" onclick="logout()"><div class="set-icon">🚪</div><div class="set-label" style="color:var(--red)">خروج از حساب</div><span class="set-arrow">‹</span></div>
+      <div class="set-item" role="button" tabindex="0" onclick="toast('','ویرایش پروفایل')"><div class="set-icon">${icon('user',{size:20})}</div><div class="set-label">ویرایش پروفایل</div><span class="set-arrow">‹</span></div>
+      <div class="set-item" role="button" tabindex="0" onclick="toast('','کیف پول کش‌بک')"><div class="set-icon">${icon('wallet',{size:20})}</div><div class="set-label">کیف پول کش‌بک</div><span class="set-arrow">‹</span></div>
+      <div class="set-item" role="button" tabindex="0" onclick="openNotifPrefs()"><div class="set-icon">${icon('bell',{size:20})}</div><div class="set-label">اعلان‌ها</div><span class="set-arrow">‹</span></div>
+      <div class="set-item" role="button" tabindex="0" onclick="toast('','پشتیبانی')"><div class="set-icon">${icon('message',{size:20})}</div><div class="set-label">پشتیبانی</div><span class="set-arrow">‹</span></div>
+      <div class="set-item" role="button" tabindex="0" onclick="logout()"><div class="set-icon">${icon('logout',{size:20})}</div><div class="set-label" style="color:var(--red)">خروج از حساب</div><span class="set-arrow">‹</span></div>
     </div>
   </div>`;
   armReveals&&armReveals();

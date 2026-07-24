@@ -7,6 +7,14 @@
 //    ۲. فرمتِ خطای یکدست — همه‌ی خطاها یک شکل دارند (ValidationError با field+message)
 //    ۳. عدم تکرار — schemaها یک‌جا تعریف و در routeها استفاده می‌شوند
 //
+//  ⚠️ Immutability (حیاتی): همه‌ی متدهای builder (optional/default/nullable/min/max/...)
+//  یک نسخه‌ی cloneشده برمی‌گردانند، نه this. چون این پروژه primitiveهای مشترک
+//  (zPhone/zUuid/... در lib/schemas.ts) را به‌عنوان const سطح‌ماژول export می‌کند و
+//  در روت‌های مختلف با/بدون .optional() استفاده می‌کند — اگر builder، خودِ instance
+//  را mutate می‌کرد، یک .optional() در یک فایل، فیلدِ الزامی در همه‌ی فایل‌های دیگری که
+//  همان const را (بدون .optional) استفاده می‌کنند هم به‌صورت خاموش optional می‌کرد
+//  (باگ bypass اعتبارسنجی سراسری). این دقیقاً رفتار Zod واقعی هم هست (immutable schemas).
+//
 //  مهاجرت به Zod در آینده: چون API عمداً شبیهِ Zod است، کافی است
 //  `import { z } from './validate'` به `import { z } from 'zod'` تغییر کند
 //  و بیشترِ schemaها بدونِ تغییر کار می‌کنند. (وقتی شبکه وصل شد + zod نصب شد.)
@@ -26,19 +34,35 @@ export class SchemaError extends Error {
 type ParseResult<T> = { ok: true; value: T } | { ok: false; issues: Issue[] };
 
 /** پایه‌ی همه‌ی schemaها. */
-abstract class Schema<T> {
+export abstract class Schema<T> {
   protected _optional = false;
   protected _default?: T;
+  protected _nullable = false;
   abstract _parse(v: unknown, path: string): ParseResult<T>;
 
+  /** clone سطحی: instance جدید از همان کلاس با همان own-propertyها (برای immutability). */
+  protected clone(): this {
+    const c = Object.create(Object.getPrototypeOf(this));
+    return Object.assign(c, this);
+  }
+
   optional(): Schema<T | undefined> {
-    this._optional = true;
-    return this as unknown as Schema<T | undefined>;
+    const c = this.clone();
+    c._optional = true;
+    return c as unknown as Schema<T | undefined>;
   }
   default(val: T): Schema<T> {
-    this._default = val;
-    this._optional = true;
-    return this;
+    const c = this.clone();
+    c._default = val;
+    c._optional = true;
+    return c;
+  }
+  /** null صریح را به‌عنوان مقدار معتبر (نه «ارسال‌نشده») می‌پذیرد — برای PATCH نیمه که
+   *  باید بین «کلید نیامده» (دست‌نخورده) و «کلید=null» (عمداً پاک‌شده) فرق بگذارد. */
+  nullable(): Schema<T | null> {
+    const c = this.clone();
+    c._nullable = true;
+    return c as unknown as Schema<T | null>;
   }
 
   /** parse با پرتابِ خطای یکدست (برای استفاده در route). */
@@ -55,6 +79,7 @@ abstract class Schema<T> {
   }
 
   protected handleEmpty(v: unknown): ParseResult<T> | null {
+    if (v === null && this._nullable) return { ok: true, value: null as unknown as T };
     if (v === undefined || v === null) {
       if (this._default !== undefined) return { ok: true, value: this._default };
       if (this._optional) return { ok: true, value: undefined as unknown as T };
@@ -64,12 +89,19 @@ abstract class Schema<T> {
   }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 class StringSchema extends Schema<string> {
   private _min?: number; private _max?: number; private _regex?: RegExp; private _trim = false;
-  min(n: number) { this._min = n; return this; }
-  max(n: number) { this._max = n; return this; }
-  regex(r: RegExp) { this._regex = r; return this; }
-  trim() { this._trim = true; return this; }
+  private _regexMsg?: string;
+  min(n: number) { const c = this.clone(); c._min = n; return c; }
+  max(n: number) { const c = this.clone(); c._max = n; return c; }
+  regex(r: RegExp, msg?: string) { const c = this.clone(); c._regex = r; c._regexMsg = msg; return c; }
+  trim() { const c = this.clone(); c._trim = true; return c; }
+  /** UUID v1-5 معتبر (فرمت شناسه‌های Prisma در این پروژه). */
+  uuid() { const c = this.clone(); c._regex = UUID_RE; c._regexMsg = 'باید UUID معتبر باشد'; return c; }
+  email() { const c = this.clone(); c._regex = EMAIL_RE; c._regexMsg = 'ایمیل معتبر نیست'; return c; }
   _parse(v: unknown, path: string): ParseResult<string> {
     const empty = this.handleEmpty(v); if (empty) return this.tagPath(empty, path);
     let s = v;
@@ -81,7 +113,7 @@ class StringSchema extends Schema<string> {
     const str = s as string;
     if (this._min !== undefined && str.length < this._min) return { ok: false, issues: [{ field: path, message: `حداقل ${this._min} کاراکتر` }] };
     if (this._max !== undefined && str.length > this._max) return { ok: false, issues: [{ field: path, message: `حداکثر ${this._max} کاراکتر` }] };
-    if (this._regex && !this._regex.test(str)) return { ok: false, issues: [{ field: path, message: 'قالب نامعتبر' }] };
+    if (this._regex && !this._regex.test(str)) return { ok: false, issues: [{ field: path, message: this._regexMsg || 'قالب نامعتبر' }] };
     return { ok: true, value: str };
   }
   private tagPath(r: ParseResult<string>, path: string): ParseResult<string> {
@@ -92,9 +124,9 @@ class StringSchema extends Schema<string> {
 
 class NumberSchema extends Schema<number> {
   private _min?: number; private _max?: number; private _int = false;
-  min(n: number) { this._min = n; return this; }
-  max(n: number) { this._max = n; return this; }
-  int() { this._int = true; return this; }
+  min(n: number) { const c = this.clone(); c._min = n; return c; }
+  max(n: number) { const c = this.clone(); c._max = n; return c; }
+  int() { const c = this.clone(); c._int = true; return c; }
   _parse(v: unknown, path: string): ParseResult<number> {
     const empty = this.handleEmpty(v); if (empty) { if (!empty.ok) empty.issues = empty.issues.map(i => ({ ...i, field: path })); return empty; }
     let n = v;
@@ -111,6 +143,10 @@ class NumberSchema extends Schema<number> {
 class BooleanSchema extends Schema<boolean> {
   _parse(v: unknown, path: string): ParseResult<boolean> {
     const empty = this.handleEmpty(v); if (empty) { if (!empty.ok) empty.issues = empty.issues.map(i => ({ ...i, field: path })); return empty; }
+    if (typeof v === 'string') { // پذیرشِ نرم برای query string ('true'/'false'/'1'/'0')
+      if (v === 'true' || v === '1') return { ok: true, value: true };
+      if (v === 'false' || v === '0') return { ok: true, value: false };
+    }
     if (typeof v !== 'boolean') return { ok: false, issues: [{ field: path, message: 'باید بولی باشد' }] };
     return { ok: true, value: v };
   }
@@ -122,6 +158,38 @@ class EnumSchema<T extends string> extends Schema<T> {
     const empty = this.handleEmpty(v); if (empty) { if (!empty.ok) empty.issues = empty.issues.map(i => ({ ...i, field: path })); return empty; }
     if (!this.values.includes(v as T)) return { ok: false, issues: [{ field: path, message: `باید یکی از: ${this.values.join('، ')}` }] };
     return { ok: true, value: v as T };
+  }
+}
+
+class ArraySchema<T> extends Schema<T[]> {
+  private _min?: number; private _max?: number;
+  constructor(private item: Schema<T>) { super(); }
+  min(n: number) { const c = this.clone(); c._min = n; return c; }
+  max(n: number) { const c = this.clone(); c._max = n; return c; }
+  _parse(v: unknown, path: string): ParseResult<T[]> {
+    const empty = this.handleEmpty(v); if (empty) { if (!empty.ok) empty.issues = empty.issues.map(i => ({ ...i, field: path })); return empty; }
+    if (!Array.isArray(v)) return { ok: false, issues: [{ field: path, message: 'باید آرایه باشد' }] };
+    if (this._min !== undefined && v.length < this._min) return { ok: false, issues: [{ field: path, message: `حداقل ${this._min} عضو` }] };
+    if (this._max !== undefined && v.length > this._max) return { ok: false, issues: [{ field: path, message: `حداکثر ${this._max} عضو` }] };
+    const out: T[] = [];
+    const issues: Issue[] = [];
+    v.forEach((el, i) => {
+      const r = this.item._parse(el, `${path}[${i}]`);
+      if (r.ok) out.push(r.value); else issues.push(...r.issues);
+    });
+    if (issues.length) return { ok: false, issues };
+    return { ok: true, value: out };
+  }
+}
+
+/** برای فیلدهای JSON آزاد (config دلخواه) که باید کامل حفظ شوند، نه فیلتر بر اساس shape ثابت. */
+class RecordSchema extends Schema<Record<string, unknown>> {
+  _parse(v: unknown, path: string): ParseResult<Record<string, unknown>> {
+    const empty = this.handleEmpty(v); if (empty) { if (!empty.ok) empty.issues = empty.issues.map(i => ({ ...i, field: path })); return empty; }
+    if (typeof v !== 'object' || v === null || Array.isArray(v)) {
+      return { ok: false, issues: [{ field: path, message: 'باید آبجکت باشد' }] };
+    }
+    return { ok: true, value: v as Record<string, unknown> };
   }
 }
 
@@ -154,8 +222,11 @@ export const z = {
   string: () => new StringSchema(),
   number: () => new NumberSchema(),
   boolean: () => new BooleanSchema(),
-  enum: <T extends string>(values: readonly T[]) => new EnumSchema(values),
+  enum: <const T extends string>(values: readonly T[]) => new EnumSchema(values),
   object: <S extends Shape>(shape: S) => new ObjectSchema(shape),
+  array: <T>(item: Schema<T>) => new ArraySchema(item),
+  /** آبجکت آزاد (JSON config دلخواه) — کلیدها فیلتر نمی‌شوند. */
+  record: () => new RecordSchema(),
 };
 
 /** استنتاجِ تایپ از schema — مثلِ z.infer در Zod. */

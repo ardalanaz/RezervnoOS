@@ -3,6 +3,21 @@ import { db } from '@/lib/db';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 import { genCouponCode } from '@/lib/coupons';
 import { Err } from '@/lib/errors';
+import { parseBody, zUuid, z } from '@/lib/schemas';
+
+const SEGMENTS = ['new_customer', 'active', 'at_risk', 'churned', 'vip'] as const;
+
+const createSchema = z.object({
+  kind: z.enum(['percent', 'fixed', 'free_item'] as const),
+  value: z.number().int().min(0).optional(),
+  code: z.string().min(1).max(30).optional(),
+  free_menu_item_id: zUuid.optional(),
+  min_party_size: z.number().int().min(1).max(30).optional(),
+  max_redemptions: z.number().int().min(1).optional(),
+  per_user_limit: z.number().int().min(1).max(1000).optional(),
+  target_segment: z.enum(SEGMENTS).optional(),
+  valid_until: z.string().max(40).optional(),
+});
 
 export const GET = withRestaurantAuth({ permission: 'canManageCoupons' }, async (_req, ctx) => {
   const coupons = await db.coupon.findMany({
@@ -22,9 +37,9 @@ export const GET = withRestaurantAuth({ permission: 'canManageCoupons' }, async 
 
 // POST — ساخت کوپن جدید · بدنه: { kind, value, code?, min_party_size?, max_redemptions?, per_user_limit?, target_segment?, valid_until? }
 export const POST = withRestaurantAuth({ rateLimit: 'auth', permission: 'canManageCoupons' }, async (req, ctx) => {
-  const b = await req.json();
-  if (!['percent', 'fixed', 'free_item'].includes(b.kind)) throw Err.validation('نوع کوپن نامعتبر است');
-  if (b.kind !== 'free_item' && (!Number.isFinite(b.value) || b.value <= 0)) throw Err.validation('مقدار تخفیف نامعتبر است');
+  const b = await parseBody(req, createSchema);
+  if (b.kind !== 'free_item' && (!b.value || b.value <= 0)) throw Err.validation('مقدار تخفیف نامعتبر است');
+  if (b.kind === 'percent' && b.value! > 100) throw Err.validation('درصد تخفیف نمی‌تواند بیش از ۱۰۰ باشد');
 
   const code = (b.code || genCouponCode(ctx.restaurant.name.slice(0, 4))).toUpperCase().slice(0, 30);
   const coupon = await db.coupon.create({

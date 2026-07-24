@@ -8,33 +8,35 @@ import { renderLoyalty } from '../features/loyalty.js';
 import { R } from '../init.js';
 import { renderFavs, renderTrips } from '../reservation.js';
 import { buzz } from '../theme-pwa.js';
+import { icon } from '../icons.js';
 export function go(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   document.querySelectorAll('[data-nav]').forEach(n=>n.classList.toggle('active',n.dataset.nav===p));
   // در صفحه‌ی رستوران، نوار ناوبری مخفی می‌شود تا نوار رزرو پایین بنشیند
   const botnav=document.querySelector('.botnav');
-  if(botnav)botnav.style.display=(p==='rest')?'none':'';
+  if(botnav)botnav.style.display=(p==='rest'||p==='chat')?'none':'';
   window.scrollTo({top:0,behavior:'instant'});
   if(p==='favorites')renderFavs();
   if(p==='trips')renderTrips();
   if(p==='loyalty')renderLoyalty();
   if(p==='profile')renderProfile();
+  if(p==='chats' && typeof renderChats==='function')renderChats();
 }
 export function fmtFa(n){return n.toLocaleString('fa-IR')}
 export function cardHTML(r){
   const weekly = (r.reviews||0) >= 5 ? Math.max(3, Math.round((r.reviews||0)/8)) : 0;
-  const avatars = ['👩','🧔','👨‍💼','👩‍🦱'].slice(0, Math.min(3, Math.max(1, Math.ceil(weekly/4))));
+  const avatars = Array.from({length: Math.min(3, Math.max(1, Math.ceil(weekly/4)))}, (_,i)=>i);
   const hot = r.rt >= 4.7 && (r.reviews||0) >= 80;
   return `<article class="rc reveal" onclick="openRest(${r.id})">
     <div class="rc-bg" style="background:${GRAD[r.id]}"></div>
     <span class="rc-emoji">${r.e}</span>
-    ${hot?'<span class="rc-hotbadge">🔥 داغ</span>':r.ai?'<span class="rc-hotbadge ai">✦ AI</span>':''}
-    <button class="rc-fav" onclick="event.stopPropagation();toggleFav(${r.id},this);buzz&&buzz()">${favs.has(r.id)?'❤️':'🤍'}</button>
+    ${hot?`<span class="rc-hotbadge">${icon('flame',{size:13,fill:true})} داغ</span>`:r.ai?`<span class="rc-hotbadge ai">${icon('sparkle',{size:13,fill:true})} AI</span>`:''}
+    <button class="rc-fav" type="button" aria-pressed="${favs.has(r.id)}" aria-label="${favs.has(r.id)?'حذف از علاقه‌مندی‌ها':'افزودن به علاقه‌مندی‌ها'}" onclick="event.stopPropagation();toggleFav(${r.id},this);buzz&&buzz()">${icon('heart',{size:20,fill:favs.has(r.id)})}</button>
     <div class="rc-panel">
-      <div class="rc-top"><div class="rc-name">${r.n}</div><div class="rc-rating"><span class="star">★</span>${fmtFa(r.rt)}</div></div>
-      <div class="rc-meta">${r.cuisine} · ${r.price} · <span class="rc-cb">💰 ${fmtFa(r.cb)}٪ کش‌بک</span></div>
-      ${weekly?`<div class="rc-social"><div class="rc-avas">${avatars.map(a=>`<span>${a}</span>`).join('')}</div><div class="rc-social-t"><b>${fmtFa(weekly)} نفر</b> این هفته اومدن</div></div>`:''}
+      <div class="rc-top"><div class="rc-name">${r.n}</div><div class="rc-rating">${icon('star',{size:14,fill:true,class:'star'})}${fmtFa(r.rt)}</div></div>
+      <div class="rc-meta">${r.cuisine} · ${r.price} · <span class="rc-cb">${icon('wallet',{size:12})} ${fmtFa(r.cb)}٪ کش‌بک</span></div>
+      ${weekly?`<div class="rc-social"><div class="rc-avas" aria-hidden="true">${avatars.map(()=>`<span class="avatar avatar-sm"></span>`).join('')}</div><div class="rc-social-t"><b>${fmtFa(weekly)} نفر</b> این هفته اومدن</div></div>`:''}
       <div class="rc-slots">${r.slots.slice(0,3).map((s,i)=>`<span class="rc-slot ${i===0?'go':''}" onclick="event.stopPropagation();quickBook(${r.id},'${s}');buzz&&buzz()">${s}</span>`).join('')}</div>
     </div>
   </article>`;
@@ -49,11 +51,11 @@ export function detailSocialProof(r){
   const recommend = Math.min(98, Math.round(r.rt/5*100)+6);
   return `<div class="rp-social">
     <div class="rp-social-item">
-      <div class="rp-social-avas">${['👩','🧔','👨‍💼','👩‍🦱'].map(a=>`<span>${a}</span>`).join('')}</div>
+      <div class="rp-social-avas" aria-hidden="true">${[0,1,2,3].map(()=>`<span class="avatar avatar-sm"></span>`).join('')}</div>
       <div class="rp-social-txt"><b>${fmtFa(weekly)} نفر</b> این هفته اینجا رزرو کردن</div>
     </div>
     <div class="rp-social-item">
-      <span style="font-size:18px">💚</span>
+      <span style="color:var(--success);display:inline-flex">${icon('heart',{size:18,fill:true})}</span>
       <div class="rp-social-txt"><b>${fmtFa(recommend)}٪</b> مهمان‌ها این‌جا رو پیشنهاد می‌کنن</div>
     </div>
   </div>`;
@@ -63,12 +65,12 @@ export function socialProofHTML(r){
   if(reviews < 5) return ''; // رستوران تازه — اثبات اجتماعی الکی نساز
   // تخمین بازدید این هفته از تعداد نظر (قطعی و منطقی، نه رندوم بی‌معنی)
   const weekly = Math.max(3, Math.round(reviews / 8));
-  const avatars = ['👩','🧔','👨‍💼','👩‍🦱','🧑'].slice(0, Math.min(3, Math.ceil(weekly/4)));
+  const avatars = Array.from({length: Math.min(3, Math.max(1, Math.ceil(weekly/4)))}, (_,i)=>i);
   const hot = r.rt >= 4.7 && reviews >= 80;
   return `<div class="rc-social">
-    <div class="rc-social-ava">${avatars.map(a=>`<span>${a}</span>`).join('')}</div>
+    <div class="rc-social-ava" aria-hidden="true">${avatars.map(()=>`<span class="avatar avatar-sm"></span>`).join('')}</div>
     <div class="rc-social-txt"><b>${fmtFa(weekly)} نفر</b> این هفته اومدن</div>
-    ${hot?'<span class="rc-hot" style="margin-right:auto">🔥 داغ</span>':''}
+    ${hot?`<span class="rc-hot" style="margin-inline-start:auto">${icon('flame',{size:12,fill:true})} داغ</span>`:''}
   </div>`;
 }
 export function renderFeed(list){
@@ -96,7 +98,7 @@ export function pickOccasion(occ, el){
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
   if(already){
     document.querySelector('.chip')?.classList.add('active');
-    document.getElementById('feedTitle').textContent='🔥 محبوب امشب';
+    document.getElementById('feedTitle').innerHTML=icon('flame',{size:16,fill:true})+' محبوب امشب';
     const sub=document.querySelector('.section-sub'); if(sub) sub.textContent='۲۴۷ رستوران فعال در تهران';
     renderFeed(R);
     return;
@@ -117,15 +119,15 @@ export function filterVibe(v,el){
   document.querySelectorAll('.occ-card').forEach(c=>c.classList.remove('on'));
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');
   const list=v==='all'?R:R.filter(r=>r.vibes.includes(v));
-  document.getElementById('feedTitle').textContent=v==='all'?'🔥 محبوب امشب':el.textContent.trim();
+  document.getElementById('feedTitle').innerHTML=v==='all'?icon('flame',{size:16,fill:true})+' محبوب امشب':esc(el.textContent.trim());
   renderFeed(list);
 }
 // ── نزدیک تو (کارت افقی کوچک) ──
 export function hCardHTML(r,extra){
   return `<div class="hcard" role="button" tabindex="0" onclick="openRest(${r.id})">
-    <div class="hcard-img" style="background:${GRAD[r.id]||GRAD[1]}">${r.e||'🍽️'}${extra?`<span class="hcard-tag">${extra}</span>`:''}</div>
+    <div class="hcard-img" style="background:${GRAD[r.id]||GRAD[1]}">${r.e||icon('utensils',{size:22})}${extra?`<span class="hcard-tag">${extra}</span>`:''}</div>
     <div class="hcard-name">${esc(r.n)}</div>
-    <div class="hcard-meta">⭐ ${fmtFa(r.rating||4.5)} · ${esc((r.tags&&r.tags[0])||r.cuisine||'')}</div>
+    <div class="hcard-meta">${icon('star',{size:12,fill:true})} ${fmtFa(r.rating||4.5)} · ${esc((r.tags&&r.tags[0])||r.cuisine||'')}</div>
   </div>`;
 }
 export function renderNearby(){
@@ -138,7 +140,7 @@ export function renderTrending(){
   const el=document.getElementById('trendingScroll');if(!el)return;
   // پرطرفدارترین‌ها بر اساس امتیاز
   const trend=[...R].sort((a,b)=>(b.rating||0)-(a.rating||0)).slice(0,6);
-  el.innerHTML=trend.map((r,i)=>hCardHTML(r,i<2?'🔥 داغ':'')).join('');
+  el.innerHTML=trend.map((r,i)=>hCardHTML(r,i<2?`${icon('flame',{size:12,fill:true})} داغ`:'')).join('');
 }
 // ── رویدادهای ویژه ──
 export const SAMPLE_EVENTS=[
@@ -160,7 +162,7 @@ export async function renderEvents(){
       <div class="event-body">
         <div class="event-title">${esc(e.title)}</div>
         ${e.rest?`<div class="event-rest">${esc(e.rest)}</div>`:''}
-        <div class="event-when">📅 ${esc(e.when)}</div>
+        <div class="event-when">${icon('calendar',{size:13})} ${esc(e.when)}</div>
         ${e.desc?`<div class="event-desc">${esc(e.desc)}</div>`:''}
       </div>
       ${e.price?`<div class="event-price">${esc(e.price)}<span>تومان</span></div>`:''}
@@ -178,17 +180,29 @@ export function doSearch(){
   const list=R.filter(r=>r.n.includes(q)||r.cuisine.includes(q)||r.vibes.some(v=>v.includes(q)));
   document.getElementById('feedTitle').textContent=`نتایج «${q}»`;
   renderFeed(list.length?list:R);
-  if(!list.length)toast('🔍','چیزی پیدا نشد — همه رو نشون می‌دیم');
+  if(!list.length)toast('','چیزی پیدا نشد — همه رو نشون می‌دیم');
 }
 export function toggleFav(id,el){
-  if(favs.has(id)){favs.delete(id);el&&(el.textContent='🤍');toast('','حذف شد')}
-  else{favs.add(id);el&&(el.textContent='❤️');toast('❤️','ذخیره شد')}
+  const on=!favs.has(id);
+  on?favs.add(id):favs.delete(id);
+  if(el){
+    el.innerHTML=icon('heart',{size:20,fill:on});
+    el.setAttribute('aria-pressed',String(on));
+    el.setAttribute('aria-label',on?'حذف از علاقه‌مندی‌ها':'افزودن به علاقه‌مندی‌ها');
+  }
+  toast('',on?'ذخیره شد':'حذف شد');
 }
 // نسخه‌ی hero صفحه رستوران — با انیمیشن تپش
 export function toggleRestFav(id){
   const btn=document.getElementById('rpFav');
-  if(favs.has(id)){favs.delete(id);if(btn)btn.textContent='🤍';toast('','از علاقه‌مندی‌ها حذف شد')}
-  else{favs.add(id);if(btn)btn.textContent='❤️';toast('❤️','به علاقه‌مندی‌ها اضافه شد')}
+  const on=!favs.has(id);
+  on?favs.add(id):favs.delete(id);
+  if(btn){
+    btn.innerHTML=icon('heart',{size:22,fill:on});
+    btn.setAttribute('aria-pressed',String(on));
+    btn.setAttribute('aria-label',on?'حذف از علاقه‌مندی‌ها':'افزودن به علاقه‌مندی‌ها');
+  }
+  toast('',on?'به علاقه‌مندی‌ها اضافه شد':'از علاقه‌مندی‌ها حذف شد');
   if(btn){btn.style.transform='scale(1.3)';setTimeout(()=>btn.style.transform='',180)}
 }
 

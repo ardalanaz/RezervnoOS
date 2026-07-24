@@ -84,7 +84,7 @@ function mapAdminRestaurant(apiR, fallback){
     id: apiR.id,
     tenantId: apiR.tenant_id,
     name: apiR.name,
-    logo: fallback?.logo || '🍽️',
+    logo: fallback?.logo || '',
     grad: fallback?.grad || 'linear-gradient(135deg,#818CF8,#4F46E5)',
     city: apiR.cuisine || fallback?.city || '—',
     plan: apiR.plan || 'free',

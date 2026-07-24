@@ -3,6 +3,15 @@ import { db } from '@/lib/db';
 import { enqueueSms } from '@/lib/sms';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 import { Err } from '@/lib/errors';
+import { parseBody, zPhone, z } from '@/lib/schemas';
+
+const smsSchema = z.object({
+  kind: z.enum(['winback', 'campaign']).default('campaign'),
+  phones: z.array(zPhone).max(500).optional(),
+  segment: z.enum(['gold', 'silver', 'bronze']).optional(),
+  discount_code: z.string().max(20).optional(),
+  message: z.string().max(500).optional(),
+});
 
 /**
  * POST /api/v1/restaurant/sms — پیامک کمپین/winback به اعضای باشگاه.
@@ -12,16 +21,16 @@ export const POST = withRestaurantAuth(
   { permission: 'canManageCampaigns', rateLimit: 'auth' },
   async (req, ctx) => {
     const restaurant = ctx.restaurant;
-    const b = await req.json();
+    const b = await parseBody(req, smsSchema);
 
-    const kind: string = b.kind === 'winback' ? 'winback' : 'campaign';
+    const kind = b.kind;
     const template = kind === 'winback' ? 'winback_offer' : 'campaign';
 
     let targets: { phone: string; name: string }[] = [];
-    if (Array.isArray(b.phones) && b.phones.length) {
-      targets = b.phones.filter(Boolean).map((p: string) => ({ phone: p, name: '' }));
+    if (b.phones && b.phones.length) {
+      targets = b.phones.map((p) => ({ phone: p, name: '' }));
     } else {
-      const tierFilter = ['gold', 'silver', 'bronze'].includes(b.segment) ? { tier: b.segment } : {};
+      const tierFilter = b.segment ? { tier: b.segment } : {};
       const members = await db.clubMember.findMany({
         where: { restaurantId: restaurant.id, ...tierFilter },
         include: { user: { select: { phone: true, firstName: true } } },
@@ -34,7 +43,7 @@ export const POST = withRestaurantAuth(
 
     if (!targets.length) throw Err.validation('هیچ مخاطبی برای ارسال یافت نشد');
 
-    const discount = (b.discount_code || '').toString().slice(0, 20);
+    const discount = (b.discount_code || '').slice(0, 20);
     let queued = 0;
     for (const t of targets) {
       const tokens = kind === 'winback'
@@ -49,7 +58,7 @@ export const POST = withRestaurantAuth(
       await db.campaignLog.create({
         data: {
           restaurantId: restaurant.id,
-          segment: (b.segment || (Array.isArray(b.phones) ? 'custom' : 'all')).toString().slice(0, 40),
+          segment: (b.segment || (b.phones?.length ? 'custom' : 'all')).toString().slice(0, 40),
           message: (b.message || b.discount_code || kind).toString().slice(0, 500),
           recipientsCount: queued,
         },

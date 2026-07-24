@@ -2,12 +2,13 @@
 import { API, isLoggedIn } from '../api.js';
 import { closeSheet, esc, openSheet, toast } from '../auth.js';
 import { copyCode } from '../data/detail.js';
+import { icon } from '../icons.js';
 import { fmtFa } from '../data/discover.js';
 export async function openReferral(){
   let stats={code:'REF••••',total_invited:0,completed:0,points_earned:0};
   if(isLoggedIn()){const res=await API.get('/me/referral');if(res.ok&&res.data?.code)stats=res.data;}
   openSheet(`<div style="text-align:center;padding:4px 0">
-    <div style="font-size:40px;margin-bottom:8px">🎁</div>
+    <div style="margin-bottom:var(--sp-2);color:var(--brand-500)">${icon('gift',{size:40})}</div>
     <div class="sheet-title" style="text-align:center">دوستات رو دعوت کن</div>
     <div class="sheet-sub" style="text-align:center;margin-bottom:18px">برای هر دوستی که با کد تو ثبت‌نام کنه و اولین رزروش رو انجام بده، ۵۰۰ امتیاز بگیر</div>
     <div class="ref-code-box"><div class="ref-code-label">کد دعوت تو</div><div class="ref-code">${esc(stats.code)}</div>
@@ -27,10 +28,10 @@ export async function sendInvite(){
   if(!phone||phone.length<10){toast('','شماره معتبر وارد کن');return;}
   if(isLoggedIn()){
     const res=await API.post('/me/referral',{phone});
-    if(res.ok){toast('✅','دعوت با پیامک ارسال شد');closeSheet();return;}
-    if(!res.offline){toast('⚠️',res.error?.message||'خطا');return;}
+    if(res.ok){toast('','دعوت با پیامک ارسال شد');closeSheet();return;}
+    if(!res.offline){toast('',res.error?.message||'خطا');return;}
   }
-  toast('✅','دعوت ارسال شد');closeSheet();
+  toast('','دعوت ارسال شد');closeSheet();
 }
 // ── کارت هدیه (Gift Cards) ──
 export function openGiftCards(){
@@ -77,11 +78,11 @@ export async function buyGiftCard(){
     showGiftSuccess(res.data.code,giftAmt);
   }else if(res.offline){
     showGiftSuccess('GIFT'+Math.random().toString(36).slice(2,8).toUpperCase(),giftAmt);
-  }else{toast('⚠️',res.error?.message||'خطا در خرید');}
+  }else{toast('',res.error?.message||'خطا در خرید');}
 }
 export function showGiftSuccess(code,amt){
   openSheet(`<div style="text-align:center;padding:8px 0">
-    <div style="font-size:48px;margin-bottom:8px">🎉</div>
+    <div style="margin-bottom:var(--sp-2);color:var(--success)">${icon('checkCircle',{size:48})}</div>
     <div class="sheet-title" style="text-align:center">کارت هدیه ساخته شد!</div>
     <div class="gift-success-card"><div class="gsc-amt">${fmtFa(Math.round(amt/1000))} هزار تومان</div><div class="gsc-code">${esc(code)}</div></div>
     <div class="sheet-sub" style="text-align:center;margin-top:12px">کد برای گیرنده پیامک شد</div>
@@ -106,20 +107,20 @@ export async function doCheckGift(){
     const d=res.data;
     el.innerHTML=`<div class="gift-check ${d.valid?'valid':'invalid'}">
       <div class="gc-balance">${fmtFa(Math.round(d.balance_toman/1000))} هزار تومان</div>
-      <div class="gc-status">${d.valid?'✓ فعال و قابل‌استفاده':'✕ غیرفعال یا منقضی'}</div></div>`;
+      <div class="gc-status">${d.valid?`${icon('check',{size:13})} فعال و قابل‌استفاده`:`${icon('close',{size:13})} غیرفعال یا منقضی`}</div></div>`;
   }else if(res.offline){
-    el.innerHTML=`<div class="gift-check valid"><div class="gc-balance">۵۰۰ هزار تومان</div><div class="gc-status">✓ فعال (دمو)</div></div>`;
+    el.innerHTML=`<div class="gift-check valid"><div class="gc-balance">۵۰۰ هزار تومان</div><div class="gc-status">${icon('check',{size:13})} فعال (دمو)</div></div>`;
   }else{el.innerHTML=`<div class="gift-check invalid"><div class="gc-status">کارت پیدا نشد</div></div>`;}
 }
 // ── پاداش تولد و سالگرد ──
 export function openRewardsDates(){
   openSheet(`<div style="padding:4px 0">
-    <div style="text-align:center;font-size:40px;margin-bottom:8px">🎂</div>
+    <div style="text-align:center;margin-bottom:var(--sp-2);color:var(--brand-500)">${icon('calendar',{size:40})}</div>
     <div class="sheet-title" style="text-align:center">پاداش تولد و سالگرد</div>
     <div class="sheet-sub" style="text-align:center;margin-bottom:18px">تاریخ‌های خاصت رو ثبت کن تا در اون روز ۱۰۰۰ امتیاز هدیه بگیری</div>
-    <label class="rd-label">🎂 تاریخ تولد</label>
+    <label class="rd-label">${icon('calendar',{size:14})} تاریخ تولد</label>
     <input id="bdayDate" class="inp" type="text" placeholder="مثلاً ۱۵ خرداد" style="margin-bottom:14px">
-    <label class="rd-label">💍 سالگرد (اختیاری)</label>
+    <label class="rd-label">${icon('heart',{size:14})} سالگرد (اختیاری)</label>
     <input id="annivDate" class="inp" type="text" placeholder="مثلاً ۲۰ مهر">
     <button class="btn btn-primary btn-lg btn-block" style="margin-top:16px" onclick="saveRewardDates()">ذخیره</button>
     <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeSheet()">بستن</button>

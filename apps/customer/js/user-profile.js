@@ -9,13 +9,14 @@
 // ═══════════════════════════════════════════════════════════
 import { API, isLoggedIn } from './api.js';
 import { openSheet, toast } from './auth.js';
+import { icon } from './icons.js';
 export const NOTIF_KEY = 'rz_notif_prefs';
 export const NOTIF_CATS = [
-  {id:'availability', icon:'🪑', title:'میز خالی شد', desc:'وقتی میز رستوران مورد علاقه‌ات آزاد شد', hi:true},
-  {id:'offers',       icon:'💰', title:'تخفیف و کش‌بک ویژه', desc:'وقتی جایی که دنبال می‌کنی پیشنهاد ویژه داره'},
-  {id:'reminder',     icon:'⏰', title:'یادآوری رزرو', desc:'قبل از رزروت یادت می‌ندازیم (تا فراموش نکنی)', hi:true},
-  {id:'loyalty',      icon:'🎁', title:'امتیاز و پاداش', desc:'وقتی امتیازت به یه پاداش جدید رسید'},
-  {id:'dna',          icon:'🧬', title:'DNA غذایی', desc:'وقتی خلاصه‌ی ماهانه‌ات آماده شد'},
+  {id:'availability', icon:'utensils', title:'میز خالی شد', desc:'وقتی میز رستوران مورد علاقه‌ات آزاد شد', hi:true},
+  {id:'offers',       icon:'wallet', title:'تخفیف و کش‌بک ویژه', desc:'وقتی جایی که دنبال می‌کنی پیشنهاد ویژه داره'},
+  {id:'reminder',     icon:'clock', title:'یادآوری رزرو', desc:'قبل از رزروت یادت می‌ندازیم (تا فراموش نکنی)', hi:true},
+  {id:'loyalty',      icon:'gift', title:'امتیاز و پاداش', desc:'وقتی امتیازت به یه پاداش جدید رسید'},
+  {id:'dna',          icon:'sparkle', title:'DNA غذایی', desc:'وقتی خلاصه‌ی ماهانه‌ات آماده شد'},
 ];
 export function getNotifPrefs(){
   try{ return JSON.parse(localStorage.getItem(NOTIF_KEY)) || {availability:true,offers:true,reminder:true,loyalty:true,dna:true}; }
@@ -29,7 +30,7 @@ export function openNotifPrefs(){
   const p=getNotifPrefs();
   const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
   const permBanner = perm==='granted'
-    ? `<div class="np-perm ok">✓ اعلان‌ها روی این دستگاه فعاله</div>`
+    ? `<div class="np-perm ok">${icon('check',{size:14})} اعلان‌ها روی این دستگاه فعاله</div>`
     : perm==='denied'
     ? `<div class="np-perm no">اعلان‌ها در مرورگر مسدود شده — از تنظیمات مرورگر فعالش کن</div>`
     : `<div class="np-perm ask"><div>برای دریافت اعلان‌ها، اجازه‌ی مرورگر لازمه</div><button class="np-perm-btn" onclick="requestNotifPerm()">فعال‌سازی</button></div>`;
@@ -40,26 +41,26 @@ export function openNotifPrefs(){
     <div class="np-list">
       ${NOTIF_CATS.map(c=>`
         <div class="np-item">
-          <div class="np-ic">${c.icon}</div>
+          <div class="np-ic">${icon(c.icon,{size:20})}</div>
           <div class="np-txt"><div class="np-title">${c.title}${c.hi?'<span class="np-hi">پیشنهادی</span>':''}</div><div class="np-desc">${c.desc}</div></div>
           <label class="np-toggle"><input type="checkbox" ${p[c.id]?'checked':''} onchange="setNotifPref('${c.id}',this.checked)"><span class="np-slider"></span></label>
         </div>`).join('')}
     </div>
-    <div class="np-foot">🔒 ما هیچ‌وقت اعلان تبلیغاتی اسپم نمی‌فرستیم. کنترل کاملش دست توئه.</div>`);
+    <div class="np-foot">${icon('shield',{size:14})} ما هیچ‌وقت اعلان تبلیغاتی اسپم نمی‌فرستیم. کنترل کاملش دست توئه.</div>`);
 }
 export async function requestNotifPerm(){
-  if(!('Notification' in window)){ toast('⚠️','مرورگرت اعلان رو پشتیبانی نمی‌کنه'); return; }
+  if(!('Notification' in window)){ toast('','مرورگرت اعلان رو پشتیبانی نمی‌کنه'); return; }
   try{
     const res = await Notification.requestPermission();
     if(res==='granted'){
-      toast('🔔','عالی! اعلان‌ها فعال شد');
+      toast('','عالی! اعلان‌ها فعال شد');
       // ثبت توکن در بک‌اند (وقتی سرویس push آماده شد) — الان بی‌صدا
       if(isLoggedIn()) API.post('/me/push-subscribe',{enabled:true}).catch(()=>{});
       openNotifPrefs(); // رفرش بنر
     } else {
       toast('','بدون اجازه، فعلاً اعلان نمی‌فرستیم');
     }
-  }catch{ toast('⚠️','مشکلی پیش اومد'); }
+  }catch{ toast('','مشکلی پیش اومد'); }
 }
 // ═══════════ ورود با کد یکبارمصرف (فاز ۳) ═══════════
 

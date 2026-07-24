@@ -61,6 +61,9 @@ img{display:block;max-width:100%}
 .sb-switch{margin:14px;padding:11px 13px;background:var(--s-50);border:1px solid var(--border);border-radius:var(--r);
   display:flex;align-items:center;gap:10px;cursor:pointer;transition:all var(--t-fast)}
 .sb-switch:hover{border-color:var(--border-strong);background:var(--white)}
+.sb-switch.locked{cursor:default;opacity:.65}
+.sb-switch.locked:hover{border-color:var(--border);background:var(--s-50)}
+.sb-switch.locked .sb-switch-arr{display:none}
 .sb-switch-emoji{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
 .sb-switch-info{flex:1;min-width:0}
 .sb-switch-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -72,6 +75,11 @@ img{display:block;max-width:100%}
 .sb-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-sm);cursor:pointer;
   color:var(--t2);font-weight:600;font-size:13px;transition:all var(--t-fast);border:none;background:none;width:100%;text-align:right;margin-bottom:1px}
 .sb-item:hover{background:var(--s-100);color:var(--t1)}
+/* آیتمِ منوی بدونِ دسترسی. لازم است چون .sb-item{display:flex} یک استایلِ
+   نویسنده است و بر [hidden]{display:none} مرورگر غلبه می‌کند؛ بدونِ این
+   قاعده صفتِ hidden هیچ اثری نداشت. ویژگی‌مندیِ (0,2,0) بدونِ !important کافی است. */
+.sb-item[hidden]{display:none}
+
 .sb-item.active{background:var(--blue-50);color:var(--blue)}
 .sb-item svg{width:19px;height:19px;flex-shrink:0}
 .sb-item .badge{margin-right:auto;background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:50px;min-width:18px;text-align:center}
@@ -783,3 +791,62 @@ img{display:block;max-width:100%}
 .login-back{background:none;border:none;color:var(--blue);font-weight:700;font-family:inherit;font-size:13px;cursor:pointer;margin-top:16px}
 .login-hint{background:var(--amber-50);border:1px solid #FDE68A;border-radius:10px;padding:10px 13px;font-size:12px;color:#92400E;margin-top:14px;line-height:1.5}
 .login-foot{font-size:11.5px;color:var(--t3);margin-top:18px;line-height:1.6}
+/* ═══════════ چت با مشتریان (business) ═══════════ */
+.chat-inbox{display:flex;flex-direction:column}
+.chat-inbox-row{display:flex;align-items:center;gap:12px;padding:13px 6px;border-bottom:1px solid var(--line,#eee);cursor:pointer;transition:background .15s}
+.chat-inbox-row:hover{background:var(--hover,#f6f6fa)}
+.chat-inbox-ava{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--blue,#4F46E5),#7C6BF0);color:#fff;display:grid;place-items:center;font-weight:800;flex-shrink:0}
+.chat-inbox-main{flex:1;min-width:0}
+.chat-inbox-top{display:flex;align-items:center;gap:8px}
+.chat-inbox-name{font-weight:700;font-size:14px}
+.chat-inbox-tag{font-size:11px;color:var(--blue,#4F46E5);background:rgba(79,70,229,.1);padding:2px 7px;border-radius:7px}
+.chat-inbox-prev{font-size:13px;color:var(--muted,#888);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.chat-inbox-badge{background:#FF4B6A;color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:10px;display:grid;place-items:center;padding:0 6px;flex-shrink:0}
+.chat-empty,.chat-empty-thread{text-align:center;color:var(--muted,#999);padding:40px 20px;font-size:14px}
+/* modal conversation */
+.chat-modal{display:flex;flex-direction:column;height:70vh;max-height:560px}
+.chat-modal-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--line,#eee)}
+.chat-modal-name{font-weight:800;font-size:16px}
+.chat-modal-phone{font-size:12px;color:var(--muted,#888);margin-top:2px}
+.chat-modal-body{flex:1;overflow-y:auto;padding:14px 4px;display:flex;flex-direction:column;gap:7px}
+.chat-b{max-width:78%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.6;word-break:break-word}
+.chat-b.me{align-self:flex-start;background:linear-gradient(135deg,var(--blue,#4F46E5),#5a4fe0);color:#fff;border-bottom-right-radius:4px}
+.chat-b.them{align-self:flex-end;background:var(--hover,#f0f0f5);color:var(--text,#222);border-bottom-left-radius:4px}
+.chat-b.pending{opacity:.55}
+.chat-b-t{font-size:10px;opacity:.7;margin-top:3px;text-align:left}
+.chat-modal-input{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--line,#eee)}
+.chat-modal-input input{flex:1;border:1px solid var(--line,#ddd);border-radius:20px;padding:10px 15px;font-size:14px;font-family:inherit;color:var(--text,#222)}
+.chat-modal-input input:focus{outline:2px solid var(--blue,#4F46E5)}
+
+/* ═══════════ چت با مشتریان ═══════════ */
+.chat-inbox{display:flex;flex-direction:column}
+.chat-inbox-row{display:flex;align-items:center;gap:12px;padding:13px 6px;cursor:pointer;border-bottom:1px solid var(--line,#EDEDF2);transition:background .15s}
+.chat-inbox-row:hover{background:var(--bg,#FBFBFD)}
+.chat-inbox-ava{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--blue,#4F46E5),#7C69F0);color:#fff;display:grid;place-items:center;font-weight:800;font-size:17px;flex-shrink:0}
+.chat-inbox-main{flex:1;min-width:0}
+.chat-inbox-top{display:flex;align-items:center;gap:8px}
+.chat-inbox-name{font-weight:700;font-size:14px}
+.chat-inbox-tag{font-size:11px;color:var(--blue,#4F46E5);background:rgba(79,70,229,.1);padding:2px 8px;border-radius:7px}
+.chat-inbox-prev{font-size:13px;color:#8A8A9A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.chat-inbox-badge{background:#FF4B6A;color:#fff;font-size:12px;font-weight:800;min-width:22px;height:22px;border-radius:11px;display:grid;place-items:center;padding:0 6px;flex-shrink:0}
+.chat-empty,.chat-empty-thread{text-align:center;color:#9A9AA8;padding:40px 20px;font-size:14px;line-height:1.8}
+/* modal conversation */
+.chat-modal{display:flex;flex-direction:column;height:70vh;max-height:560px}
+.chat-modal-head{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--line,#EDEDF2)}
+.chat-modal-name{font-weight:800;font-size:16px}
+.chat-modal-phone{font-size:12px;color:#8A8A9A;margin-top:2px}
+.chat-modal-body{flex:1;overflow-y:auto;padding:14px 2px;display:flex;flex-direction:column;gap:7px}
+.chat-b{max-width:76%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.55;word-break:break-word}
+.chat-b.me{align-self:flex-start;background:linear-gradient(135deg,var(--blue,#4F46E5),#5f52e8);color:#fff;border-bottom-right-radius:4px}
+.chat-b.them{align-self:flex-end;background:#F0F0F5;color:#1a1a24;border-bottom-left-radius:4px}
+.chat-b.pending{opacity:.55}
+.chat-b-t{font-size:10px;opacity:.7;margin-top:3px;text-align:left}
+.chat-modal-input{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--line,#EDEDF2)}
+.chat-modal-input input{flex:1;background:#F4F4F8;border:none;border-radius:20px;padding:10px 15px;font-size:14px;font-family:inherit}
+.chat-modal-input input:focus{outline:2px solid var(--blue,#4F46E5)}
+
+/* نشانگرهای وضعیت — رنگ semantic از Design System (جایگزین emoji) */
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);display:inline-block;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent)}
+.dot-closed{width:7px;height:7px;border-radius:50%;background:var(--danger);display:inline-block;
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent)}

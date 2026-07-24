@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
 import { normalizePhone } from '@/lib/otp';
 import { createWalkin } from '@/lib/reservations';
-import { Err } from '@/lib/errors';
+import { parseBody, zPhone, zUuid, z } from '@/lib/schemas';
 
 // ═══════════════════════════════════════════════════════════
 //  POST /restaurant/walkin — ثبت ورود مهمان بدون رزروی قبلی (walk-in) توسط پرسنل.
@@ -10,22 +10,30 @@ import { Err } from '@/lib/errors';
 //  فقط اعتبارسنجی ورودی و صدازدنِ سرویس را انجام می‌دهد (route لاغر).
 // ═══════════════════════════════════════════════════════════
 
+const schema = z.object({
+  phone: zPhone,
+  party_size: z.number().int().min(1).max(30),
+  first_name: z.string().max(100).optional(),
+  last_name: z.string().max(100).optional(),
+  table_id: zUuid.optional(),
+  birth_day: z.number().int().min(1).max(31).optional(),
+  birth_month: z.number().int().min(1).max(12).optional(),
+});
+
 export const POST = withRestaurantAuth({ rateLimit: 'auth', permission: 'canManageReservations' }, async (req, ctx) => {
-  const b = await req.json();
-  const phone = normalizePhone(String(b.phone || ''));
-  const partySize = Number(b.party_size) || 2;
-  if (partySize < 1 || partySize > 30) throw Err.validation('تعداد نفرات نامعتبر است');
+  const b = await parseBody(req, schema);
+  const phone = normalizePhone(b.phone);
 
   const result = await createWalkin({
     restaurantId: ctx.restaurant.id,
     clubPrefix: ctx.restaurant.clubPrefix,
     phone,
-    partySize,
-    firstName: (b.first_name || '').trim() || null,
-    lastName: (b.last_name || '').trim() || null,
+    partySize: b.party_size,
+    firstName: b.first_name?.trim() || null,
+    lastName: b.last_name?.trim() || null,
     tableId: b.table_id || null,
-    birthDay: b.birth_day ? Number(b.birth_day) : null,
-    birthMonth: b.birth_month ? Number(b.birth_month) : null,
+    birthDay: b.birth_day ?? null,
+    birthMonth: b.birth_month ?? null,
   });
 
   return NextResponse.json({

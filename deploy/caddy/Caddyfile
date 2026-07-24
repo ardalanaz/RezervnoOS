@@ -83,3 +83,11 @@
 www.{$DOMAIN} {
 	redir https://{$DOMAIN}{uri} permanent
 }
+
+# ── healthcheckِ داخلیِ کانتینر ──
+# روی پورتِ داخلیِ 8080 (منتشر نمی‌شود؛ فقط Docker healthcheck از داخل می‌زند).
+# عمداً روی دامنه‌ی عمومی نیست تا نیازی به DNS/TLS در healthcheck نباشد.
+:8080 {
+	respond /healthz "ok" 200
+	respond 404
+}

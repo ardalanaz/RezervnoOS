@@ -10,6 +10,7 @@
 //  این‌ها توابعِ خالص‌اند (بدونِ side-effect، بدونِ DB) — قابلِ تستِ واحدِ ساده.
 // ═══════════════════════════════════════════════════════════
 import { Prisma } from '@prisma/client';
+import { zonedTimeToUtc } from './hours';
 import { randomBytes } from 'crypto';
 import { Err } from './errors';
 
@@ -21,8 +22,8 @@ export interface TimingConfig {
 }
 
 /** محاسبه‌ی بازه‌ی رزرو + بازه‌ی بلاک (شامل نظافت/بافر). */
-export function computeRanges(date: string, time: string, cfg: TimingConfig, durationOverride?: number) {
-  const start = new Date(`${date}T${time}:00+03:30`); // Asia/Tehran
+export function computeRanges(date: string, time: string, cfg: TimingConfig, durationOverride?: number, timezone = 'Asia/Tehran') {
+  const start = zonedTimeToUtc(date, time, timezone);
   if (isNaN(+start)) throw Err.validation('تاریخ یا ساعت نامعتبر است');
   const duration = durationOverride ?? cfg.slotMinutes;
   const end = new Date(+start + duration * 60_000);

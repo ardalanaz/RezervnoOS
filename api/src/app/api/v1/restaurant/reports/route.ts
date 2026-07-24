@@ -3,11 +3,14 @@ import { dbRead as db } from '@/lib/db';
 import { cached, cacheKey } from '@/lib/cache';
 import { sinceDays } from '@/lib/staff-helpers';
 import { withRestaurantAuth } from '@/lib/with-restaurant-auth';
+import { parseQuery, z } from '@/lib/schemas';
+
+const querySchema = z.object({ range: z.string().regex(/^\d{1,3}d$/).default('30d') });
 
 // GET /restaurant/reports/revenue?range=30d
 export const GET = withRestaurantAuth({ permission: 'canViewRevenue' }, async (req, ctx) => {
-  const url = new URL(req.url);
-  const days = Math.min(180, Number((url.searchParams.get('range') || '30d').replace('d', '')) || 30);
+  const { range } = parseQuery(req, querySchema);
+  const days = Math.min(180, Number(range.replace('d', '')) || 30);
   const since = sinceDays(days);
 
   const data = await cached(cacheKey('revenue', ctx.restaurant.id, days), 300, async () => {

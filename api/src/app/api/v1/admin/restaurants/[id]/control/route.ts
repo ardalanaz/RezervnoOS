@@ -4,6 +4,14 @@ import { enforceRateLimit, clientIp, RULES } from '@/lib/ratelimit';
 import { adminAuthFromRequest } from '@/lib/admin-auth';
 import { audit } from '@/lib/audit';
 import { Err, errorResponse } from '@/lib/errors';
+import { parseBody, parseParams, zUuid, z } from '@/lib/schemas';
+
+const paramsSchema = z.object({ id: zUuid });
+const bodySchema = z.object({
+  action: z.enum(['activate', 'deactivate', 'set_plan', 'extend_plan', 'cancel_subscription']),
+  plan: z.string().max(20).optional(),
+  months: z.number().optional(),
+});
 
 /**
  * PATCH /api/v1/admin/restaurants/[id]/control — کنترل رستوران (پنل شرکت).
@@ -19,9 +27,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   try {
     await enforceRateLimit(clientIp(req), RULES.auth);
     const admin = adminAuthFromRequest(req);
-    const restaurantId = params.id;
-    const body = await req.json();
-    const action = body.action as string;
+    const { id: restaurantId } = parseParams(params, paramsSchema);
+    const body = await parseBody(req, bodySchema);
+    const action = body.action;
 
     const restaurant = await db.restaurant.findUnique({
       where: { id: restaurantId },

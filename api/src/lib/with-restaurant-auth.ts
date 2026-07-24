@@ -60,7 +60,7 @@ export function withRestaurantAuth(
         await enforceRateLimit(clientIp(req), rule);
 
         const auth = authFromRequest(req);
-        const restaurant = await resolveStaffRestaurant(auth);
+        const restaurant = await resolveStaffRestaurant(auth, req);
         if (opts.permission) await requirePermission(auth, opts.permission);
 
         const res = await handler(req, { auth, restaurant }, routeArg?.params);

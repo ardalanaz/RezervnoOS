@@ -78,6 +78,33 @@ psql "$DATABASE_URL" -f 006-loyalty.sql
 
 ---
 
+## `018` تا `022` — بازسازی‌شده / جدید (۲۰۲۶-۰۷-۱۹)
+
+فایل‌های `018-staff-branch-scoping.sql` تا `021-restaurant-closures.sql` **بازسازی‌شده‌اند**:
+این تغییرات از قبل روی DB زنده (`zmyuvtpbchytqvtgyewt`) اعمال شده بودند ولی فایلِ migration
+برایشان هیچ‌وقت کامیت نشده بود — یک drift واقعی که در حسابرسیِ zero-trust دیتابیس
+(`docs/PROJECT-AUDIT-HANDOFF-DATABASE.md` بخش ۲) کشف شد. شماره‌گذاریِ دقیقِ تاریخی
+(کدام یکی واقعاً migration ۰۱۸ بوده در برابر ۰۱۹) از گیت قابلِ‌بازیابی نبود؛ این فایل‌ها بر
+اساسِ دیفِ `schema.prisma` بازسازی شدند و به‌ترتیبِ منطقی شماره خوردند. همه idempotent‌اند
+(`IF NOT EXISTS`/`DO $$ ... EXCEPTION`) — اجرای دوباره روی DB زنده هم بی‌خطر است.
+
+`022-audit-fixes-2026-07-19.sql` **جدید** است (هنوز چیزی روی DB زنده اعمال نشده بود قبل از
+این نشست) و شاملِ سه فیکسِ واقعی از همان حسابرسی است: rename ستونِ mixed-case
+`coupons.targetSegment`، افزودنِ ۴ Foreign Key گمشده (`webhooks`, `sms_transactions`,
+`guest_profiles`, `restaurant_closures`)، و حذفِ دو ایندکسِ تکراری. **این فایل روی DB زنده
+اعمال و تک‌تکِ تغییراتش تأیید شد** — رجوع کن به `docs/PROJECT-AUDIT-HANDOFF-DATABASE.md`.
+
+```bash
+# روی هر DB جدید (یا برای تطبیق‌دادنِ یک DB قدیمی‌تر):
+psql "$DATABASE_URL" -f 018-staff-branch-scoping.sql
+psql "$DATABASE_URL" -f 019-payments-deposit.sql
+psql "$DATABASE_URL" -f 020-platform-settings-payment-toggle.sql
+psql "$DATABASE_URL" -f 021-restaurant-closures.sql
+psql "$DATABASE_URL" -f 022-audit-fixes-2026-07-19.sql
+```
+
+---
+
 ## نکته‌ی مهم درباره‌ی constraint جلوگیری از تداخل
 
 فایل `../0_init/EXTRA-after-prisma-migrate.sql` شامل EXCLUDE constraint و

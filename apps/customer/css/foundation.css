@@ -1,0 +1,277 @@
+/* ═══════════════════════════════════════════════════════════
+   رزرونو — لایه‌ی Foundation (کامپوننت‌های پایه)
+   روی tokens.css سوار است. کلاس‌های یوتیلیتی و کامپوننتِ مشترک.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── دسترسی‌پذیری: skip-link ── */
+.skip-link {
+  position: absolute; inset-inline-start: -9999px; top: var(--sp-2);
+  background: var(--brand-500); color: #fff; padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-sm); z-index: 9999; font-weight: var(--fw-semibold);
+}
+.skip-link:focus { inset-inline-start: var(--sp-2); }
+
+/* ── دسترسی‌پذیری: مخفی برای چشم، قابل‌خواندن برای screen-reader ── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ── دسترسی‌پذیری: focus-ring یکدست روی همه‌ی المان‌های تعاملی ── */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+/* ═══════════ دکمه ═══════════ */
+.btn {
+  --btn-h: 40px;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  height: var(--btn-h); min-height: var(--touch-min);
+  padding: 0 var(--sp-4);
+  font-family: inherit; font-size: var(--fs-md); font-weight: var(--fw-semibold);
+  line-height: 1; white-space: nowrap; cursor: pointer;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  transition: transform var(--motion-fast) var(--ease-out),
+              background var(--motion-fast) var(--ease-out),
+              box-shadow var(--motion-fast) var(--ease-out),
+              opacity var(--motion-fast) var(--ease-out);
+  user-select: none;
+}
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-sm { --btn-h: 36px; font-size: var(--fs-sm); padding: 0 var(--sp-3); }
+.btn-lg { --btn-h: 44px; font-size: var(--fs-lg); padding: 0 var(--sp-6); }
+
+.btn-primary { background: var(--brand-500); color: #fff; }
+.btn-primary:hover { background: var(--brand-600); }
+.btn-ghost { background: transparent; border-color: var(--border, #e5e5e5); color: inherit; }
+.btn-ghost:hover { background: var(--surface-hover, rgba(0,0,0,.04)); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { filter: brightness(.94); }
+
+/* اسپینرِ داخلِ دکمه (loading) */
+.btn[data-loading="true"] { color: transparent !important; pointer-events: none; position: relative; }
+.btn[data-loading="true"]::after {
+  content: ""; position: absolute; width: 16px; height: 16px;
+  border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%;
+  color: #fff; animation: spin .6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════════ کارت ═══════════ */
+.card {
+  background: var(--surface, #fff); border: 1px solid var(--border, #ececec);
+  border-radius: var(--radius-lg); padding: var(--sp-5);
+  transition: transform var(--motion-base) var(--ease-out),
+              box-shadow var(--motion-base) var(--ease-out);
+}
+.card-interactive { cursor: pointer; }
+.card-interactive:hover { transform: translateY(-2px); box-shadow: var(--sh-lg, 0 12px 32px rgba(0,0,0,.1)); }
+
+/* ═══════════ فرم ═══════════ */
+.field { display: flex; flex-direction: column; gap: var(--sp-2); }
+.field-label { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-2, #555); }
+.field-input {
+  height: var(--touch-min); padding: 0 var(--sp-4);
+  font-family: inherit; font-size: var(--fs-md); color: inherit;
+  background: var(--surface-2, #f6f6f8); border: 1px solid var(--border, #e5e5e5);
+  border-radius: var(--radius-md);
+  transition: border-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
+  width: 100%;
+}
+.field-input:focus { outline: none; border-color: var(--brand-500); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 15%, transparent); }
+.field-input[aria-invalid="true"] { border-color: var(--danger); }
+.field-error { font-size: var(--fs-xs); color: var(--danger-ink); }
+.field-help  { font-size: var(--fs-xs); color: var(--text-3, #999); }
+
+/* ═══════════ Skeleton (loading) ═══════════ */
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--skeleton-base, rgba(0,0,0,.06)) 25%,
+    var(--skeleton-hi, rgba(0,0,0,.11)) 37%,
+    var(--skeleton-base, rgba(0,0,0,.06)) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.skeleton-text { height: 12px; margin-bottom: var(--sp-2); }
+.skeleton-text.w-60 { width: 60%; } .skeleton-text.w-40 { width: 40%; } .skeleton-text.w-80 { width: 80%; }
+.skeleton-card { height: 120px; border-radius: var(--radius-lg); }
+.skeleton-avatar { width: 44px; height: 44px; border-radius: 50%; }
+
+/* ═══════════ Empty state ═══════════ */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: var(--sp-12) var(--sp-6); gap: var(--sp-3);
+}
+.empty-state-icon {
+  width: 56px; height: 56px; display: grid; place-items: center;
+  color: var(--text-3, #aaa); opacity: .7;
+}
+.empty-state-title { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+.empty-state-desc { font-size: var(--fs-sm); color: var(--text-2, #666); line-height: var(--lh-relaxed); max-width: 320px; }
+
+/* ═══════════ Error state ═══════════ */
+.error-state {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: var(--sp-10) var(--sp-6); gap: var(--sp-3);
+}
+.error-state-icon { width: 48px; height: 48px; color: var(--danger); }
+
+/* ═══════════ ریز-تعامل: toast ورودی ═══════════ */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.toast-enter { animation: toast-in var(--motion-base) var(--ease-spring); }
+
+/* ═══════════ اعدادِ جدولی (tabular) برای جدول‌ها و ارقام ═══════════ */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ═══════════ Grid & Layout (سیستم چیدمان) ═══════════ */
+.container { width: 100%; max-width: var(--container-max); margin-inline: auto; padding-inline: var(--sp-4); }
+.grid { display: grid; gap: var(--grid-gutter); }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+.grid-12 { grid-template-columns: repeat(12, 1fr); }
+/* stack: چیدمانِ عمودی با فاصله‌ی یکدست (جایگزینِ margin پراکنده) */
+.stack { display: flex; flex-direction: column; }
+.stack-2 { gap: var(--sp-2); } .stack-3 { gap: var(--sp-3); }
+.stack-4 { gap: var(--sp-4); } .stack-6 { gap: var(--sp-6); }
+.row { display: flex; align-items: center; }
+.row-2 { gap: var(--sp-2); } .row-3 { gap: var(--sp-3); } .row-4 { gap: var(--sp-4); }
+.spacer { flex: 1; }
+.divider { height: 1px; background: var(--border, #ececec); border: 0; margin: var(--sp-4) 0; }
+.divider-v { width: 1px; align-self: stretch; background: var(--border, #ececec); }
+
+/* ── قوانینِ Responsive (breakpointهای استاندارد) ── */
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .hide-mobile { display: none !important; }
+}
+@media (min-width: 641px) { .only-mobile { display: none !important; } }
+
+/* ═══════════ Badge ═══════════ */
+.badge {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  height: 22px; padding: 0 var(--sp-2);
+  font-size: var(--fs-2xs); font-weight: var(--fw-bold); line-height: 1;
+  border-radius: var(--radius-full); white-space: nowrap;
+}
+.badge-neutral { background: var(--surface-2, #f0f0f4); color: var(--text-2, #555); }
+.badge-brand   { background: color-mix(in srgb, var(--brand-500) 12%, transparent); color: var(--brand-600); }
+.badge-success { background: var(--success-soft); color: var(--success-ink); }
+.badge-warning { background: var(--warning-soft); color: var(--warning-ink); }
+.badge-danger  { background: var(--danger-soft);  color: var(--danger-ink); }
+.badge-info    { background: var(--info-soft);    color: var(--info-ink); }
+/* badge شمارشی (عدد قرمز روی آیکون) */
+.badge-count {
+  min-width: 18px; height: 18px; padding: 0 5px;
+  background: var(--danger); color: #fff;
+  font-size: var(--fs-2xs); font-weight: var(--fw-bold);
+  border-radius: var(--radius-full); display: inline-grid; place-items: center;
+}
+
+/* ═══════════ Chip (فیلتر/انتخاب) ═══════════ */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  height: 34px; min-height: 34px; padding: 0 var(--sp-3);
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+  background: var(--surface-2, #f4f4f8); color: var(--text-2, #555);
+  border: 1px solid transparent; border-radius: var(--radius-full);
+  cursor: pointer; white-space: nowrap;
+  transition: background var(--motion-fast) var(--ease-out), color var(--motion-fast) var(--ease-out);
+}
+.chip:hover { background: var(--surface-hover, rgba(0,0,0,.05)); }
+.chip[aria-pressed="true"], .chip.is-active {
+  background: color-mix(in srgb, var(--brand-500) 12%, transparent);
+  color: var(--brand-600); border-color: color-mix(in srgb, var(--brand-500) 30%, transparent);
+}
+
+/* ═══════════ Avatar ═══════════ */
+.avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: inline-grid; place-items: center; flex-shrink: 0;
+  font-weight: var(--fw-bold); color: #fff; overflow: hidden;
+  background: linear-gradient(135deg, var(--brand-400), var(--brand-600));
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-sm { width: 32px; height: 32px; font-size: var(--fs-sm); }
+.avatar-lg { width: 56px; height: 56px; font-size: var(--fs-xl); }
+
+/* ═══════════ Toggle / Switch ═══════════ */
+.switch { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
+.switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.switch-track {
+  position: absolute; inset: 0; background: var(--border, #d5d5da);
+  border-radius: var(--radius-full); transition: background var(--motion-base) var(--ease-out);
+}
+.switch-thumb {
+  position: absolute; top: 3px; inset-inline-start: 3px; width: 20px; height: 20px;
+  background: #fff; border-radius: 50%; box-shadow: var(--elevation-1);
+  transition: transform var(--motion-base) var(--ease-spring);
+}
+.switch input:checked ~ .switch-track { background: var(--brand-500); }
+.switch input:checked ~ .switch-thumb { transform: translateX(-18px); } /* RTL: به چپ */
+.switch input:focus-visible ~ .switch-track { box-shadow: var(--focus-ring); }
+
+/* ═══════════ Tabs ═══════════ */
+.tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--border, #ececec); }
+.tab {
+  height: 40px; padding: 0 var(--sp-4); background: none; border: 0;
+  font-family: inherit; font-size: var(--fs-md); font-weight: var(--fw-semibold);
+  color: var(--text-2, #666); cursor: pointer; position: relative;
+  transition: color var(--motion-fast) var(--ease-out);
+}
+.tab:hover { color: var(--text-1, #222); }
+.tab[aria-selected="true"] { color: var(--brand-600); }
+.tab[aria-selected="true"]::after {
+  content: ""; position: absolute; inset-inline: var(--sp-3); bottom: -1px; height: 2px;
+  background: var(--brand-500); border-radius: 2px;
+}
+
+/* ═══════════ Tooltip (CSS-only) ═══════════ */
+.tooltip { position: relative; }
+.tooltip::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); inset-inline-start: 50%;
+  transform: translateX(50%) translateY(4px); /* RTL-safe center */
+  background: var(--text-1, #222); color: #fff; font-size: var(--fs-xs); font-weight: var(--fw-medium);
+  padding: var(--sp-1) var(--sp-2); border-radius: var(--radius-sm); white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity var(--motion-fast) var(--ease-out), transform var(--motion-fast) var(--ease-out);
+  z-index: var(--z-tooltip);
+}
+.tooltip:hover::after, .tooltip:focus-visible::after { opacity: 1; transform: translateX(50%) translateY(0); }
+
+/* ═══════════ Modal / Overlay (پایه — helper رفتار در JS) ═══════════ */
+.overlay {
+  position: fixed; inset: 0; background: rgba(11,16,32,.5);
+  display: grid; place-items: center; padding: var(--sp-4);
+  z-index: var(--z-modal); animation: overlay-in var(--motion-base) var(--ease-out);
+}
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+.modal {
+  background: var(--surface, #fff); border-radius: var(--radius-xl);
+  box-shadow: var(--elevation-5); max-width: 480px; width: 100%;
+  max-height: 85vh; overflow-y: auto; padding: var(--sp-6);
+  animation: modal-in var(--motion-base) var(--ease-spring);
+}
+@keyframes modal-in { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* ═══════════ Bottom Sheet (پایه) ═══════════ */
+.sheet {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: var(--z-modal);
+  background: var(--surface, #fff); border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+  box-shadow: var(--elevation-5); max-height: 90vh; overflow-y: auto;
+  padding: var(--sp-3) var(--sp-5) var(--sp-6);
+  animation: sheet-in var(--motion-slow) var(--ease-spring);
+}
+@keyframes sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet-handle { width: 36px; height: 4px; background: var(--border, #ddd); border-radius: 2px; margin: 0 auto var(--sp-4); }

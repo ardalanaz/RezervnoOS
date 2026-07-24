@@ -1,6 +1,7 @@
 // ═══ رزرونو — سفرها: تقویم، کیف پول، QR، رزرو مجدد (بخشی از اپ کاستومر) ═══
 // ── Calendar Sync: تولید فایل .ics واقعی ──
 import { API, isLoggedIn } from '../api.js';
+import { icon } from '../icons.js';
 import { closeSheet, esc, openSheet, toast } from '../auth.js';
 import { openRest } from '../data/detail.js';
 import { go } from '../data/discover.js';
@@ -19,7 +20,7 @@ export function addToCalendar(code,name,date,time){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=`rezervno-${code}.ics`;a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  toast('📅','فایل تقویم دانلود شد — بازش کن تا اضافه شه');
+  toast('','فایل تقویم دانلود شد — بازش کن تا اضافه شه');
 }
 export function icsDate(d){return d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';}
 export function parseTripDateTime(date,time){
@@ -34,7 +35,7 @@ export function addToWallet(code,name,date,time,kind){
   // (که در سرور تولید می‌شود). اینجا کارت پاس‌مانند را نمایش می‌دهیم.
   const isApple=kind==='apple';
   openSheet(`<div class="wallet-pass ${isApple?'wp-apple':'wp-google'}">
-    <div class="wp-top"><span class="wp-brand">رزرونو</span><span class="wp-logo">${isApple?'':'🎫'}</span></div>
+    <div class="wp-top"><span class="wp-brand">رزرونو</span><span class="wp-logo">${isApple?'':icon('ticket',{size:18})}</span></div>
     <div class="wp-rest">${esc(name)}</div>
     <div class="wp-row"><div><div class="wp-lbl">تاریخ</div><div class="wp-val">${esc(date)}</div></div>
       <div><div class="wp-lbl">ساعت</div><div class="wp-val">${esc(time)}</div></div></div>
@@ -77,18 +78,18 @@ export function repeatReservation(rid){
   const r=R.find(x=>x.id===rid);
   if(!r){toast('','رستوران پیدا نشد');return;}
   go('rest');openRest(rid);
-  toast('🔄','اطلاعات رزرو قبلی آماده‌ست — فقط زمان رو انتخاب کن');
+  toast('','اطلاعات رزرو قبلی آماده‌ست — فقط زمان رو انتخاب کن');
 }
 // لغو رزرو (متصل به API اگر آنلاین)
 export async function cancelTrip(code,btn){
   const tripEl=btn.closest('.trip');
   if(isLoggedIn()){
     const res=await API.post('/reservations/'+encodeURIComponent(code)+'/cancel',{});
-    if(res.ok){toast('✓','رزرو لغو شد');if(tripEl)tripEl.style.opacity=.5;return;}
-    if(!res.offline){toast('⚠️',res.error?.message||'لغو ناموفق بود');return;}
+    if(res.ok){toast('','رزرو لغو شد');if(tripEl)tripEl.style.opacity=.5;return;}
+    if(!res.offline){toast('',res.error?.message||'لغو ناموفق بود');return;}
   }
   // fallback (آفلاین یا مهمان)
-  toast('✓','رزرو لغو شد');if(tripEl)tripEl.style.opacity=.5;
+  toast('','رزرو لغو شد');if(tripEl)tripEl.style.opacity=.5;
 }
 
 

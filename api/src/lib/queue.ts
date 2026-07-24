@@ -105,14 +105,23 @@ export async function completeJob(id: string, result?: Record<string, unknown>):
   });
 }
 
+/** مدتِ backoff نمایی بر حسب ثانیه (سقف ۱ ساعت). تابع خالص — قابل‌تست بدون DB. */
+export function computeBackoffSeconds(attempts: number): number {
+  return Math.min(Math.pow(2, attempts), 3600);
+}
+
+/** آیا job با این تعداد تلاش باید به DLQ برود؟ تابع خالص — قابل‌تست بدون DB. */
+export function shouldDeadLetter(attempts: number, maxAttempts: number): boolean {
+  return attempts >= maxAttempts;
+}
+
 /**
  * علامت‌گذاری شکست. اگر attempts به max رسیده باشد → DLQ (dead).
  * وگرنه → pending با backoff نمایی (2^attempts ثانیه).
  */
 export async function failJob(job: ClaimedJob, error: string): Promise<'retry' | 'dead'> {
-  const willDie = job.attempts >= job.maxAttempts;
-  // backoff: 2^attempts ثانیه (attempt 1 → 2s, 2 → 4s, 3 → 8s ...)
-  const backoffSec = Math.min(Math.pow(2, job.attempts), 3600); // سقف ۱ ساعت
+  const willDie = shouldDeadLetter(job.attempts, job.maxAttempts);
+  const backoffSec = computeBackoffSeconds(job.attempts);
   await db.$executeRaw`
     UPDATE jobs SET
       status = ${willDie ? 'dead' : 'pending'}::job_status,

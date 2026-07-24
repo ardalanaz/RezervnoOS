@@ -48,11 +48,12 @@ ALTER TABLE reservations ADD CONSTRAINT no_table_overlap
   );
 
 -- ── ایندکس‌های عملکرد (مکمل ایندکس‌های Prisma) ──
--- برای کوئری تداخل و داشبورد در ساعات شلوغ:
+-- ⚠️ یافته‌ی حسابرسیِ ۲۰۲۶-۰۷-۱۹ (رجوع: docs/PROJECT-AUDIT-HANDOFF-DATABASE.md #۵):
+-- این فایل قبلاً اینجا idx_resv_table_active_range را می‌ساخت — یک ایندکسِ GiST
+-- تقریباً عینِ ایندکسِ خودکارِ constraint «no_table_overlap» بالا (همان ستون‌ها، فقط
+-- بدونِ شرطِ table_id IS NOT NULL)، بدونِ فایده‌ی کوئریِ اضافه و با دو برابر هزینه‌ی
+-- maintenance روی هر INSERT/UPDATE رزرو. حذف شد (رجوع: migration manual/022).
 DROP INDEX IF EXISTS idx_resv_table_active_range;
-CREATE INDEX IF NOT EXISTS idx_resv_table_active_range
-  ON reservations USING gist (table_id, tsrange(slot_start, block_end))
-  WHERE status IN ('pending','confirmed','auto_confirmed','preparing','checked_in','running_late','arrived','seated','dining');
 
 -- برای پاکسازی هولدهای منقضی:
 CREATE INDEX IF NOT EXISTS idx_resv_hold_expiry

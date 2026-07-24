@@ -6,23 +6,44 @@ import { normalizePhone } from '@/lib/otp';
 import { withIdempotency } from '@/lib/idempotency';
 import { clientIp } from '@/lib/ratelimit';
 import { Err, errorResponse } from '@/lib/errors';
-import { z } from '@/lib/validate';
+import { parseBody, z, zUuid, zDateStr, zTimeStr, zPartySize, zPhone } from '@/lib/schemas';
 
 // Schema ورودیِ رزرو — یک‌جا تعریف، خطاهای یکدست، type inference.
+// نکته‌ی امنیتی: قبلاً preorder/guest/coupon_code/gift_card_* اصلاً اعتبارسنجی
+// نمی‌شدند و مستقیم (فقط با ?? پیش‌فرض) به createReservation می‌رفتند — یعنی
+// شکلِ دلخواه از کلاینت مستقیم وارد منطق مالی/رزرو می‌شد.
 const reservationSchema = z.object({
-  restaurant_id: z.string().min(1),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),   // YYYY-MM-DD
-  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), // HH:mm
-  party_size: z.number().int().min(1).max(30),
+  restaurant_id: zUuid,
+  date: zDateStr,
+  time: zTimeStr,
+  party_size: zPartySize,
+  // ستونِ DB از نوع text[] است و createReservation هم string[] می‌گیرد؛ schema پیش‌تر
+  // z.string() بود که هم buildِ TypeScript را می‌شکست و هم در زمانِ اجرا آرایه را رد می‌کرد.
+  preferences: z.array(z.string().max(100)).max(20).optional(),
+  preorder: z.array(z.object({
+    menu_item_id: zUuid,
+    qty: z.number().int().min(1).max(50).optional(),
+  })).max(50).optional(),
+  guest: z.object({
+    name: z.string().min(1).max(100).optional(),
+    phone: zPhone.optional(),
+    table_number: z.number().int().min(1).max(999).optional(),
+    note: z.string().max(500).optional(),
+  }).optional(),
+  notify_sms: z.boolean().optional(),
+  duration_minutes: z.number().int().min(15).max(600).optional(),
+  hold: z.boolean().optional(),
+  coupon_code: z.string().min(1).max(50).optional(),
+  gift_card_code: z.string().min(1).max(50).optional(),
+  gift_card_amount: z.number().min(0).max(1_000_000_000).optional(),
 });
 
 /** POST /api/v1/reservations — مشتری (app) یا staff (manual) */
 export async function POST(req: Request) {
   try {
     const auth = authFromRequest(req);
-    const b = await req.json();
-    // Validation متمرکز: همه‌ی خطاها با هم، فرمتِ یکدست (به‌جای if دستی).
-    reservationSchema.parse(b);
+    // Validation متمرکز: همه‌ی خطاها با هم، فرمتِ یکدست (به‌جای if دستی)، + سقفِ حجمِ بدنه.
+    const b = await parseBody(req, reservationSchema);
 
     // ── Idempotency: اگر کلاینت هدر Idempotency-Key بفرستد، double-submit
     //    (دوبار زدن دکمه یا retry شبکه) رزرو دوم نمی‌سازد؛ پاسخ اول برمی‌گردد. ──
@@ -63,9 +84,11 @@ export async function POST(req: Request) {
       preorder: (b.preorder ?? []).map((p: { menu_item_id: string; qty?: number }) =>
         ({ menuItemId: p.menu_item_id, qty: p.qty ?? 1 })),
       userId: auth.kind === 'customer' ? auth.sub : staffGuestUserId,
-      guest: isStaff ? {
-        name: b.guest?.name, phone: b.guest?.phone,
-        tableNumber: b.guest?.table_number, note: b.guest?.note,
+      // شرطی ساخته می‌شود تا TypeScript خودش name را به string باریک کند.
+      // (اعتبارسنجیِ زمانِ اجرا بالاتر انجام شده و پیامِ فارسیِ روشن می‌دهد.)
+      guest: isStaff && b.guest?.name ? {
+        name: b.guest.name, phone: b.guest.phone,
+        tableNumber: b.guest.table_number, note: b.guest.note,
       } : undefined,
       source: isStaff ? 'manual' : 'app',
       notifySms: b.notify_sms,

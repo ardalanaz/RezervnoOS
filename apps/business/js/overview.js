@@ -83,12 +83,12 @@ function renderDashResvRows(){
   if(!today.length) return '<div class="dr-empty">هنوز رزروی برای امشب ثبت نشده</div>';
   return today.map((r,i)=>{
     const arrived = ['arrived','seated','dining','checked_in'].includes(r.status);
-    const vip = r.seg==='vip' ? '<span class="dr-mini vip">★ VIP</span>' : '';
+    const vip = r.seg==='vip' ? `<span class="dr-mini vip">${icon('star',{size:11,fill:true})} VIP</span>` : '';
     const risk = (r.noShowTier==='high'||r.risk==='high') ? '<span class="dr-mini risk">ریسک نوشو</span>' : '';
     const metaBits = [r.table?('میز '+fa(r.table)):'', fa(r.party)+' نفر', r.pre?'با پیش‌سفارش':''].filter(Boolean).join(' · ');
     const idx = RES.indexOf(r);
     const act = arrived
-      ? '<span class="dr-mini" style="background:var(--green-50);color:var(--green)">حاضر ✓</span>'
+      ? `<span class="dr-mini" style="background:var(--green-50);color:var(--green)">${icon('check',{size:11})} حاضر</span>`
       : `${(r.noShowTier==='high'||r.risk==='high')?`<button class="dr-act" onclick="callGuest(${idx})">تماس</button>`:''}<button class="dr-act go" onclick="dashCheckIn(${idx})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>ثبت ورود</button>`;
     return `<div class="dr-row">
       <div class="dr-time">${r.t}</div>
@@ -102,9 +102,9 @@ function renderDashResvRows(){
 function renderDashWaitlist(){
   const initials = n => (n||'؟').trim().slice(0,2);
   const queue = WAITLIST.filter(w=>w.status==='waiting').sort((a,b)=>(b.priority-a.priority)||(b.waited_minutes-a.waited_minutes)).slice(0,5);
-  if(!queue.length) return '<div class="dr-empty">🎉 صف خالیه — همه سر میزن</div>';
+  if(!queue.length) return `<div class="empty-state"><div class="empty-state-icon">${icon('checkCircle',{size:36})}</div><div class="empty-state-desc">صف خالیه — همه سر میزن</div></div>`;
   return queue.map((w,i)=>{
-    const vip = w.is_vip ? '<span class="dr-mini vip">★</span>' : '';
+    const vip = w.is_vip ? `<span class="dr-mini vip">${icon('star',{size:11,fill:true})}</span>` : '';
     const waited = w.waited_minutes>=10 ? `<span class="wl-wait">${fa(w.waited_minutes)} دقیقه منتظر</span>` : `${fa(w.waited_minutes)} دقیقه`;
     return `<div class="dr-row">
       <div class="wl-pos">${fa(i+1)}</div>
@@ -123,7 +123,7 @@ function dashCheckIn(idx){
 // تماس با مهمان (نمایش شماره)
 function callGuest(idx){
   const r = RES[idx]; if(!r) return;
-  toast('📞', `تماس با ${r.name}: ${r.phone||'شماره ثبت نشده'}`);
+  toast('', `تماس با ${r.name}: ${r.phone||'شماره ثبت نشده'}`);
 }
 function renderEnterpriseDashboard(){
   const k = calcTodayKPIs();
@@ -142,48 +142,48 @@ function renderEnterpriseDashboard(){
     <!-- KPIهای کلیدی امروز (شبکه‌ی enterprise) -->
     <div class="kpi-grid">
       <div class="kpi-card" onclick="nav('reservations')">
-        <div class="kpi-top"><span class="kpi-ic" style="background:var(--blue-50)">📅</span><span class="kpi-trend up">امروز</span></div>
+        <div class="kpi-top"><span class="kpi-ic" style="background:var(--blue-50)">${icon('calendar',{size:18})}</span><span class="kpi-trend up">امروز</span></div>
         <div class="kpi-val">${fa(k.todayCount)}</div>
         <div class="kpi-lbl">رزرو امروز</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-top"><span class="kpi-ic" style="background:var(--green-50)">🍽️</span><span class="kpi-trend">${fa(k.occupancyPct)}٪</span></div>
+        <div class="kpi-top"><span class="kpi-ic" style="background:var(--green-50)">${icon('utensils',{size:18})}</span><span class="kpi-trend">${fa(k.occupancyPct)}٪</span></div>
         <div class="kpi-val">${fa(k.seatedTables)}<span class="kpi-sub">/${fa(k.totalTables)}</span></div>
         <div class="kpi-lbl">اشغال فعلی</div>
         <div class="kpi-bar"><div class="kpi-bar-fill" style="width:0" data-w="${k.occupancyPct}"></div></div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-top"><span class="kpi-ic" style="background:#FEF3C7">⏳</span><span class="kpi-trend">${fa(k.expectedGuests)} نفر</span></div>
+        <div class="kpi-top"><span class="kpi-ic" style="background:#FEF3C7">${icon('clock',{size:18})}</span><span class="kpi-trend">${fa(k.expectedGuests)} نفر</span></div>
         <div class="kpi-val">${fa(k.expectedCount)}</div>
         <div class="kpi-lbl">ورودی‌های منتظر</div>
       </div>
       <div class="kpi-card ${k.noShowCount>0?'kpi-warn':''}">
-        <div class="kpi-top"><span class="kpi-ic" style="background:#FEE2E2">🚫</span><span class="kpi-trend ${k.noShowRate>15?'down':''}">${fa(k.noShowRate)}٪</span></div>
+        <div class="kpi-top"><span class="kpi-ic" style="background:#FEE2E2">${icon('alert',{size:18})}</span><span class="kpi-trend ${k.noShowRate>15?'down':''}">${fa(k.noShowRate)}٪</span></div>
         <div class="kpi-val">${fa(k.noShowCount)}</div>
         <div class="kpi-lbl">عدم حضور</div>
       </div>
       <div class="kpi-card kpi-revenue">
-        <div class="kpi-top"><span class="kpi-ic" style="background:#DCFCE7">💰</span>${REVENUE_CONFIG.connected?'<span class="kpi-trend up">صندوق</span>':'<span class="kpi-trend est">تخمین</span>'}</div>
+        <div class="kpi-top"><span class="kpi-ic" style="background:#DCFCE7">${icon('wallet',{size:18})}</span>${REVENUE_CONFIG.connected?'<span class="kpi-trend up">صندوق</span>':'<span class="kpi-trend est">تخمین</span>'}</div>
         <div class="kpi-val">${elap}${fmtMoney(k.revenue)}</div>
         <div class="kpi-lbl">درآمد امروز (تومان)</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-top"><span class="kpi-ic" style="background:#EDE9FE">🧾</span></div>
+        <div class="kpi-top"><span class="kpi-ic" style="background:#EDE9FE">${icon('creditCard',{size:18})}</span></div>
         <div class="kpi-val">${elap}${fmtMoney(k.avgSpend)}</div>
         <div class="kpi-lbl">میانگین خرید هر نفر</div>
       </div>
     </div>
 
-    ${!REVENUE_CONFIG.connected?`<div class="cash-note">💡 ارقام درآمد تخمینی‌اند. با اتصال API صندوق، اعداد واقعی نمایش داده می‌شوند. <button class="cash-link" onclick="toast('🔌','وقتی API صندوق آماده شد، در تنظیمات وصل کن')">اتصال صندوق</button></div>`:''}
+    ${!REVENUE_CONFIG.connected?`<div class="cash-note">${icon('info',{size:13})} ارقام درآمد تخمینی‌اند. با اتصال API صندوق، اعداد واقعی نمایش داده می‌شوند. <button class="cash-link" onclick="toast('','وقتی API صندوق آماده شد، در تنظیمات وصل کن')">اتصال صندوق</button></div>`:''}
 
     <!-- عملیات امشب: رزروها + لیست انتظار زنده (مرکز فرماندهی) -->
     <div class="dash-ops">
       <div class="ops-panel">
-        <div class="ops-head"><div class="ops-title">رزروهای امشب</div><button class="ops-link" onclick="nav('reservations')">همه رزروها ←</button></div>
+        <div class="ops-head"><div class="ops-title">رزروهای امشب</div><button class="ops-link" onclick="nav('reservations')">همه رزروها ${icon('arrowL',{size:13})}</button></div>
         <div id="dashResvRows">${renderDashResvRows()}</div>
       </div>
       <div class="ops-panel">
-        <div class="ops-head"><div class="ops-title">🔴 لیست انتظار <span class="count-pill">${fa(WAITLIST.filter(w=>w.status==='waiting').length)} نفر</span></div><button class="ops-link" onclick="nav('waitlist')">مدیریت ←</button></div>
+        <div class="ops-head"><div class="ops-title"><span class="live-dot" aria-hidden="true"></span> لیست انتظار <span class="count-pill">${fa(WAITLIST.filter(w=>w.status==='waiting').length)} نفر</span></div><button class="ops-link" onclick="nav('waitlist')">مدیریت ${icon('arrowL',{size:13})}</button></div>
         <div id="dashWaitlist">${renderDashWaitlist()}</div>
       </div>
     </div>
@@ -191,7 +191,7 @@ function renderEnterpriseDashboard(){
     <!-- دستیار هوشمند (تمایز از رقیب) -->
     <div class="ai-strip">
       <div class="ai-strip-left">
-        <span class="ai-strip-badge">✦ دستیار هوشمند رزرونو</span>
+        <span class="ai-strip-badge">${icon('sparkle',{size:13,fill:true})} دستیار هوشمند رزرونو</span>
         <div class="ai-strip-title">امشب چه کنی؟</div>
         <div class="ai-strip-text">${dashAiInsight()}</div>
       </div>
@@ -200,31 +200,31 @@ function renderEnterpriseDashboard(){
 
     <!-- ساعات پیک امروز -->
     <div class="panel">
-      <div class="panel-head"><div class="panel-title">📊 ساعات پیک</div><div class="panel-sub">توزیع رزرو در ساعات روز</div></div>
+      <div class="panel-head"><div class="panel-title">${icon('chart',{size:16})} ساعات پیک</div><div class="panel-sub">توزیع رزرو در ساعات روز</div></div>
       <div id="peakChart" class="peak-chart"></div>
     </div>
 
     <!-- Heatmap هفتگی -->
     <div class="panel">
-      <div class="panel-head"><div class="panel-title">🔥 نقشه‌ی حرارتی هفته</div><div class="panel-sub">شلوغی بر اساس روز و ساعت</div></div>
+      <div class="panel-head"><div class="panel-title">${icon('flame',{size:16,fill:true})} نقشه‌ی حرارتی هفته</div><div class="panel-sub">شلوغی بر اساس روز و ساعت</div></div>
       <div id="heatmap" class="heatmap"></div>
     </div>
 
     <!-- مشتریان برتر + بینش‌ها -->
     <div class="dash-2col">
       <div class="panel">
-        <div class="panel-head"><div class="panel-title">⭐ مشتریان برتر</div></div>
+        <div class="panel-head"><div class="panel-title">${icon('star',{size:16,fill:true})} مشتریان برتر</div></div>
         <div id="topCustomers"></div>
       </div>
       <div class="panel">
-        <div class="panel-head"><div class="panel-title">✦ بینش‌های هوشمند</div></div>
+        <div class="panel-head"><div class="panel-title">${icon('sparkle',{size:16,fill:true})} بینش‌های هوشمند</div></div>
         <div id="insights"></div>
       </div>
     </div>
 
     <!-- یادداشت کارکنان -->
     <div class="panel">
-      <div class="panel-head"><div><div class="panel-title">📝 یادداشت کارکنان</div><div class="panel-sub">یادداشت‌های امروز تیم</div></div>
+      <div class="panel-head"><div><div class="panel-title">${icon('inbox',{size:16})} یادداشت کارکنان</div><div class="panel-sub">یادداشت‌های امروز تیم</div></div>
         <button class="btn btn-ghost btn-sm" onclick="addStaffNote()">+ یادداشت</button></div>
       <div id="staffNotes"></div>
     </div>`;
@@ -282,7 +282,7 @@ function renderTopCustomers(){
       <span class="top-ava">${c.ava}</span>
       <div class="top-body"><div class="top-name">${esc(c.name)} ${c.seg==='vip'?'<span class="seg-vip">VIP</span>':''}</div>
         <div class="top-meta">${fa(c.visits)} بازدید · ${c.spent} خرید</div></div>
-      <span class="top-arrow">›</span>
+      <span class="top-arrow">${icon('chevronL',{size:14})}</span>
     </div>`).join('');
 }
 
@@ -290,14 +290,14 @@ function renderTopCustomers(){
 function renderInsights(){
   const k=calcTodayKPIs();
   const insights=[];
-  if(k.noShowRate>15) insights.push({ic:'⚠️',t:`نرخ عدم حضور ${fa(k.noShowRate)}٪ بالاست`,d:'پیامک یادآوری بفرست یا بیعانه بگیر',c:'warn'});
-  if(k.occupancyPct>80) insights.push({ic:'🔥',t:'سالن تقریباً پره',d:'لیست انتظار را فعال نگه دار',c:'hot'});
-  if(k.expectedCount>3) insights.push({ic:'⏳',t:`${fa(k.expectedCount)} مهمان در راه`,d:'میزها را برای ورودشان آماده کن',c:'info'});
+  if(k.noShowRate>15) insights.push({ic:'alert',t:`نرخ عدم حضور ${fa(k.noShowRate)}٪ بالاست`,d:'پیامک یادآوری بفرست یا بیعانه بگیر',c:'warn'});
+  if(k.occupancyPct>80) insights.push({ic:'flame',t:'سالن تقریباً پره',d:'لیست انتظار را فعال نگه دار',c:'hot'});
+  if(k.expectedCount>3) insights.push({ic:'clock',t:`${fa(k.expectedCount)} مهمان در راه`,d:'میزها را برای ورودشان آماده کن',c:'info'});
   const vipToday=RES.filter(r=>r.date==='today'&&r.seg==='vip').length;
-  if(vipToday>0) insights.push({ic:'⭐',t:`${fa(vipToday)} مهمان VIP امروز`,d:'برخورد ویژه را فراموش نکن',c:'vip'});
-  insights.push({ic:'📈',t:'جمعه شب پرترددترین زمان توست',d:'کارکنان بیشتری برنامه‌ریزی کن',c:'info'});
+  if(vipToday>0) insights.push({ic:'star',t:`${fa(vipToday)} مهمان VIP امروز`,d:'برخورد ویژه را فراموش نکن',c:'vip'});
+  insights.push({ic:'trending',t:'جمعه شب پرترددترین زمان توست',d:'کارکنان بیشتری برنامه‌ریزی کن',c:'info'});
   document.getElementById('insights').innerHTML=insights.slice(0,4).map(i=>`
-    <div class="insight insight-${i.c}"><span class="insight-ic">${i.ic}</span>
+    <div class="insight insight-${i.c}"><span class="insight-ic">${icon(i.ic,{size:16})}</span>
       <div><div class="insight-t">${i.t}</div><div class="insight-d">${i.d}</div></div></div>`).join('');
 }
 
@@ -318,14 +318,14 @@ function renderStaffNotes(){
   if(!el)return;
   if(API.getToken() && !_notesLoaded){ loadStaffNotes().then(renderStaffNotes); }
   el.innerHTML=STAFF_NOTES.length?STAFF_NOTES.map((n)=>`
-    <div class="snote"${n.pinned?' style="border-color:var(--amber);background:var(--amber-50)"':''}><div class="snote-body"><div class="snote-txt">${n.pinned?'📌 ':''}${esc(n.txt)}</div>
+    <div class="snote"${n.pinned?' style="border-color:var(--amber);background:var(--amber-50)"':''}><div class="snote-body"><div class="snote-txt">${n.pinned?icon('pin',{size:13})+' ':''}${esc(n.txt)}</div>
       <div class="snote-meta">${esc(n.who)} · ${n.time}</div></div>
       <button class="snote-del" onclick="delStaffNote('${n.id||''}')">×</button></div>`).join(''):'<div class="snote-empty">یادداشتی ثبت نشده</div>';
 }
 function addStaffNote(){
   openModal(`<div class="modal-title">یادداشت جدید</div>
     <textarea id="noteTxt" class="inp" rows="3" placeholder="یادداشت برای تیم..." style="resize:none;margin-top:12px"></textarea>
-    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;cursor:pointer"><input type="checkbox" id="notePin"> 📌 سنجاق کن (بالای لیست بمونه)</label>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;cursor:pointer"><input type="checkbox" id="notePin"> سنجاق کن (بالای لیست بمونه)</label>
     <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveStaffNote()">ثبت یادداشت</button>`);
 }
 async function saveStaffNote(){
@@ -334,18 +334,18 @@ async function saveStaffNote(){
   const pinned=document.getElementById('notePin')?.checked||false;
   if(API.getToken()){
     const res=await API.addNote({body:txt,pinned});
-    if(!res.ok){toast('⚠️',res.error?.message||'ثبت ناموفق بود');return;}
+    if(!res.ok){toast('',res.error?.message||'ثبت ناموفق بود');return;}
     await loadStaffNotes();
   }else{
     const now=new Date();
     STAFF_NOTES.unshift({who:'شما',txt,pinned,time:fa(`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`)});
   }
-  closeModal();renderStaffNotes();toast('✓','یادداشت ثبت شد');
+  closeModal();renderStaffNotes();toast('','یادداشت ثبت شد');
 }
 async function delStaffNote(id){
   if(id && API.getToken()){
     const res=await API.deleteNote(id);
-    if(!res.ok){toast('⚠️',res.error?.message||'حذف ناموفق بود');return;}
+    if(!res.ok){toast('',res.error?.message||'حذف ناموفق بود');return;}
     await loadStaffNotes();
   }else{
     STAFF_NOTES=STAFF_NOTES.filter(n=>String(n.id||'')!==String(id));
@@ -354,13 +354,6 @@ async function delStaffNote(id){
 }
 // ═══════════ Live Updates (به‌روزرسانی زنده) ═══════════
 let liveTimer=null, liveOn=true;
-// شبیه‌سازی رویدادهای زنده برای دمو؛ با بک‌اند واقعی → polling یا WebSocket
-const LIVE_EVENTS=[
-  {ic:'✅',txt:'مهمان میز ۵ رسید'},
-  {ic:'📋',txt:'رزرو جدید: ۲ نفر، ساعت ۲۱:۰۰'},
-  {ic:'🔔',txt:'لیست انتظار: نفر جدید اضافه شد'},
-  {ic:'🪑',txt:'میز ۳ آزاد شد'},
-];
 function startLiveUpdates(){
   if(liveTimer)clearInterval(liveTimer);
   liveTimer=setInterval(()=>{
@@ -389,15 +382,15 @@ function liveStatusBadge(){
 function initLiveUpdates(){ startLiveUpdates(); }
 // ── تاریخچه‌ی مشتری ──
 function viewCustomerHistory(name){
-  const c=GUESTS.find(x=>x.name===name)||{name,visits:0,spent:'۰',seg:'new',ava:'👤'};
+  const c=GUESTS.find(x=>x.name===name)||{name,visits:0,spent:'۰',seg:'new',ava:''};
   const history=RES.filter(r=>r.name===name);
-  openModal(`<div class="ch-head"><span class="ch-ava">${c.ava||'👤'}</span>
+  openModal(`<div class="ch-head"><span class="ch-ava">${c.ava||icon('user',{size:22})}</span>
     <div><div class="modal-title">${esc(name)} ${c.seg==='vip'?'<span class="seg-vip">VIP</span>':''}</div>
     <div class="ch-sub">${fa(c.visits||0)} بازدید · ${c.spent||'۰'} مجموع خرید</div></div></div>
     ${(c.phone||c.birthday)?`<div class="ch-contact">
-      ${c.phone?`<div class="ch-cinfo"><span>📱</span> ${esc(c.phone)}</div>`:''}
-      ${c.birthday?`<div class="ch-cinfo"><span>🎂</span> ${esc(c.birthday)}</div>`:''}
-      ${c.points?`<div class="ch-cinfo"><span>⭐</span> ${fa(c.points)} امتیاز</div>`:''}
+      ${c.phone?`<div class="ch-cinfo"><span>${icon('phone',{size:13})}</span> ${esc(c.phone)}</div>`:''}
+      ${c.birthday?`<div class="ch-cinfo"><span>${icon('calendar',{size:13})}</span> ${esc(c.birthday)}</div>`:''}
+      ${c.points?`<div class="ch-cinfo"><span>${icon('star',{size:13,fill:true})}</span> ${fa(c.points)} امتیاز</div>`:''}
     </div>`:''}
     <div class="ch-stats">
       <div class="ch-stat"><div class="ch-stat-v">${fa(c.visits||0)}</div><div class="ch-stat-l">بازدید</div></div>
@@ -405,7 +398,7 @@ function viewCustomerHistory(name){
       <div class="ch-stat"><div class="ch-stat-v">${fa(c.ret||0)}٪</div><div class="ch-stat-l">بازگشت</div></div>
     </div>
     <div class="ch-hist-title">سابقه‌ی رزرو</div>
-    <div class="ch-hist">${history.length?history.map(h=>`<div class="ch-hrow"><span>${STATUS_META[h.status]?.icon||'•'} ${h.dLabel||h.date}</span><span class="ch-hmeta">${h.t} · ${fa(h.party)} نفر</span></div>`).join(''):'<div class="snote-empty">سابقه‌ای ثبت نشده</div>'}</div>`);
+    <div class="ch-hist">${history.length?history.map(h=>`<div class="ch-hrow"><span>${icon(STATUS_META[h.status]?.icon||'info',{size:12})} ${h.dLabel||h.date}</span><span class="ch-hmeta">${h.t} · ${fa(h.party)} نفر</span></div>`).join(''):'<div class="snote-empty">سابقه‌ای ثبت نشده</div>'}</div>`);
 }
 
 // ═══════════ RESERVATIONS ═══════════

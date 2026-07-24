@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { verifyRefresh, signAccess, signRefresh, accessFromRefresh } from '@/lib/jwt';
-import { isRefreshRevoked, revokeRefreshToken, safeJson } from '@/lib/security';
+import { isRefreshRevoked, revokeRefreshToken } from '@/lib/security';
 import { db } from '@/lib/db';
 import { errorResponse } from '@/lib/errors';
+import { parseBody, z } from '@/lib/schemas';
+
+const schema = z.object({ refresh: z.string().min(1).max(2000) });
 
 /**
  * POST /api/v1/auth/refresh
@@ -20,7 +23,7 @@ import { errorResponse } from '@/lib/errors';
  */
 export async function POST(req: Request) {
   try {
-    const { refresh } = await safeJson(req);
+    const { refresh } = await parseBody(req, schema);
     const payload = verifyRefresh(refresh);
     // چک لیست سیاه — توکن باطل‌شده دیگر کار نمی‌کند
     if (await isRefreshRevoked(payload.jti)) {

@@ -4,6 +4,10 @@ import { db } from '@/lib/db';
 import { transitionReservation } from '@/lib/lifecycle';
 import { enforceRateLimit, clientIp, RULES } from '@/lib/ratelimit';
 import { Err, errorResponse } from '@/lib/errors';
+import { parseParams, safeJson, zReservationCode, z } from '@/lib/schemas';
+
+const paramsSchema = z.object({ code: zReservationCode });
+const bodySchema = z.object({ reason: z.string().max(500).optional() });
 
 /**
  * POST /api/v1/reservations/:code/cancel — لغو رزرو. بدنه: { reason }
@@ -20,10 +24,11 @@ export async function POST(req: Request, { params }: { params: { code: string } 
   try {
     const auth = authFromRequest(req);
     await enforceRateLimit(clientIp(req), RULES.auth);
-    const { reason } = await req.json().catch(() => ({}));
+    const { code } = parseParams(params, paramsSchema);
+    const { reason } = bodySchema.parse(await safeJson(req));
 
     const resv = await db.reservation.findUnique({
-      where: { code: params.code },
+      where: { code },
       select: { id: true, userId: true, restaurantId: true, restaurant: { select: { tenantId: true } } },
     });
     if (!resv) throw Err.notFound('رزرو');
@@ -50,6 +55,6 @@ export async function POST(req: Request, { params }: { params: { code: string } 
       reason: reason?.trim() || undefined,
       isAutomatic: false,
     });
-    return NextResponse.json({ code: params.code, status: result.status });
+    return NextResponse.json({ code, status: result.status });
   } catch (e) { return errorResponse(e); }
 }

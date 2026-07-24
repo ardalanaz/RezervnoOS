@@ -19,6 +19,27 @@ import { rateLimit, clientIp, rateLimitHeaders, RULES, isBanned, recordViolation
 
 export const config = { matcher: '/api/:path*' };
 
+// تأیید پیکربندی حیاتی در production (fail-fast) — عمداً «تنبل»، دقیقاً مثل
+// accessSecret/refreshSecret در jwt.ts.
+//
+// چرا تنبل و نه در سطح ماژول: `next build` با NODE_ENV=production اجرا می‌شود و
+// ماژولِ middleware را ارزیابی می‌کند. چکِ سطحِ ماژول باعث می‌شد buildِ Vercel و
+// جابِ build در CI فقط به‌خاطر نبودِ یک متغیرِ زمانِ اجرا شکست بخورد — با خطایی که
+// شبیهِ خطای کامپایل به‌نظر می‌رسد. حالا build همیشه موفق است و اگر متغیر تنظیم
+// نشده باشد، نخستین درخواست در production با همین پیامِ روشن رد می‌شود؛
+// یعنی رفتارِ امنیتی حفظ شده ولی زمانِ بروزش درست است.
+let _originsChecked = false;
+function assertAllowedOriginsConfigured(): void {
+  if (_originsChecked) return;
+  if (process.env.NODE_ENV === 'production' && !process.env.ALLOWED_ORIGINS?.trim()) {
+    throw new Error(
+      'ALLOWED_ORIGINS در production تنظیم نشده — محافظت CSRF (چک Origin) خاموش می‌شود. ' +
+      'مثلاً: ALLOWED_ORIGINS=https://rezervno.ir,https://www.rezervno.ir'
+    );
+  }
+  _originsChecked = true;
+}
+
 // پاسخ بلاک استاندارد
 function blocked(message: string, status = 429, retryAfter?: number) {
   const headers: Record<string, string> = {};
@@ -60,6 +81,7 @@ function applySecurityHeaders(res: NextResponse, origin: string | null = null) {
 }
 
 export async function middleware(req: NextRequest) {
+  assertAllowedOriginsConfigured();  // fail-fast در نخستین درخواستِ production
   const ip = clientIp(req);
   const origin = req.headers.get('origin');
 
