@@ -204,10 +204,36 @@ shown where relevant. Owners/managers bypass permission checks.
 | `/events` | GET, POST, PATCH, DELETE | — | Special events. |
 | `/branches` | GET, POST | canManageSettings* | Multi-branch management. |
 | `/chats` · `/chats/[id]` | GET, POST | — | Restaurant-side chat. |
-| `/staff` | GET, PATCH | `withStaffAuth` | Staff list + permissions (tenant-level). |
+| `/staff` | GET, POST, PATCH | `withStaffAuth` (owner/manager) | Staff management (tenant-level). See below. |
 
 \* permission mapping is **(uncertain)** for a few routes — confirm in the route
 file; the table reflects the most likely key based on the resource.
+
+### `/v1/restaurant/staff` — staff management (auth: `withStaffAuth`, owner/manager only)
+
+Tenant-level (not scoped to one restaurant). Only `owner`/`manager` may call it;
+`owner` records are immutable via this route.
+
+- **GET** → `{ items: StaffItem[] }`. Each `StaffItem`:
+  `{ id, name (string|null), phone, role, is_active, restaurant_id (string|null),
+  permissions }` where `permissions` is exactly the 9 `can*` booleans (owner/manager
+  → all `true`; `staff` → its `StaffPermission` record or the safe defaults).
+- **POST** — add a member. Body `{ phone, name?, role?('staff'|'manager', default 'staff'), permissions? }`.
+  - `phone` is normalized to `+98…`; invalid → `422 VALIDATION`.
+  - Only `owner` may create a `manager` → otherwise `403`.
+  - Duplicate phone in the tenant → `409 STAFF_PHONE_TAKEN`.
+  - `permissions` apply only when `role='staff'`.
+  - Returns `{ item: StaffItem }`, `201`.
+- **PATCH** — body `{ staff_id, name?, is_active?, permissions?, restaurant_id? }`.
+  `name: null` clears it; absent = unchanged. Guards: cannot modify an `owner`;
+  cannot deactivate yourself; a `manager` cannot deactivate another `manager`
+  (owner-only). Returns `{ ok: true }`.
+
+```bash
+curl -X POST "$API/api/v1/restaurant/staff" \
+  -H "Authorization: Bearer $OWNER_ACCESS" -H "Content-Type: application/json" \
+  -d '{"phone":"09123456789","name":"رضا محمدی","role":"staff"}'
+```
 
 Example (list reservations):
 ```bash

@@ -34,12 +34,27 @@ export async function requirePermission(auth: AccessPayload, key: PermissionKey)
   if (!allowed) throw Err.forbidden('دسترسی شما برای این بخش محدود شده است');
 }
 
-export async function getEffectivePermissions(staffId: string, role: string): Promise<Record<PermissionKey, boolean>> {
+// نسخه‌ی خالص و بدونِ DB: از role و رکوردِ StaffPermission (یا null) نقشه‌ی مؤثرِ
+// دسترسی را می‌سازد. دقیقاً همان منطقِ getEffectivePermissions است، فقط بدونِ
+// خواندنِ DB — تا هم قابلِ تست باشد و هم صدا زننده بتواند رکوردِ perm را که از
+// قبل (مثلاً با include) خوانده پاس بدهد و از N+1 پرهیز کند.
+// خروجی همیشه دقیقاً همان ۹ کلیدِ PermissionKey است (نه بیشتر) تا ستون‌های دیگرِ
+// StaffPermission مثل updated_at به API نشت نکنند.
+export function effectivePermissionsFrom(
+  role: string,
+  perm: Partial<Record<PermissionKey, boolean>> | null,
+): Record<PermissionKey, boolean> {
+  const keys = Object.keys(SAFE_DEFAULTS) as PermissionKey[];
   if (role === 'owner' || role === 'manager') {
-    return Object.fromEntries(Object.keys(SAFE_DEFAULTS).map(k => [k, true])) as Record<PermissionKey, boolean>;
+    return Object.fromEntries(keys.map(k => [k, true])) as Record<PermissionKey, boolean>;
   }
-  const perm = await db.staffPermission.findUnique({ where: { staffId } });
   return perm
-    ? Object.fromEntries(Object.keys(SAFE_DEFAULTS).map(k => [k, (perm as any)[k]])) as Record<PermissionKey, boolean>
-    : SAFE_DEFAULTS;
+    ? Object.fromEntries(keys.map(k => [k, (perm as any)[k]])) as Record<PermissionKey, boolean>
+    : { ...SAFE_DEFAULTS };
+}
+
+export async function getEffectivePermissions(staffId: string, role: string): Promise<Record<PermissionKey, boolean>> {
+  if (role === 'owner' || role === 'manager') return effectivePermissionsFrom(role, null);
+  const perm = await db.staffPermission.findUnique({ where: { staffId } });
+  return effectivePermissionsFrom(role, perm);
 }
