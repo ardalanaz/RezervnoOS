@@ -164,3 +164,11 @@ jobs:
           name: playwright-report
           path: e2e/playwright-report/
           retention-days: 14
+
+  # ── مرحله ۵: هماهنگیِ دیزاین‌سیستم (بدونِ drift بین shared/ و اپ‌ها) ──
+  design-system:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check design-system in sync with shared/
+        run: sh tools/sync-design-system.sh --check

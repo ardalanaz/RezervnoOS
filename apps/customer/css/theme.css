@@ -1,0 +1,18 @@
+/* theme.css — تمِ مخصوصِ این اپ (app-owned، از shared/ sync نمی‌شود).
+ * پایه‌ی مشترکِ توکن‌ها در tokens.css است (منبع: shared/css/tokens.css)؛
+ * این فایل فقط نگاشتِ semantic مخصوصِ همین اپ را روی آن سوار می‌کند.
+ * باید در HTML بلافاصله بعد از tokens.css لود شود (همان ترتیبِ cascadeِ قبلی). */
+
+/* ── پلِ تم: اپ مشتری (دارک) — نگاشتِ semantic به توکن‌های موجود ── */
+:root {
+  --surface: var(--card-solid, #141026);
+  --surface-2: rgba(255,255,255,.05);
+  --surface-hover: rgba(255,255,255,.06);
+  --text-1: rgba(255,255,255,.95);
+  --text-2: rgba(255,255,255,.68);
+  --text-3: rgba(255,255,255,.45);
+  --skeleton-base: rgba(255,255,255,.06);
+  --skeleton-hi: rgba(255,255,255,.12);
+  --brand-500: #6A4BFF;
+  --brand-600: #5a3fe0;
+}
