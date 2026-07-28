@@ -4,7 +4,7 @@ import { closeSheet, esc, openLogin, openSheet, toApiDateTime, toast } from '../
 import { detailSocialProof, fmtFa, go, toggleRestFav } from './discover.js';
 import { GRAD, TRIPS, bk, curRest, favs, pts, setCurRest, setBk, setPts } from './seed.js';
 import { R } from '../init.js';
-import { offerWaitlist } from '../reservation.js';
+import { offerWaitlist } from '../waitlist.js';
 import { armReveals, buzz } from '../theme-pwa.js';
 import { icon } from '../icons.js';
 export function openRest(id){
