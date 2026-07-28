@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 import { API, USER, refreshAuthUI, setUSER } from './api.js';
 import { icon } from './icons.js';
-import { faTime } from './data/detail.js';
+import { faTime } from './data/booking.js';
 import { renderProfile } from './features/food-dna.js';
 export let _loginPhone = '';
 export function openLogin(){

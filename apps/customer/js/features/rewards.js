@@ -1,7 +1,7 @@
 // ═══ رزرونو — دعوت دوستان، کارت هدیه، پاداش تولد (بخشی از اپ کاستومر) ═══
 import { API, isLoggedIn } from '../api.js';
 import { closeSheet, esc, openSheet, toast } from '../auth.js';
-import { copyCode } from '../data/detail.js';
+import { copyCode } from '../data/booking.js';
 import { icon } from '../icons.js';
 import { fmtFa } from '../data/discover.js';
 export async function openReferral(){
