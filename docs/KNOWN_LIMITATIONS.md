@@ -27,9 +27,15 @@
 
 ## 2. Frontend
 
-- **Design system is duplicated, not packaged.** `shared/css/*` + `shared/js/icons.js`
-  are copied into every app (`apps/*`, `demo-mvp/*`). A change must be propagated
-  to all copies by hand; there is no sync/build step. Risk of drift.
+- **Design system: single-source with a sync script (drift eliminated for `apps/*`).**
+  `shared/` is the canonical source; `tools/sync-design-system.sh` copies the shared
+  base (`tokens.css`, `foundation.css`, `ds-bridge.css`, `icons.js`) into each app,
+  and a CI job (`design-system`) fails on any drift. No bundler/build step is
+  introduced (each app is still a standalone static site). Per-app **intentional**
+  deltas stay app-owned: `apps/*/css/theme.css` (the app's theme, loaded right after
+  `tokens.css`) and the ESM-vs-global form of `icons.js` (customer imports it as a
+  module; the panels load it via a classic `<script>`, so the sync strips `export`).
+  **(still open)** `demo-mvp/*` and `standalone/*` are not yet covered by the sync.
 - **`standalone/` and `demo-mvp/` are generated/duplicate frontends.** They can
   fall out of sync with `apps/*`. `standalone/` should be regenerated via
   `tools/build-standalone.py` after front-end changes. **(the standalone bundle

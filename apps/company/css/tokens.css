@@ -137,17 +137,3 @@
     scroll-behavior: auto !important;
   }
 }
-
-/* ── پلِ تم: پنل شرکت (لایت) ── */
-:root {
-  --surface: #FFFFFF;
-  --surface-2: #F1F5F9;
-  --surface-hover: rgba(15,23,42,.04);
-  --text-1: #0F172A;
-  --text-2: #475569;
-  --text-3: #94A3B8;
-  --skeleton-base: rgba(15,23,42,.05);
-  --skeleton-hi: rgba(15,23,42,.10);
-  --brand-500: #4F46E5;
-  --brand-600: #4338CA;
-}

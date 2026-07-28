@@ -1,0 +1,18 @@
+/* theme.css — تمِ مخصوصِ این اپ (app-owned، از shared/ sync نمی‌شود).
+ * پایه‌ی مشترکِ توکن‌ها در tokens.css است (منبع: shared/css/tokens.css)؛
+ * این فایل فقط نگاشتِ semantic مخصوصِ همین اپ را روی آن سوار می‌کند.
+ * باید در HTML بلافاصله بعد از tokens.css لود شود (همان ترتیبِ cascadeِ قبلی). */
+
+/* ── پلِ تم: پنل بیزنس (لایت) ── */
+:root {
+  --surface: #FFFFFF;
+  --surface-2: #F4F4F8;
+  --surface-hover: rgba(11,16,32,.04);
+  --text-1: #0B1020;
+  --text-2: #5A6172;
+  --text-3: #9AA0AE;
+  --skeleton-base: rgba(11,16,32,.05);
+  --skeleton-hi: rgba(11,16,32,.10);
+  --brand-500: #4F46E5;
+  --brand-600: #4338CA;
+}

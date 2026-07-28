@@ -137,17 +137,3 @@
     scroll-behavior: auto !important;
   }
 }
-
-/* ── پلِ تم: اپ مشتری (دارک) — نگاشتِ semantic به توکن‌های موجود ── */
-:root {
-  --surface: var(--card-solid, #141026);
-  --surface-2: rgba(255,255,255,.05);
-  --surface-hover: rgba(255,255,255,.06);
-  --text-1: rgba(255,255,255,.95);
-  --text-2: rgba(255,255,255,.68);
-  --text-3: rgba(255,255,255,.45);
-  --skeleton-base: rgba(255,255,255,.06);
-  --skeleton-hi: rgba(255,255,255,.12);
-  --brand-500: #6A4BFF;
-  --brand-600: #5a3fe0;
-}
