@@ -1,7 +1,8 @@
 // ═══ رزرونو — ناوبری + رندرِ کشف: فید، وایب، مناسبت، رویداد (بخشی از اپ کاستومر) ═══
 import { API } from '../api.js';
 import { esc, toast } from '../auth.js';
-import { openRest, quickBook } from './detail.js';
+import { openRest } from './detail.js';
+import { quickBook } from './booking.js';
 import { GRAD, favs } from './seed.js';
 import { renderProfile } from '../features/food-dna.js';
 import { renderLoyalty } from '../features/loyalty.js';
