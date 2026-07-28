@@ -62,6 +62,8 @@ model Staff {
   tenantId String @map("tenant_id") @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id])
   phone    String
+  // نامِ نمایشیِ کارمند (اختیاری) — پنلِ بیزنس آن را نشان/ویرایش می‌کند (migration 027).
+  name     String?
   role     StaffRole @default(staff)
   isActive Boolean @default(true) @map("is_active")  // غیرفعال‌سازی کارمند (اخراج) — توکن refreshش رد می‌شود
   permission StaffPermission?

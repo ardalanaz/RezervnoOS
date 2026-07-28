@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
 import { withStaffAuth } from '@/lib/with-restaurant-auth';
-import { getEffectivePermissions } from '@/lib/permissions';
+import { getEffectivePermissions, effectivePermissionsFrom, type PermissionKey } from '@/lib/permissions';
+import { normalizePhone } from '@/lib/otp';
 import type { AccessPayload } from '@/lib/jwt';
-import { Err } from '@/lib/errors';
-import { parseBody, zUuid, z } from '@/lib/schemas';
+import { ApiError, Err } from '@/lib/errors';
+import { parseBody, zPhone, zUuid, z } from '@/lib/schemas';
 
 const permissionsSchema = z.object({
   canManageReservations: z.boolean().optional(),
@@ -17,8 +19,21 @@ const permissionsSchema = z.object({
   canManageStaff: z.boolean().optional(),
   canManageSettings: z.boolean().optional(),
 });
+
+// نام: اختیاری، حداکثر ۸۰ کاراکتر. null صریح یعنی «پاک کن»، غایب یعنی «تغییر نده».
+const zStaffName = z.string().max(80).nullable().optional();
+
+const postSchema = z.object({
+  phone: zPhone,
+  name: zStaffName,
+  // فقط 'staff' و 'manager' از این مسیر ساخته می‌شوند؛ owner/admin هرگز.
+  role: z.enum(['staff', 'manager']).default('staff'),
+  permissions: permissionsSchema.optional(),
+});
 const patchSchema = z.object({
   staff_id: zUuid,
+  name: zStaffName,
+  is_active: z.boolean().optional(),
   permissions: permissionsSchema.optional(),
   // ⚠️ همگام‌سازی‌شده با DB زنده (migration 018): تخصیص/تغییرِ شعبه.
   // null صریح یعنی «قفل شعبه را بردار» (دسترسی به همه‌ی شعبه‌ها)، غایب یعنی «تغییر نده».
@@ -41,14 +56,63 @@ function assertManagerOrOwner(auth: AccessPayload): asserts auth is StaffPayload
   if (auth.role !== 'owner' && auth.role !== 'manager') throw Err.forbidden('فقط مدیر می‌تواند کارکنان را مدیریت کند');
 }
 
+function shapeStaff(
+  s: { id: string; name: string | null; phone: string; role: string; isActive: boolean; restaurantId: string | null },
+  permissions: Record<PermissionKey, boolean>,
+) {
+  return {
+    id: s.id, name: s.name, phone: s.phone, role: s.role,
+    is_active: s.isActive, restaurant_id: s.restaurantId,
+    permissions,
+  };
+}
+
 export const GET = withStaffAuth({}, async (_req, auth) => {
   assertManagerOrOwner(auth);
-  const staff = await db.staff.findMany({ where: { tenantId: auth.tenantId }, orderBy: { role: 'asc' } });
-  const items = await Promise.all(staff.map(async s => ({
-    id: s.id, phone: s.phone, role: s.role, restaurant_id: s.restaurantId,
-    permissions: await getEffectivePermissions(s.id, s.role),
-  })));
+  // با include یک کوئری می‌گیریم و مجوز را در حافظه می‌سازیم — بدونِ N+1
+  // (قبلاً برای هر staff یک findUnique جدا زده می‌شد).
+  const staff = await db.staff.findMany({
+    where: { tenantId: auth.tenantId },
+    orderBy: { role: 'asc' },
+    include: { permission: true },
+  });
+  const items = staff.map(s => shapeStaff(s, effectivePermissionsFrom(s.role, s.permission)));
   return NextResponse.json({ items });
+});
+
+// POST — افزودن یک عضو staff · بدنه: { phone, name?, role?, permissions? }
+export const POST = withStaffAuth({ rateLimit: 'auth' }, async (req, auth) => {
+  assertManagerOrOwner(auth);
+
+  const b = await parseBody(req, postSchema);
+
+  // فقط owner می‌تواند manager بسازد (بک‌اند و UI هر دو این را اعمال می‌کنند).
+  if (b.role === 'manager' && auth.role !== 'owner') {
+    throw Err.forbidden('فقط مالک می‌تواند مدیر اضافه کند');
+  }
+
+  const phone = normalizePhone(b.phone);          // → فرمتِ +98…؛ روی نامعتبر throw می‌کند
+  const name = b.name?.trim() || null;
+
+  let created;
+  try {
+    created = await db.staff.create({
+      data: { tenantId: auth.tenantId, phone, name, role: b.role },
+    });
+  } catch (e) {
+    // @@unique([tenantId, phone]) → شماره‌ی تکراری در همین تنانت
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      throw new ApiError('STAFF_PHONE_TAKEN', 'این شماره قبلاً به‌عنوانِ کارمند ثبت شده است', 409);
+    }
+    throw e;
+  }
+
+  // دسترسی‌ها فقط برای staff عادی معنا دارد (owner/manager همه‌چیز را دارند).
+  if (b.permissions && b.role === 'staff') {
+    await db.staffPermission.create({ data: { staffId: created.id, ...b.permissions } });
+  }
+
+  return NextResponse.json({ item: shapeStaff(created, await getEffectivePermissions(created.id, created.role)) }, { status: 201 });
 });
 
 // PATCH — به‌روزرسانی دسترسی/شعبه‌ی یک عضو staff · بدنه: { staff_id, permissions?, restaurant_id? }
@@ -69,13 +133,31 @@ export const PATCH = withStaffAuth({ rateLimit: 'auth' }, async (req, auth) => {
     });
   }
 
+  // فیلدهای مستقیمِ staff را در یک آبجکت جمع می‌کنیم و در صورتِ نیاز یک‌بار update می‌زنیم.
+  const data: { name?: string | null; isActive?: boolean; restaurantId?: string | null } = {};
+
+  if (b.name !== undefined) data.name = b.name?.trim() || null;
+
+  if (b.is_active !== undefined) {
+    if (b.is_active === false) {
+      // جلوگیری از قفل‌شدنِ خودِ کاربر و از غیرفعال‌سازیِ مدیر توسطِ مدیرِ دیگر.
+      if (target.id === auth.sub) throw Err.forbidden('نمی‌توانید خودتان را غیرفعال کنید');
+      if (target.role === 'manager' && auth.role !== 'owner') throw Err.forbidden('فقط مالک می‌تواند مدیر را غیرفعال کند');
+    }
+    data.isActive = b.is_active;
+  }
+
   if (b.restaurant_id !== undefined) {
     if (b.restaurant_id !== null) {
       // چک تنانت: جلوگیری از قفل‌کردنِ کارمند به شعبه‌ای متعلق به تنانتِ دیگر (IDOR)
       const restaurant = await db.restaurant.findFirst({ where: { id: b.restaurant_id, tenantId: auth.tenantId }, select: { id: true } });
       if (!restaurant) throw Err.notFound('رستوران/شعبه');
     }
-    await db.staff.update({ where: { id: target.id }, data: { restaurantId: b.restaurant_id } });
+    data.restaurantId = b.restaurant_id;
+  }
+
+  if (Object.keys(data).length > 0) {
+    await db.staff.update({ where: { id: target.id }, data });
   }
 
   return NextResponse.json({ ok: true });
