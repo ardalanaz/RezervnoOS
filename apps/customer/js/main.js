@@ -17,6 +17,7 @@ import './actions.js';
 
 // لایه‌ی داده و API
 import './api.js';
+import './analytics.js';
 import './data/seed.js';
 import './data/discover.js';
 import './data/detail.js';

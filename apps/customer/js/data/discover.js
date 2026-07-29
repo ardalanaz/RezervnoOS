@@ -10,7 +10,9 @@ import { R } from '../init.js';
 import { renderFavs, renderTrips } from '../reservation.js';
 import { buzz } from '../theme-pwa.js';
 import { icon } from '../icons.js';
+import { track } from '../analytics.js';
 export function go(p){
+  try{ track('page.viewed',{page:p}); }catch{}
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   document.querySelectorAll('[data-nav]').forEach(n=>n.classList.toggle('active',n.dataset.nav===p));
