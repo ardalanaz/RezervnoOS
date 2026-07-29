@@ -905,3 +905,20 @@ button,[role="button"],.botnav-item,a{min-height:0}
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block;
   box-shadow:0 0 0 3px color-mix(in srgb, var(--success) 25%, transparent);animation:live-pulse 2s var(--ease-out) infinite}
 @keyframes live-pulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+
+/* Pull-to-Refresh (C15) */
+.ptr{position:fixed;top:-52px;left:50%;transform:translateX(-50%);z-index:80;
+  width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--card,#12131a);border:1px solid var(--s-200,rgba(255,255,255,.10));
+  box-shadow:0 8px 24px rgba(0,0,0,.28);opacity:0;pointer-events:none;transition:opacity .18s ease}
+.ptr.show{opacity:1}
+.ptr-spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--s-300,rgba(255,255,255,.25));
+  border-top-color:var(--brand,#7c5cff);transition:transform .12s ease}
+.ptr.ready .ptr-spin{border-top-color:var(--brand,#7c5cff);transform:rotate(180deg)}
+.ptr.spinning .ptr-spin{animation:ptr-rot .7s linear infinite}
+@keyframes ptr-rot{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){
+  .ptr{transition:none}.ptr-spin{transition:none}.ptr.spinning .ptr-spin{animation:none}
+  .ptr.ready .ptr-spin{transform:none}
+}
