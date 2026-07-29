@@ -348,6 +348,26 @@ img{display:block;max-width:100%}
 .tl-step.cancel .tl-dot{background:var(--red,#EF4444)}
 .tl-step.cancel::before{background:var(--red,#EF4444)}
 .tl-step.cancel{color:var(--red,#EF4444)}
+/* Command Palette (C6) */
+.cmdk-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:14vh 16px 16px;opacity:0;pointer-events:none;transition:opacity .16s ease}
+.cmdk-overlay.show{opacity:1;pointer-events:auto}
+.cmdk{width:100%;max-width:560px;background:var(--card,#12131a);border:1px solid var(--s-200,rgba(255,255,255,.08));border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.5);overflow:hidden;transform:translateY(-8px);transition:transform .16s ease}
+.cmdk-overlay.show .cmdk{transform:translateY(0)}
+.cmdk-row{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--s-200,rgba(255,255,255,.08));color:var(--t2,#94A3B8)}
+.cmdk-input{flex:1;background:transparent;border:none;outline:none;color:var(--t1,#fff);font-family:inherit;font-size:16px}
+.cmdk-esc{font-size:11px;color:var(--t3);border:1px solid var(--s-200,rgba(255,255,255,.12));border-radius:6px;padding:2px 6px}
+.cmdk-list{list-style:none;margin:0;padding:6px;max-height:52vh;overflow-y:auto}
+.cmdk-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;cursor:pointer;color:var(--t1,#fff)}
+.cmdk-item.sel{background:var(--blue,#4F8CFF);color:#fff}
+.cmdk-item.sel .cmdk-sub,.cmdk-item.sel .cmdk-ic{color:rgba(255,255,255,.85)}
+.cmdk-ic{display:inline-flex;color:var(--t2,#94A3B8);flex-shrink:0}
+.cmdk-t{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmdk-sub{font-size:12px;color:var(--t3,#64748B)}
+.cmdk-empty{padding:20px;text-align:center;color:var(--t3);font-size:14px}
+.nav-icn{background:transparent;border:none;color:var(--t2,#94A3B8);cursor:pointer;width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center}
+.nav-icn:hover{background:var(--s-100,rgba(0,0,0,.05));color:var(--t1)}
+.nav-icn:focus-visible{outline:2px solid var(--blue,#4F8CFF);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){ .cmdk-overlay,.cmdk{transition:none} }
 
 /* ─────────── BOTTOM NAV (mobile) ─────────── */
 .botnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(255,255,255,.92);
