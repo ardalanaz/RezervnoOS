@@ -33,6 +33,7 @@ import './features/palette.js';
 import './features/notifications.js';
 import './features/a11y.js';
 import './features/onboarding.js';
+import './features/pull-refresh.js';
 
 // پروفایل و احراز هویت
 import './user-profile.js';
