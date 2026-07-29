@@ -148,12 +148,8 @@
     <div class="section-head">
       <div><div class="section-title" id="feedTitle">🔥 محبوب امشب</div><div class="section-sub">رستوران‌های فعال</div></div>
     </div>
-    <div class="live-strip" id="liveStrip">
-      <div class="live-pill"><span class="live-dot-sm"></span><b>۱۲ رستوران</b> الان در حال پر شدن</div>
-      <div class="live-pill">🔥 <b>ویستا</b> پرطرفدار امشب</div>
-      <div class="live-pill">⭐ <b>۸ جای جدید</b> این هفته</div>
-      <div class="live-pill">💰 میانگین کش‌بک <b>۷٪</b></div>
-    </div>
+    <!-- نوارِ زنده: با دادهٔ واقعی از /restaurants/live-stats پر می‌شود (features/live-strip.js). -->
+    <div class="live-strip" id="liveStrip" aria-live="polite"></div>
     <div class="grid" id="feed"></div>
   </div>
 
