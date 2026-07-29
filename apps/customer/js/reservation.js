@@ -51,6 +51,13 @@ export function mapApiTrip(apiR){
   };
 }
 
+// تایم‌لاینِ روندِ رزرو (C5) — از وضعیتِ موجود مشتق می‌شود (بدونِ رویدادِ جعلی)
+function tripTimeline(status){
+  const steps = status==='cancelled'
+    ? [['ثبت','done'],['لغو','cancel']]
+    : [['ثبت','done'],['تأیید',status==='up'?'active':'done'],['حضور',status==='done'?'done':'future'],['تکمیل',status==='done'?'active':'future']];
+  return `<ol class="tl" aria-label="روند رزرو">${steps.map(([l,st])=>`<li class="tl-step ${st}"><span class="tl-dot" aria-hidden="true"></span><span class="tl-lbl">${l}</span></li>`).join('')}</ol>`;
+}
 export async function renderTrips(){
   const listEl=document.getElementById('tripsList');
   let trips=TRIPS; // پیش‌فرض: داده‌ی محلی
@@ -99,6 +106,7 @@ export async function renderTrips(){
         <div class="trip-card-name">${esc(name)}</div>
         <div class="trip-card-meta"><span>${icon('calendar',{size:13})} ${t.date}</span><span class="tcm-dot">·</span><span>${icon('clock',{size:13})} ${t.time}</span><span class="tcm-dot">·</span><span>${icon('users',{size:13})} ${t.party}</span></div>
         <div class="trip-card-code">کد رزرو: <b>${esc(t.code)}</b></div>
+        ${tripTimeline(t.status)}
         ${acts?`<div class="trip-card-actions">${acts}</div>`:''}
       </div>
     </div>`;

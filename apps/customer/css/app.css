@@ -334,6 +334,20 @@ img{display:block;max-width:100%}
 .undo-snack .us-btn:hover{background:rgba(255,255,255,.08)}
 .undo-snack .us-btn:focus-visible{outline:2px solid var(--blue,#4F8CFF);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){ .undo-snack{transition:none} }
+/* Activity timeline روی کارتِ رزرو (C5) — بدونِ کامپوننتِ تکراری */
+.tl{list-style:none;display:flex;gap:0;margin:12px 0 2px;padding:0}
+.tl-step{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;font-size:11px;color:var(--t3,#94A3B8);min-width:0}
+.tl-step::before{content:"";position:absolute;top:5px;right:50%;width:100%;height:2px;background:var(--s-200,#e5e7eb)}
+.tl-step:first-child::before{display:none}
+.tl-dot{width:12px;height:12px;border-radius:50%;background:var(--s-200,#e5e7eb);border:2px solid var(--card,#fff);z-index:1;margin-bottom:5px}
+.tl-lbl{white-space:nowrap}
+.tl-step.done .tl-dot,.tl-step.active .tl-dot{background:var(--blue,#4F8CFF)}
+.tl-step.done::before,.tl-step.active::before{background:var(--blue,#4F8CFF)}
+.tl-step.active .tl-dot{box-shadow:0 0 0 3px color-mix(in srgb,var(--blue,#4F8CFF) 25%,transparent)}
+.tl-step.done,.tl-step.active{color:var(--t1,#0f172a)}
+.tl-step.cancel .tl-dot{background:var(--red,#EF4444)}
+.tl-step.cancel::before{background:var(--red,#EF4444)}
+.tl-step.cancel{color:var(--red,#EF4444)}
 
 /* ─────────── BOTTOM NAV (mobile) ─────────── */
 .botnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(255,255,255,.92);
