@@ -39,6 +39,7 @@ function applyPermissionsToNav(){
 function nav(v){
   // دفاعِ لایه‌ی دوم: حتی اگر کسی دکمه را دور بزند، به صفحه‌ی بدونِ مجوز نمی‌رود.
   if (!canAccessView(v)) { if (typeof toast === 'function') toast('', 'دسترسی شما به این بخش محدود شده است'); return; }
+  try{ if(window.rzTrack) window.rzTrack('page.viewed',{page:v}); }catch(e){}
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   document.getElementById('v-'+v).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(i=>i.classList.toggle('active',i.dataset.v===v));

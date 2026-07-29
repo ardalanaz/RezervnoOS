@@ -19,6 +19,7 @@ let restFilter='all';
 let currentRest=null; // رستوران انتخاب‌شده برای صفحه‌ی جزئیات
 
 function nav(v){
+  try{ if(window.rzTrack) window.rzTrack('page.viewed',{page:v}); }catch(e){}
   document.querySelectorAll('.sb-item[data-v]').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.getElementById('v-'+v).classList.add('active');
