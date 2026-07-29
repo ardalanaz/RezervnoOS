@@ -2,7 +2,7 @@
 // ── Calendar Sync: تولید فایل .ics واقعی ──
 import { API, isLoggedIn } from '../api.js';
 import { icon } from '../icons.js';
-import { closeSheet, esc, openSheet, toast } from '../auth.js';
+import { closeSheet, esc, openSheet, toast, undoSnack } from '../auth.js';
 import { openRest } from '../data/detail.js';
 import { go } from '../data/discover.js';
 import { R } from '../init.js';
@@ -82,14 +82,18 @@ export function repeatReservation(rid){
 }
 // لغو رزرو (متصل به API اگر آنلاین)
 export async function cancelTrip(code,btn){
-  const tripEl=btn.closest('.trip');
-  if(isLoggedIn()){
-    const res=await API.post('/reservations/'+encodeURIComponent(code)+'/cancel',{});
-    if(res.ok){toast('','رزرو لغو شد');if(tripEl)tripEl.style.opacity=.5;return;}
-    if(!res.offline){toast('',res.error?.message||'لغو ناموفق بود');return;}
-  }
-  // fallback (آفلاین یا مهمان)
-  toast('','رزرو لغو شد');if(tripEl)tripEl.style.opacity=.5;
+  const tripEl=btn.closest('.trip-card')||btn.closest('.trip');
+  // Undoِ امن: کارت فوراً کم‌رنگ می‌شود، ولی لغوِ واقعی ۵ ثانیه به تعویق می‌افتد.
+  if(tripEl)tripEl.style.opacity=.5;
+  undoSnack('رزرو لغو شد',
+    ()=>{ if(tripEl)tripEl.style.opacity=''; },   // Undo: هیچ APIای صدا زده نشده
+    async ()=>{                                    // Commit: حالا واقعاً لغو کن
+      if(isLoggedIn()){
+        const res=await API.post('/reservations/'+encodeURIComponent(code)+'/cancel',{});
+        if(res.ok)return;
+        if(!res.offline){ toast('',res.error?.message||'لغو ناموفق بود'); if(tripEl)tripEl.style.opacity=''; }
+      }
+    });
 }
 
 

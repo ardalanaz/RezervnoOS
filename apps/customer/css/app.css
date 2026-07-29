@@ -326,6 +326,14 @@ img{display:block;max-width:100%}
 .sk-trip .sk-line.w40{width:40%}
 /* احترام به کاهشِ حرکت (WCAG 2.3.3) — shimmer متوقف می‌شود */
 @media (prefers-reduced-motion: reduce){ .sk{animation:none} }
+/* Undo snackbar (C3) — اکشنِ بازگرداندن برای اقدام‌های مخرب */
+.undo-snack{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:120;display:flex;align-items:center;gap:14px;max-width:min(92vw,420px);padding:12px 16px;border-radius:14px;background:var(--s-900,#12131a);color:#fff;box-shadow:0 12px 40px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease}
+.undo-snack.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.undo-snack .us-msg{font-size:14px;font-weight:600;flex:1;min-width:0}
+.undo-snack .us-btn{flex-shrink:0;background:transparent;border:none;color:var(--blue,#4F8CFF);font-weight:800;font-size:14px;cursor:pointer;padding:6px 10px;min-height:24px;border-radius:8px}
+.undo-snack .us-btn:hover{background:rgba(255,255,255,.08)}
+.undo-snack .us-btn:focus-visible{outline:2px solid var(--blue,#4F8CFF);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){ .undo-snack{transition:none} }
 
 /* ─────────── BOTTOM NAV (mobile) ─────────── */
 .botnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(255,255,255,.92);
