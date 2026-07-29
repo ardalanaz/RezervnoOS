@@ -197,7 +197,7 @@ export function toggleFav(id,el){
     el.setAttribute('aria-pressed',String(on));
     el.setAttribute('aria-label',on?'حذف از علاقه‌مندی‌ها':'افزودن به علاقه‌مندی‌ها');
   }
-  if(on){ toast('','ذخیره شد'); }
+  if(on){ toast('','ذخیره شد'); if(el){ el.classList.add('liked-pop'); setTimeout(()=>el.classList.remove('liked-pop'),420); } }
   else {
     // Undo روی حذفِ علاقه (کاملاً client-side)
     undoSnack('از علاقه‌مندی‌ها حذف شد', ()=>{

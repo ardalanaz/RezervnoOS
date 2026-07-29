@@ -411,6 +411,12 @@ img{display:block;max-width:100%}
 .onb-dot{width:7px;height:7px;border-radius:50%;background:var(--s-200,rgba(255,255,255,.2));transition:width .2s ease,background .2s ease}
 .onb-dot.on{width:22px;border-radius:4px;background:var(--blue,#4F8CFF)}
 @media (prefers-reduced-motion: reduce){ .onb-overlay,.onb-card,.onb-dot{transition:none} }
+/* Microinteractions (C10) — بازخوردِ لمسی/تعاملیِ سبک */
+@keyframes like-pop{0%{transform:scale(1)}35%{transform:scale(1.35)}60%{transform:scale(.9)}100%{transform:scale(1)}}
+.liked-pop{animation:like-pop .42s var(--spring,cubic-bezier(.34,1.56,.64,1))}
+.btn:active{transform:scale(.97)}
+.chip:active,.rc-fav:active,.nav-icn:active,.botnav-item:active{transform:scale(.94)}
+@media (prefers-reduced-motion: reduce){ .liked-pop{animation:none} .btn:active,.chip:active,.rc-fav:active,.nav-icn:active,.botnav-item:active{transform:none} }
 
 /* ─────────── BOTTOM NAV (mobile) ─────────── */
 .botnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(255,255,255,.92);
