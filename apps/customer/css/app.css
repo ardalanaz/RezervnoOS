@@ -398,6 +398,19 @@ img{display:block;max-width:100%}
 /* C11: حلقه‌ی فوکوسِ عمومیِ قابل‌مشاهده (WCAG 2.4.7) */
 :focus-visible{outline:2px solid var(--blue,#4F8CFF);outline-offset:2px;border-radius:6px}
 .occ-card:focus-visible{outline-offset:3px}
+/* Onboarding wizard (C9) */
+.onb-overlay{position:fixed;inset:0;z-index:210;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s ease}
+.onb-overlay.show{opacity:1;pointer-events:auto}
+.onb-card{position:relative;width:100%;max-width:380px;background:var(--card,#12131a);border:1px solid var(--s-200,rgba(255,255,255,.08));border-radius:24px;padding:36px 24px 24px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.5);transform:translateY(12px) scale(.98);transition:transform .2s var(--spring,cubic-bezier(.34,1.56,.64,1))}
+.onb-overlay.show .onb-card{transform:none}
+.onb-skip{position:absolute;top:14px;left:16px;background:transparent;border:none;color:var(--t3);font-size:13px;cursor:pointer;padding:6px 8px;min-height:24px}
+.onb-emoji{font-size:64px;line-height:1;margin:8px 0 18px}
+.onb-title{font-size:21px;font-weight:800;color:var(--t1);margin-bottom:10px}
+.onb-text{font-size:14px;color:var(--t2);line-height:1.8;margin-bottom:22px}
+.onb-dots{display:flex;gap:7px;justify-content:center;margin-bottom:22px}
+.onb-dot{width:7px;height:7px;border-radius:50%;background:var(--s-200,rgba(255,255,255,.2));transition:width .2s ease,background .2s ease}
+.onb-dot.on{width:22px;border-radius:4px;background:var(--blue,#4F8CFF)}
+@media (prefers-reduced-motion: reduce){ .onb-overlay,.onb-card,.onb-dot{transition:none} }
 
 /* ─────────── BOTTOM NAV (mobile) ─────────── */
 .botnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(255,255,255,.92);
