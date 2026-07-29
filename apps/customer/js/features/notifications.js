@@ -11,6 +11,8 @@ import { go } from '../data/discover.js';
 import { openRest } from '../data/detail.js';
 import { icon } from '../icons.js';
 import { esc } from '../auth.js';
+import { API, isLoggedIn } from '../api.js';
+import { mapApiTrip } from '../reservation.js';
 
 const READ_KEY = 'rz_notif_read';
 function readSet(){ try{ return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); }catch{ return new Set(); } }
@@ -19,13 +21,32 @@ function saveRead(set){ try{ localStorage.setItem(READ_KEY, JSON.stringify([...s
 const CATS = { all:'همه', reservation:'رزرو', ai:'پیشنهاد' };
 let _filter = 'all';
 
+// منبعِ رزروها: در صورتِ ورودِ کاربر، رزروهای واقعیِ سرور (کش‌شده)؛ در غیرِ این‌صورت
+// دادهٔ نمونهٔ محلی (demo-safe). _live با refresh() از /me/reservations پر می‌شود.
+let _live = null; // null = هنوز از سرور خوانده نشده → fallback به TRIPS
+function tripsSource(){ return Array.isArray(_live) ? _live : (Array.isArray(TRIPS)?TRIPS:[]); }
+
+// خواندنِ رزروهای واقعی از سرور (همان endpointِ صفحهٔ سفرها) و به‌روزرسانیِ badge.
+// آفلاین/خطا/مهمان → _live دست‌نخورده و اعلان‌ها روی دادهٔ محلی می‌مانند (بدونِ جعل).
+export async function refreshNotif(){
+  try{
+    if(!isLoggedIn()){ _live = null; updateNotifBadge(); return; }
+    const res = await API.get('/me/reservations');
+    if(res && res.ok && Array.isArray(res.data)) _live = res.data.map(mapApiTrip);
+  }catch(e){}
+  updateNotifBadge();
+  const ov = document.getElementById('notif');
+  if(ov && ov.classList.contains('show')) render();
+}
+
 // ساختِ اعلان‌ها از دادهٔ واقعیِ کلاینت
 function build(){
   const out = [];
-  (Array.isArray(TRIPS)?TRIPS:[]).filter(t=>t.status==='up').forEach(t=>{
+  tripsSource().filter(t=>t.status==='up').forEach(t=>{
     const r = (Array.isArray(R)?R:[]).find(x=>x.id===t.rid);
+    const name = (r&&r.n) || t._name || 'رستوران';
     out.push({ id:'resv-'+t.code, cat:'reservation', pri:'high', ic:'calendar',
-      title:'یادآورِ رزرو', body:`${r?r.n:'رستوران'} — ${t.date} ساعت ${t.time}`,
+      title:'یادآورِ رزرو', body:`${name} — ${t.date} ساعت ${t.time}`,
       action:{ label:'مشاهده', run:()=>go('trips') } });
   });
   const top = (Array.isArray(R)?[...R]:[]).sort((a,b)=>(b.rt||0)-(a.rt||0))[0];
@@ -95,13 +116,14 @@ function render(){
   }));
 }
 
-export function openNotif(){ const ov=ensureEl(); render(); ov.classList.add('show'); }
+export function openNotif(){ const ov=ensureEl(); render(); ov.classList.add('show'); refreshNotif(); }
 export function closeNotif(){ const ov=document.getElementById('notif'); if(ov) ov.classList.remove('show'); }
 
-// badge اولیه بعد از آماده‌شدنِ DOM
+// badge اولیه بعد از آماده‌شدنِ DOM؛ سپس تلاش برای خواندنِ رزروهای واقعی (اگر کاربر وارد شده)
 try{
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=>setTimeout(updateNotifBadge,0));
-  else setTimeout(updateNotifBadge,0);
+  const boot = ()=>{ setTimeout(updateNotifBadge,0); setTimeout(refreshNotif,600); };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 }catch{}
 
-try{ window.openNotif = openNotif; window.closeNotif = closeNotif; }catch{}
+try{ window.openNotif = openNotif; window.closeNotif = closeNotif; window.refreshNotif = refreshNotif; }catch{}
