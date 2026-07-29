@@ -53,6 +53,10 @@
     <button class="nav-link" data-nav="loyalty" onclick="go('loyalty')">باشگاه</button>
   </div>
   <div class="nav-right">
+    <button class="nav-icn notif-btn" type="button" onclick="openNotif()" aria-label="اعلان‌ها">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      <span class="notif-badge" id="notifBadge" aria-hidden="true"></span>
+    </button>
     <button class="nav-icn" type="button" onclick="openPalette()" aria-label="جست‌وجو و فرمان‌ها">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
     </button>
