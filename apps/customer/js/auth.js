@@ -161,8 +161,33 @@ export function toApiDateTime(faDate, faTime){
   return { date: iso, time: time || '20:00' };
 }
 
-export function openSheet(html){document.getElementById('sheetBody').innerHTML=html;document.getElementById('sheet').classList.add('show')}
-export function closeSheet(){document.getElementById('sheet').classList.remove('show')}
+// focus-trap شیتِ رزرو (C8) — WCAG 2.4.3/2.1.2: تله‌ی فوکوس، Esc، بازگرداندنِ فوکوس
+let _sheetTrap=null,_sheetLastFocus=null;
+export function openSheet(html){
+  const sheet=document.getElementById('sheet');
+  const wasOpen=sheet.classList.contains('show');
+  document.getElementById('sheetBody').innerHTML=html;
+  sheet.classList.add('show');
+  if(!wasOpen) _sheetLastFocus=document.activeElement;
+  if(_sheetTrap) sheet.removeEventListener('keydown',_sheetTrap);
+  _sheetTrap=(e)=>{
+    if(e.key==='Escape'){ e.preventDefault(); closeSheet(); return; }
+    if(e.key!=='Tab') return;
+    const f=sheet.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+    if(!f.length) return;
+    const first=f[0],last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  };
+  sheet.addEventListener('keydown',_sheetTrap);
+  setTimeout(()=>{ const el=sheet.querySelector('input:not([type=hidden]),button,select,textarea,a[href],[tabindex]:not([tabindex="-1"])'); if(el) try{el.focus()}catch(e){} },30);
+}
+export function closeSheet(){
+  const sheet=document.getElementById('sheet');
+  sheet.classList.remove('show');
+  if(_sheetTrap){ sheet.removeEventListener('keydown',_sheetTrap); _sheetTrap=null; }
+  if(_sheetLastFocus && _sheetLastFocus.focus){ try{_sheetLastFocus.focus()}catch(e){} _sheetLastFocus=null; }
+}
 let tt;
 export function toast(icon,msg){document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMsg').textContent=msg;const t=document.getElementById('toast');t.classList.add('show');t.classList.remove('toast-enter');void t.offsetWidth;t.classList.add('toast-enter');const live=document.getElementById('a11y-live');if(live)live.textContent=msg;clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400)}
 let _undo=null;
