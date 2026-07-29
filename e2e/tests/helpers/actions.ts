@@ -7,6 +7,8 @@ import { Page, expect } from '@playwright/test';
 
 /** باز کردنِ اپ و صبر تا آماده شدنِ صفحه‌ی کشف. */
 export async function gotoApp(page: Page) {
+  // onboardingِ بارِ اول را در تست‌ها رد کن (تنظیمِ حالتِ تست، نه تغییرِ رفتار)
+  await page.addInitScript(() => { try { localStorage.setItem('rz_onboarded', '1'); } catch { /* ignore */ } });
   await page.goto('/');
   // صفحه‌ی کشف باید فعال باشد
   await expect(page.locator('#page-discover')).toBeVisible();
