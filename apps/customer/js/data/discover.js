@@ -3,7 +3,7 @@ import { API } from '../api.js';
 import { esc, toast, undoSnack } from '../auth.js';
 import { openRest } from './detail.js';
 import { quickBook } from './booking.js';
-import { GRAD, favs } from './seed.js';
+import { GRAD, favs, pts } from './seed.js';
 import { renderProfile } from '../features/food-dna.js';
 import { renderLoyalty } from '../features/loyalty.js';
 import { R } from '../init.js';
@@ -102,7 +102,7 @@ export function pickOccasion(occ, el){
   if(already){
     document.querySelector('.chip')?.classList.add('active');
     document.getElementById('feedTitle').innerHTML=icon('flame',{size:16,fill:true})+' محبوب امشب';
-    const sub=document.querySelector('.section-sub'); if(sub) sub.textContent='۲۴۷ رستوران فعال در تهران';
+    const sub=document.querySelector('.section-sub'); if(sub) sub.textContent=`${fmtFa(R.length)} رستوران فعال`;
     renderFeed(R);
     return;
   }
@@ -176,6 +176,10 @@ export function renderDiscoverSections(){
   renderNearby();
   renderTrending();
   renderEvents();
+  // اعداد را به دادهٔ واقعی وصل کن (نه ثابتِ hard-coded) — C4
+  const sub=document.querySelector('#page-discover .section-sub');
+  if(sub && Array.isArray(R) && R.length) sub.textContent=`${fmtFa(R.length)} رستوران فعال`;
+  const np=document.getElementById('navPts'); if(np) np.textContent=fmtFa(pts);
 }
 export function doSearch(){
   const q=document.getElementById('sQ').value.trim();
