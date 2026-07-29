@@ -30,6 +30,7 @@ import './features/rewards.js';
 import './features/food-dna.js';
 import './features/chat.js';
 import './features/palette.js';
+import './features/notifications.js';
 
 // پروفایل و احراز هویت
 import './user-profile.js';
