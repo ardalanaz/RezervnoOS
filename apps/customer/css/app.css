@@ -316,6 +316,16 @@ img{display:block;max-width:100%}
 /* skeleton */
 .sk{background:linear-gradient(90deg,var(--s-100) 25%,var(--s-200) 50%,var(--s-100) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px}
 @keyframes shimmer{to{background-position:-200% 0}}
+/* اسکلتونِ کارتِ رزرو (C2) — از .sk بازاستفاده می‌کند، بدونِ تکرارِ shimmer */
+.sk-trip{border-radius:var(--r,16px);overflow:hidden;margin-bottom:14px;background:var(--card,var(--s-100))}
+.sk-trip .sk-hero{height:120px;border-radius:0}
+.sk-trip .sk-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.sk-trip .sk-line{height:12px;border-radius:6px}
+.sk-trip .sk-line.w80{width:80%}
+.sk-trip .sk-line.w55{width:55%}
+.sk-trip .sk-line.w40{width:40%}
+/* احترام به کاهشِ حرکت (WCAG 2.3.3) — shimmer متوقف می‌شود */
+@media (prefers-reduced-motion: reduce){ .sk{animation:none} }
 
 /* ─────────── BOTTOM NAV (mobile) ─────────── */
 .botnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(255,255,255,.92);

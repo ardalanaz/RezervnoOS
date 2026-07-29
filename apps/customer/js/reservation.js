@@ -57,8 +57,12 @@ export async function renderTrips(){
 
   // اگر کاربر وارد شده، از API بخوان
   if(isLoggedIn()){
-    listEl.innerHTML=`<div style="text-align:center;padding:40px;color:var(--t2)">در حال بارگذاری رزروها...</div>`;
+    // اسکلتونِ بارگذاری (به‌جای متنِ خالی) — کاهشِ پرش/CLS، بازاستفاده از .sk (C2)
+    listEl.setAttribute('aria-busy','true');
+    const skTrip=`<div class="sk-trip" aria-hidden="true"><div class="sk sk-hero"></div><div class="sk-body"><div class="sk sk-line w80"></div><div class="sk sk-line w55"></div><div class="sk sk-line w40"></div></div></div>`;
+    listEl.innerHTML=skTrip.repeat(3);
     const res=await API.get('/me/reservations');
+    listEl.removeAttribute('aria-busy');
     if(res.ok && Array.isArray(res.data)){
       // داده‌ی واقعی از سرور
       trips=res.data.map(mapApiTrip);
