@@ -92,22 +92,29 @@ export async function renderTrips(){
     const name=t._name||r?.n||'رستوران';
     const gradId=t._grad||t.rid||1;
     const statusLabel=t.status==='up'?`<span class="live-dot" aria-hidden="true"></span> پیش‌رو`:t.status==='cancelled'?`${icon('close',{size:12})} لغوشده`:`${icon('check',{size:12})} تجربه‌شده`;
+    // اکشنِ swipe (C16): کارتِ «پیش‌رو» → لغو، کارتِ «تجربه‌شده» با rid → رزرو مجدد.
+    // دکمه‌ی متناظر با data-swipe-action علامت می‌خورد تا ژستِ swipe همان هندلرِ سیم‌کشی‌شده را کلیک کند.
+    const swipe=t.status==='up'?{cls:'cancel',ic:'close',label:'لغو رزرو'}
+      :(t.status!=='cancelled'&&t.rid)?{cls:'repeat',ic:'calendar',label:'رزرو مجدد'}:null;
     const acts=t.status==='up'
-      ? `<button class="btn btn-sm btn-primary" onclick="buzz&&buzz();showCheckInQR('${esc(t.code)}','${esc(name)}')">QR ورود</button><button class="btn btn-sm btn-ghost" onclick="addToCalendar('${esc(t.code)}','${esc(name)}','${esc(t.date)}','${esc(t.time)}')">تقویم</button><button class="btn btn-sm btn-ghost" onclick="addToWallet('${esc(t.code)}','${esc(name)}','${esc(t.date)}','${esc(t.time)}','apple')">کیف پول</button><button class="btn btn-sm btn-ghost" onclick="cancelTrip('${esc(t.code)}',this)">لغو</button>`
+      ? `<button class="btn btn-sm btn-primary" onclick="buzz&&buzz();showCheckInQR('${esc(t.code)}','${esc(name)}')">QR ورود</button><button class="btn btn-sm btn-ghost" onclick="addToCalendar('${esc(t.code)}','${esc(name)}','${esc(t.date)}','${esc(t.time)}')">تقویم</button><button class="btn btn-sm btn-ghost" onclick="addToWallet('${esc(t.code)}','${esc(name)}','${esc(t.date)}','${esc(t.time)}','apple')">کیف پول</button><button class="btn btn-sm btn-ghost" data-swipe-action onclick="cancelTrip('${esc(t.code)}',this)">لغو</button>`
       : t.status==='cancelled' ? ''
-      : `${t.rid?`<button class="btn btn-sm btn-primary" onclick="buzz&&buzz();repeatReservation(${t.rid})">رزرو مجدد</button><button class="btn btn-sm btn-ghost" onclick="openRest(${t.rid})">ثبت نظر</button>`:''}`;
-    return `<div class="trip-card reveal ${t.status}">
-      <div class="trip-card-hero" style="background:${GRAD[gradId]||GRAD[1]}">
-        <div class="trip-card-mesh"></div>
-        <span class="trip-card-emoji">${emoji}</span>
-        <span class="trip-card-status ${t.status}">${statusLabel}</span>
-      </div>
-      <div class="trip-card-body">
-        <div class="trip-card-name">${esc(name)}</div>
-        <div class="trip-card-meta"><span>${icon('calendar',{size:13})} ${t.date}</span><span class="tcm-dot">·</span><span>${icon('clock',{size:13})} ${t.time}</span><span class="tcm-dot">·</span><span>${icon('users',{size:13})} ${t.party}</span></div>
-        <div class="trip-card-code">کد رزرو: <b>${esc(t.code)}</b></div>
-        ${tripTimeline(t.status)}
-        ${acts?`<div class="trip-card-actions">${acts}</div>`:''}
+      : `${t.rid?`<button class="btn btn-sm btn-primary" data-swipe-action onclick="buzz&&buzz();repeatReservation(${t.rid})">رزرو مجدد</button><button class="btn btn-sm btn-ghost" onclick="openRest(${t.rid})">ثبت نظر</button>`:''}`;
+    return `<div class="trip-card reveal ${t.status}${swipe?' has-swipe':''}">
+      ${swipe?`<div class="trip-swipe-pad ${swipe.cls}" aria-hidden="true">${icon(swipe.ic,{size:18})}<span>${swipe.label}</span></div>`:''}
+      <div class="trip-card-inner">
+        <div class="trip-card-hero" style="background:${GRAD[gradId]||GRAD[1]}">
+          <div class="trip-card-mesh"></div>
+          <span class="trip-card-emoji">${emoji}</span>
+          <span class="trip-card-status ${t.status}">${statusLabel}</span>
+        </div>
+        <div class="trip-card-body">
+          <div class="trip-card-name">${esc(name)}</div>
+          <div class="trip-card-meta"><span>${icon('calendar',{size:13})} ${t.date}</span><span class="tcm-dot">·</span><span>${icon('clock',{size:13})} ${t.time}</span><span class="tcm-dot">·</span><span>${icon('users',{size:13})} ${t.party}</span></div>
+          <div class="trip-card-code">کد رزرو: <b>${esc(t.code)}</b></div>
+          ${tripTimeline(t.status)}
+          ${acts?`<div class="trip-card-actions">${acts}</div>`:''}
+        </div>
       </div>
     </div>`;
   }).join('');

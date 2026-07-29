@@ -922,3 +922,15 @@ button,[role="button"],.botnav-item,a{min-height:0}
   .ptr{transition:none}.ptr-spin{transition:none}.ptr.spinning .ptr-spin{animation:none}
   .ptr.ready .ptr-spin{transform:none}
 }
+
+/* Swipe-actions روی کارت‌های رزرو (C16) */
+.trip-card.has-swipe{position:relative}
+.trip-card-inner{position:relative;z-index:1;background:var(--s-50);border-radius:inherit;
+  transition:transform .3s var(--spring);will-change:transform}
+.trip-card.swiping .trip-card-inner{transition:none}
+.trip-swipe-pad{position:absolute;inset:0;z-index:0;display:flex;align-items:center;justify-content:center;
+  gap:8px;font-weight:800;font-size:14px;color:#fff}
+.trip-swipe-pad.cancel{background:linear-gradient(90deg,var(--red,#e5484d),color-mix(in srgb,var(--red,#e5484d) 68%,#000))}
+.trip-swipe-pad.repeat{background:linear-gradient(90deg,var(--brand,#7c5cff),color-mix(in srgb,var(--brand,#7c5cff) 68%,#000))}
+.trip-card.ready .trip-swipe-pad{filter:brightness(1.08)}
+@media (prefers-reduced-motion: reduce){ .trip-card-inner{transition:none} }
