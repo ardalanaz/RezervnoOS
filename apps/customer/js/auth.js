@@ -165,6 +165,21 @@ export function openSheet(html){document.getElementById('sheetBody').innerHTML=h
 export function closeSheet(){document.getElementById('sheet').classList.remove('show')}
 let tt;
 export function toast(icon,msg){document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMsg').textContent=msg;const t=document.getElementById('toast');t.classList.add('show');t.classList.remove('toast-enter');void t.offsetWidth;t.classList.add('toast-enter');const live=document.getElementById('a11y-live');if(live)live.textContent=msg;clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400)}
+let _undo=null;
+export function undoSnack(msg, onUndo, onCommit, seconds){
+  seconds=seconds||5;
+  if(_undo){ clearTimeout(_undo.timer); const c=_undo.commit; _undo=null; if(c)c(); } // commit قبلی
+  let s=document.getElementById('undoSnack');
+  if(!s){ s=document.createElement('div'); s.id='undoSnack'; s.className='undo-snack'; s.setAttribute('role','status'); s.setAttribute('aria-live','polite'); document.body.appendChild(s); }
+  s.innerHTML='<span class="us-msg"></span><button class="us-btn" type="button">بازگرداندن</button>';
+  s.querySelector('.us-msg').textContent=msg;
+  s.classList.add('show');
+  const hide=()=>s.classList.remove('show');
+  const commit=()=>{ _undo=null; hide(); try{onCommit&&onCommit();}catch(e){} };
+  const timer=setTimeout(commit, seconds*1000);
+  _undo={commit,timer};
+  s.querySelector('.us-btn').onclick=()=>{ clearTimeout(timer); _undo=null; hide(); try{onUndo&&onUndo();}catch(e){} };
+}
 
 // ═══════════ شروع اپ (فاز ۳: نمایش فوری + به‌روزرسانی از API) ═══════════
 
@@ -178,3 +193,4 @@ window.esc = esc;
 window.openSheet = openSheet;
 window.closeSheet = closeSheet;
 window.toast = toast;
+window.undoSnack = undoSnack;

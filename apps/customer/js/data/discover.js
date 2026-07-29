@@ -1,6 +1,6 @@
 // ═══ رزرونو — ناوبری + رندرِ کشف: فید، وایب، مناسبت، رویداد (بخشی از اپ کاستومر) ═══
 import { API } from '../api.js';
-import { esc, toast } from '../auth.js';
+import { esc, toast, undoSnack } from '../auth.js';
 import { openRest } from './detail.js';
 import { quickBook } from './booking.js';
 import { GRAD, favs } from './seed.js';
@@ -193,7 +193,16 @@ export function toggleFav(id,el){
     el.setAttribute('aria-pressed',String(on));
     el.setAttribute('aria-label',on?'حذف از علاقه‌مندی‌ها':'افزودن به علاقه‌مندی‌ها');
   }
-  toast('',on?'ذخیره شد':'حذف شد');
+  if(on){ toast('','ذخیره شد'); }
+  else {
+    // Undo روی حذفِ علاقه (کاملاً client-side)
+    undoSnack('از علاقه‌مندی‌ها حذف شد', ()=>{
+      favs.add(id);
+      if(el){ el.innerHTML=icon('heart',{size:20,fill:true}); el.setAttribute('aria-pressed','true'); el.setAttribute('aria-label','حذف از علاقه‌مندی‌ها'); }
+      if(document.getElementById('page-favorites')?.classList.contains('active')) renderFavs();
+    });
+    if(document.getElementById('page-favorites')?.classList.contains('active')) renderFavs();
+  }
 }
 // نسخه‌ی hero صفحه رستوران — با انیمیشن تپش
 export function toggleRestFav(id){
@@ -205,7 +214,13 @@ export function toggleRestFav(id){
     btn.setAttribute('aria-pressed',String(on));
     btn.setAttribute('aria-label',on?'حذف از علاقه‌مندی‌ها':'افزودن به علاقه‌مندی‌ها');
   }
-  toast('',on?'به علاقه‌مندی‌ها اضافه شد':'از علاقه‌مندی‌ها حذف شد');
+  if(on){ toast('','به علاقه‌مندی‌ها اضافه شد'); }
+  else {
+    undoSnack('از علاقه‌مندی‌ها حذف شد', ()=>{
+      favs.add(id);
+      if(btn){ btn.innerHTML=icon('heart',{size:22,fill:true}); btn.setAttribute('aria-pressed','true'); btn.setAttribute('aria-label','حذف از علاقه‌مندی‌ها'); }
+    });
+  }
   if(btn){btn.style.transform='scale(1.3)';setTimeout(()=>btn.style.transform='',180)}
 }
 
