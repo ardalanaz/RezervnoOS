@@ -11,7 +11,7 @@
 //
 //  نسخه‌بندی: با تغییرِ CACHE_VERSION، کشِ قدیمی خودکار پاک می‌شود.
 // ═══════════════════════════════════════════════════════════
-const CACHE_VERSION = 'rezervno-v14';
+const CACHE_VERSION = 'rezervno-v15';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 

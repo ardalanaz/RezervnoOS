@@ -31,6 +31,7 @@ import './features/food-dna.js';
 import './features/chat.js';
 import './features/palette.js';
 import './features/notifications.js';
+import './features/a11y.js';
 
 // پروفایل و احراز هویت
 import './user-profile.js';
