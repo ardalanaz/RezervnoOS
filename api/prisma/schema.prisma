@@ -979,3 +979,36 @@ model ChatMessage {
   @@index([threadId, createdAt])
   @@map("chat_messages")
 }
+
+// ───────────────────────────────────────────────────────────────────────
+//  رویدادبوسِ رفتاری (Data Platform · فاز ۱)
+//
+//  جدولِ کانونیِ append-only برای رویدادهای رفتاریِ همه‌ی دامنه‌ها (نه فقط رزرو،
+//  که ReservationEvent پوشش می‌دهد). عمداً بدونِ رابطه‌ی FKِ سخت به موجودیت‌ها →
+//  درجِ بی‌قفل و سریع، و anonymize بدونِ شکستنِ ارجاع. هرگز UPDATE/DELETE نمی‌شود
+//  (به‌جز job نگه‌داشت/anonymize). زمینه (tenant/restaurant/user/session) همه
+//  اختیاری‌اند چون رویدادِ ناشناس هم پذیرفته می‌شود. جزئیاتِ معماری:
+//  docs/INTELLIGENCE-PLATFORM-ARCHITECTURE.md
+// ───────────────────────────────────────────────────────────────────────
+model PlatformEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  type          String                                            // نامِ نام‌فضادار: "search.performed"
+  occurredAt    DateTime @map("occurred_at") @db.Timestamptz      // زمانِ وقوع (کلاینت یا سرور)
+  ingestedAt    DateTime @default(now()) @map("ingested_at") @db.Timestamptz
+  tenantId      String?  @map("tenant_id") @db.Uuid
+  restaurantId  String?  @map("restaurant_id") @db.Uuid
+  userId        String?  @map("user_id") @db.Uuid                 // مشتری (اگر شناخته‌شده)
+  staffId       String?  @map("staff_id") @db.Uuid
+  sessionId     String?  @map("session_id")                       // نشستِ ناشناس
+  correlationId String?  @map("correlation_id")                   // زنجیره‌ی علّی
+  source        String                                            // customer|business|company|backend|cron
+  device        Json?    @db.JsonB                                // ua/platform (بدونِ PII)
+  geo           Json?    @db.JsonB
+  payload       Json     @db.JsonB                                // بدنه‌ی رویداد (schema-per-type)
+  schemaVersion Int      @default(1) @map("schema_version")
+  @@index([type, occurredAt])
+  @@index([restaurantId, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([correlationId])
+  @@map("platform_events")
+}
