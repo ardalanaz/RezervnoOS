@@ -9,9 +9,23 @@ import { openRest } from '../data/detail.js';
 import { go } from '../data/discover.js';
 import { icon } from '../icons.js';
 import { esc } from '../auth.js';
+import { TRIPS } from '../data/seed.js';
 
 const RECENT_KEY = 'rz_recent_search';
 let _sel = 0, _items = [];
+
+// نرمال‌سازی برای typo-tolerance: یکدست‌کردنِ ی/ک عربی، حذفِ نیم‌فاصله/کشیده،
+// یکدست‌کردنِ فاصله‌ها و کوچک‌کردنِ لاتین. روی هر دو سمتِ جست‌وجو اعمال می‌شود.
+function norm(s){
+  return String(s||'')
+    .replace(/ي/g,'ی')   // ي → ی
+    .replace(/ك/g,'ک')   // ك → ک
+    .replace(/[‌‏‎ـ]/g,'') // ZWNJ/کشیده/نشانه‌های جهت
+    .replace(/\s+/g,' ')
+    .trim()
+    .toLowerCase();
+}
+function has(hay, needle){ return norm(hay).includes(norm(needle)); }
 
 function recents(){ try{ return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }catch{ return []; } }
 function pushRecent(q){ try{ const r=recents().filter(x=>x!==q); r.unshift(q); localStorage.setItem(RECENT_KEY, JSON.stringify(r.slice(0,6))); }catch{} }
@@ -61,11 +75,20 @@ function render(q){
     recents().forEach(r=>_items.push({ t:r, ic:'clock', run:()=>{ const inp=document.getElementById('cmdkInput'); inp.value=r; render(r); } }));
     COMMANDS.forEach(c=>_items.push(c));
   } else {
-    const ql = q.toLowerCase();
-    COMMANDS.filter(c=>c.t.toLowerCase().includes(ql)).forEach(c=>_items.push(c));
+    // فرمان‌های ناوبری (typo-tolerant)
+    COMMANDS.filter(c=>has(c.t, q)).forEach(c=>_items.push(c));
+    // رستوران‌ها (نام/آشپزی/حال‌وهوا) — typo-tolerant
     (Array.isArray(R)?R:[]).filter(r=>
-        (r.n&&r.n.includes(q)) || (r.cuisine&&r.cuisine.includes(q)) || (r.vibes&&r.vibes.some(v=>v.includes(q)))
+        has(r.n, q) || has(r.cuisine, q) || (Array.isArray(r.vibes)&&r.vibes.some(v=>has(v, q)))
       ).slice(0,8).forEach(r=>_items.push({ t:r.n, sub:r.cuisine, ic:'utensils', run:()=>{ pushRecent(q); openRest(r.id); } }));
+    // رزروهای من (کد رزرو یا نامِ رستوران یا تاریخ) → صفحه‌ی سفرها
+    (Array.isArray(TRIPS)?TRIPS:[]).filter(t=>{
+        const r = (Array.isArray(R)?R:[]).find(x=>x.id===t.rid);
+        return has(t.code, q) || has(r&&r.n, q) || has(t.date, q);
+      }).slice(0,5).forEach(t=>{
+        const r = (Array.isArray(R)?R:[]).find(x=>x.id===t.rid);
+        _items.push({ t:`رزرو ${t.code}`, sub:(r&&r.n)||'رستوران', ic:'calendar', run:()=>{ pushRecent(q); go('trips'); } });
+      });
   }
   _sel = 0;
   list.innerHTML = _items.length ? _items.map(itemHTML).join('') : '<li class="cmdk-empty">چیزی پیدا نشد</li>';
