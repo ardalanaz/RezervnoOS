@@ -35,6 +35,7 @@ import './features/a11y.js';
 import './features/onboarding.js';
 import './features/pull-refresh.js';
 import './features/swipe-actions.js';
+import './features/live-strip.js';
 
 // پروفایل و احراز هویت
 import './user-profile.js';
