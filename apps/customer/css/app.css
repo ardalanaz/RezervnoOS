@@ -934,3 +934,12 @@ button,[role="button"],.botnav-item,a{min-height:0}
 .trip-swipe-pad.repeat{background:linear-gradient(90deg,var(--brand,#7c5cff),color-mix(in srgb,var(--brand,#7c5cff) 68%,#000))}
 .trip-card.ready .trip-swipe-pad{filter:brightness(1.08)}
 @media (prefers-reduced-motion: reduce){ .trip-card-inner{transition:none} }
+
+/* ویرایشِ inline پروفایل (C17) */
+.set-edit{padding:14px 16px;border-radius:14px;background:var(--s-50);border:1px solid var(--glass-brd);margin:2px 0}
+.set-edit-row{display:flex;gap:10px;flex-wrap:wrap}
+.set-input{flex:1;min-width:120px;padding:11px 13px;border-radius:11px;border:1px solid var(--s-200,rgba(255,255,255,.10));
+  background:var(--s-100,rgba(255,255,255,.04));color:var(--t1);font-family:inherit;font-size:15px;outline:none;
+  transition:border-color .18s ease}
+.set-input:focus-visible{border-color:var(--brand,#7c5cff)}
+.set-edit-acts{display:flex;gap:8px;margin-top:12px}

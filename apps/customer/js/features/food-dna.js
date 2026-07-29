@@ -2,7 +2,7 @@
 //  DNA غذایی — تجربه‌ی Wrapped برای نسل‌Z (قلاب ویروسی رزرونو)
 //  از me/profile داده‌ی واقعی می‌گیرد؛ اگر نبود، دموی جذاب نشان می‌دهد.
 // ═══════════════════════════════════════════════════════════
-import { API, USER, isLoggedIn, logout, userInitial, userName } from '../api.js';
+import { API, USER, isLoggedIn, logout, userInitial, userName, setUSER, refreshAuthUI } from '../api.js';
 import { esc, faNum, openLogin, toast } from '../auth.js';
 import { fmtFa } from '../data/discover.js';
 import { TRIPS, favs, pts } from '../data/seed.js';
@@ -189,7 +189,7 @@ export function renderProfile(){
       <div class="dna-entry-cta">کشفش کن ${icon('arrowL',{size:14})}</div>
     </div>
     <div class="settings-list reveal">
-      <div class="set-item" role="button" tabindex="0" onclick="toast('','ویرایش پروفایل')"><div class="set-icon">${icon('user',{size:20})}</div><div class="set-label">ویرایش پروفایل</div><span class="set-arrow">‹</span></div>
+      <div class="set-item" id="profEditItem" role="button" tabindex="0" onclick="editProfileInline()"><div class="set-icon">${icon('user',{size:20})}</div><div class="set-label">ویرایش پروفایل</div><span class="set-arrow">‹</span></div>
       <div class="set-item" role="button" tabindex="0" onclick="toast('','کیف پول کش‌بک')"><div class="set-icon">${icon('wallet',{size:20})}</div><div class="set-label">کیف پول کش‌بک</div><span class="set-arrow">‹</span></div>
       <div class="set-item" role="button" tabindex="0" onclick="openNotifPrefs()"><div class="set-icon">${icon('bell',{size:20})}</div><div class="set-label">اعلان‌ها</div><span class="set-arrow">‹</span></div>
       <div class="set-item" role="button" tabindex="0" onclick="toast('','پشتیبانی')"><div class="set-icon">${icon('message',{size:20})}</div><div class="set-label">پشتیبانی</div><span class="set-arrow">‹</span></div>
@@ -202,9 +202,58 @@ export function renderProfile(){
 
 
 
+// ═══════════════════════════════════════════════════════════
+//  ویرایشِ inline پروفایل (C17) — بدونِ modal، درجا در همان لیستِ تنظیمات.
+//  به endpointِ موجودِ PATCH /api/v1/me وصل است (بدونِ تغییرِ بک‌اند).
+//  demo-safe: آفلاین/دمو → به‌روزرسانیِ محلیِ USER (نامِ خودِ کاربر، نه داده‌ی جعلی).
+// ═══════════════════════════════════════════════════════════
+export function editProfileInline(){
+  const host = document.getElementById('profEditItem');
+  if(!host) return;
+  const f = esc(USER?.firstName || '');
+  const l = esc(USER?.lastName || '');
+  host.outerHTML =
+    `<div class="set-edit" id="profEditItem">
+       <div class="set-edit-row">
+         <input id="peFirst" class="set-input" type="text" maxlength="50" placeholder="نام" value="${f}" autocomplete="given-name" aria-label="نام" onkeydown="if(event.key==='Enter')saveProfileInline(this)">
+         <input id="peLast" class="set-input" type="text" maxlength="50" placeholder="نام خانوادگی" value="${l}" autocomplete="family-name" aria-label="نام خانوادگی" onkeydown="if(event.key==='Enter')saveProfileInline(this)">
+       </div>
+       <div class="set-edit-acts">
+         <button class="btn btn-sm btn-primary" onclick="saveProfileInline(this)">ذخیره</button>
+         <button class="btn btn-sm btn-ghost" onclick="cancelProfileEdit()">انصراف</button>
+       </div>
+     </div>`;
+  setTimeout(()=>{ const el=document.getElementById('peFirst'); if(el){ try{ el.focus(); el.select(); }catch(e){} } }, 30);
+}
+export async function saveProfileInline(btn){
+  const first = (document.getElementById('peFirst')?.value || '').trim();
+  const last  = (document.getElementById('peLast')?.value || '').trim();
+  if(!first){ toast('⚠️','اسمت رو وارد کن'); const el=document.getElementById('peFirst'); if(el) try{el.focus()}catch(e){} return; }
+  const b = (btn && btn.tagName==='BUTTON') ? btn : document.querySelector('#profEditItem .btn-primary');
+  if(b){ b.disabled = true; b.textContent = 'در حال ذخیره...'; }
+  if(isLoggedIn()){
+    const res = await API.updateProfile({ first_name: first, last_name: last });
+    if(res.ok && res.data?.user){ setUSER(res.data.user); }
+    else if(!res.offline){
+      toast('⚠️', res.error?.message || 'ذخیره ناموفق بود');
+      if(b){ b.disabled = false; b.textContent = 'ذخیره'; }
+      return;
+    } else { setUSER({ ...USER, firstName: first, lastName: last }); } // آفلاین → محلی
+  } else {
+    setUSER({ ...USER, firstName: first, lastName: last });
+  }
+  toast('✅','پروفایل به‌روزرسانی شد');
+  try{ refreshAuthUI && refreshAuthUI(); }catch(e){}
+  renderProfile();
+}
+export function cancelProfileEdit(){ renderProfile(); }
+
 // ── نمایشِ توابعِ onclick روی window (صدازده‌شده در رشته‌های HTML) ──
 window.openFoodDNA = openFoodDNA;
 window.dnaNext = dnaNext;
 window.dnaPrev = dnaPrev;
 window.closeFoodDNA = closeFoodDNA;
 window.shareFoodDNA = shareFoodDNA;
+window.editProfileInline = editProfileInline;
+window.saveProfileInline = saveProfileInline;
+window.cancelProfileEdit = cancelProfileEdit;
