@@ -39,6 +39,21 @@ make_global_icons() {
     "$SRC/js/icons.js"
 }
 
+# analytics پنل‌ها: از shared/js/analytics.panel.js با جای‌گذاریِ ثابت‌های per-app.
+# منطقِ تله‌متری تک‌منبع می‌شود؛ فقط ۵ مقدارِ خاصِ هر اپ (label/load-hint/SOURCE/
+# SID_KEY/Q_KEY) جای‌گذاری می‌شود. customer نسخه‌ی ESMِ جدا دارد (اینجا نمی‌آید).
+# نکته: business/company e2e ندارند؛ برای همین خروجی باید byte-identical با فایلِ
+# فعلی باشد (drift-check + cmp) تا هیچ تغییرِ رفتاری رخ ندهد.
+make_panel_analytics() { # $1=label $2=load-hint $3=source $4=sid-key $5=q-key
+  sed \
+    -e "s|__LABEL__|$1|" \
+    -e "s|__LOAD_HINT__|$2|" \
+    -e "s|__SOURCE__|$3|" \
+    -e "s|__SID_KEY__|$4|" \
+    -e "s|__Q_KEY__|$5|" \
+    "$SRC/js/analytics.panel.js"
+}
+
 # staging: خروجیِ موردِانتظار را در TMP می‌سازیم، سپس یا کپی یا مقایسه می‌کنیم.
 diffcount=0
 place() { # place <generated-file> <dest>
@@ -68,6 +83,12 @@ make_global_icons > "$TMP/icons.global.js"
 for app in $GLOBAL_APPS; do
   place "$TMP/icons.global.js" "$ROOT/apps/$app/js/icons.js"
 done
+
+# analytics.js پنل‌ها (business/company) — از منبعِ واحدِ shared/js/analytics.panel.js
+make_panel_analytics "پنل کسب‌وکار" "data.js (کلاینتِ API)" "business" "rz_sid_biz" "rz_evq_biz" > "$TMP/analytics.business.js"
+place "$TMP/analytics.business.js" "$ROOT/apps/business/js/analytics.js"
+make_panel_analytics "پنل کمپانی" "api.js" "company" "rz_sid_co" "rz_evq_co" > "$TMP/analytics.company.js"
+place "$TMP/analytics.company.js" "$ROOT/apps/company/js/analytics.js"
 
 if [ "$CHECK" = "1" ]; then
   if [ "$diffcount" -gt 0 ]; then
