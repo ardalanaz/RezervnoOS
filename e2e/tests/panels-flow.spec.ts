@@ -116,3 +116,30 @@ test('پنلِ کسب‌وکار: ناوبری به «رزروها» لیستِ 
 
   expect(errors, `خطاهای JS: ${errors.join(' | ')}`).toEqual([]);
 });
+
+test('پنلِ شرکت: ناوبری به «رستوران‌ها» لیستِ رستوران را رندر می‌کند', async ({ page }) => {
+  // فراتر از ورود: عملیاتِ اصلیِ پنلِ شرکت (viewِ رستوران‌ها). چون mock دادهٔ واقعی
+  // نمی‌دهد، view به دادهٔ نمونهٔ محلی fallback می‌کند و همان را رندر می‌کند.
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await mockPanelApi(page);
+
+  await page.goto(CO);
+
+  // ورودِ مدیرِ پلتفرم (دمو)
+  await page.locator('#adminPhone').fill('09123456789');
+  await page.locator('#adminSendBtn').click();
+  await page.locator('#adminCode').fill('1234');
+  await page.locator('#adminVerifyBtn').click();
+  await expect(page.locator('#v-overview')).toHaveClass(/active/);
+
+  // ناوبری به رستوران‌ها از همان مسیرِ nav() (روی موبایل کلیکِ مستقیمِ آیتم به‌خاطرِ
+  // نوارِ کناریِ off-canvas ناپایدار است؛ nav() همان مسیری است که onclick صدا می‌زند).
+  await page.evaluate(() => (window as unknown as { nav: (v: string) => void }).nav('restaurants'));
+
+  // نتیجه: viewِ رستوران‌ها فعال و حداقل یک ردیفِ رستوران رندر شده
+  await expect(page.locator('#v-restaurants')).toHaveClass(/active/);
+  await expect(page.locator('#restList .rest-row').first()).toBeVisible();
+
+  expect(errors, `خطاهای JS: ${errors.join(' | ')}`).toEqual([]);
+});
