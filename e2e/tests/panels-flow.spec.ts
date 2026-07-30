@@ -87,3 +87,32 @@ test('پنلِ شرکت: ورودِ مدیرِ پلتفرم (شماره → کد
 
   expect(errors, `خطاهای JS: ${errors.join(' | ')}`).toEqual([]);
 });
+
+test('پنلِ کسب‌وکار: ناوبری به «رزروها» لیستِ رزرو را رندر می‌کند', async ({ page }) => {
+  // فراتر از ورود: عملیاتِ اصلیِ پنل (viewِ رزروها) تا کنون e2e رفتاری نداشت.
+  // چون mock آرایه‌ی reservations نمی‌دهد، viewِ رزرو به دادهٔ نمونهٔ محلی fallback
+  // می‌کند و همان را رندر می‌کند — این خودِ رندرِ لیست را بدونِ خطا تأیید می‌کند.
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await mockPanelApi(page);
+
+  await page.goto(BIZ);
+
+  // ورودِ staff (دمو)
+  await page.locator('#staffPhone').fill('09123456789');
+  await page.locator('#staffSendBtn').click();
+  await page.locator('#staffCode').fill('1234');
+  await page.locator('#staffVerifyBtn').click();
+  await expect(page.locator('#v-overview')).toHaveClass(/active/);
+
+  // ناوبری به رزروها از همان مسیرِ nav() که آیتمِ نوارِ کناری هم صدا می‌زند.
+  // روی موبایل کلیکِ مستقیمِ آیتم به‌خاطرِ نوارِ کناریِ off-canvas و overlayها ناپایدار
+  // است؛ nav() را مستقیم صدا می‌زنیم تا همان رفتار پایدار روی هر viewport تست شود.
+  await page.evaluate(() => (window as unknown as { nav: (v: string) => void }).nav('reservations'));
+
+  // نتیجه: viewِ رزروها فعال و حداقل یک ردیفِ رزرو رندر شده
+  await expect(page.locator('#v-reservations')).toHaveClass(/active/);
+  await expect(page.locator('#resTL .tl-item').first()).toBeVisible();
+
+  expect(errors, `خطاهای JS: ${errors.join(' | ')}`).toEqual([]);
+});
