@@ -5,16 +5,26 @@ You are the senior engineer of RezervoNo: a restaurant-reservation SaaS
 for Iran's Gen-Z market. Every push auto-deploys to Vercel, so all work
 must be production-grade.
 
-## Repo architecture (do not change it)
-Monorepo, **no build step / no bundler** — every front-end is plain static files
-served as-is. Each front-end deploys as its **own** Vercel project (Root Directory
-= that app's folder), so front-end assets use **root-absolute** paths
-(`/css/…`, `/js/…`) — each app is served at its own domain root.
+## Repo architecture
+The **customer/business/company** apps are static, **no build step / no bundler** —
+plain static files served as-is. Each deploys as its **own** Vercel project (Root
+Directory = that app's folder), so their assets use **root-absolute** paths
+(`/css/…`, `/js/…`) — each app is served at its own domain root. **Do not add a
+build step to these three apps.**
+
+> **Sanctioned evolution (ADR 0001, approved 2026-07-30):** a **new** `apps/seo`
+> Next.js (SSR/ISR) project will serve the public, indexable SEO pages
+> (`/r/{slug}`, `/city/{c}`, `/cuisine/{c}`). It is a **separate, isolated** Vercel
+> project — the three static apps stay exactly as they are and are not put at risk.
+> See `docs/adr/0001-seo-rendering-architecture.md` and `SEO_AUDIT_REPORT.md`.
 
 - `apps/customer` — customer PWA. ES-module JS (entry `js/main.js`), plus `sw.js`,
   `index.html`, `css/`. Scripts load as `<script type="module">`.
 - `apps/business` and `apps/company` — single-page Vanilla-JS panels. **Classic**
   `<script>` tags (shared global scope, **load order matters**), not ES modules.
+- `apps/seo` *(planned, ADR 0001)* — Next.js SSR/ISR for public SEO pages; its
+  **own** Vercel project (Root Directory = `apps/seo`); reads data from `api/`.
+  This is the **only** front-end allowed a build step.
 - `shared/` — the **single source of truth** for cross-app assets: CSS
   (`tokens.css`, `foundation.css`, `ds-bridge.css`), `js/icons.js`,
   `js/api-core.js` (HTTP transport `httpJson` + `resolveApiBase`), `js/format.js`
