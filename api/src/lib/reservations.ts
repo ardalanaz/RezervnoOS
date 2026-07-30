@@ -1,7 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { db } from './db';
 import { withSlotLock } from './redis';
-import { redis } from './redis';
 import { Err } from './errors';
 import { enqueueSms } from './sms';
 import { emit } from './events';

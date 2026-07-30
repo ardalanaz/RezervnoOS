@@ -1,4 +1,4 @@
-import { claimJobs, completeJob, failJob, refreshQueueMetrics, type ClaimedJob } from './queue';
+import { claimJobs, completeJob, failJob, refreshQueueMetrics } from './queue';
 import { sendSmsNow, type SmsJob } from './sms';
 import { consumeSms } from './sms-balance';
 import { sendEmail, sendPush } from './notify';
