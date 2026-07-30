@@ -73,4 +73,4 @@ graph LR
 |---|-------|-----|
 | G1 | نبودِ ابزارِ خودکارِ تشخیصِ چرخه (madge/depcruise) در CI | پایین (توصیه‌ی افزودن) |
 | G2 | وابستگیِ ترتیبِ `<script>` در business/company (گرافِ ضمنی) | متوسط |
-| G3 | ۳ گرافِ فرانتِ جدا با کدِ مشترکِ تکراری (icons/analytics/api) | متوسط (به CONSOLIDATION) |
+| G3 | ۳ گرافِ فرانتِ جدا با کدِ مشترکِ تکراری (`analytics.js` + API client؛ `icons.js`/CSS از قبل تک‌منبع) | متوسط (به CONSOLIDATION) |

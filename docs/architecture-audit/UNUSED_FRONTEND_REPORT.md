@@ -21,11 +21,11 @@
 ## Assets / Images / Fonts / Icons
 - **تصویر/فونتِ محلی:** پوشه‌ی img/asset/font یافت نشد → آیکن‌ها **inline SVG** و فونت **Vazirmatn از CDN**.
   → بدونِ imageِ/فونتِ بلااستفاده.
-- **آیکن‌ها:** `icons.js` در هر سه اپ (۹۷ خط) — **تکرار** (نه unused)؛ به CONSOLIDATION (قدمِ اولِ ادغام).
+- **آیکن‌ها:** `icons.js` در هر سه اپ (۹۷ خط) — **از قبل single-source** (`shared/js/icons.js` + sync + drift-check)، نه تکرارِ واقعی. duplicateِ باقی‌مانده = `analytics.js`.
 
 ## Routes
 - فرانت‌ها SPAِ client-side‌اند (بدونِ routerِ سروری)؛ همه‌ی مقصدها از nav فعال‌اند. routeِ بلااستفاده یافت نشد.
 
 ## جمع‌بندی
 **بدونِ ماژول/صفحه/asset بلااستفاده‌ی قطعی.** تنها موارد: (۱) Orphan-UIهای placeholder (نیازِ flow)، (۲) تکرارِ
-`icons.js`/`analytics.js` (نیازِ ادغام، نه حذف)، (۳) ممیزیِ CSS-purge به‌عنوانِ کارِ کم‌اولویتِ آینده.
+`analytics.js` + API client (نیازِ ادغام، نه حذف؛ `icons.js`/CSS از قبل تک‌منبع‌اند)، (۳) ممیزیِ CSS-purge به‌عنوانِ کارِ کم‌اولویتِ آینده.
