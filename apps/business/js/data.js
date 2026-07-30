@@ -83,7 +83,7 @@ async function viewHistory(i){
 //  با توکن staff کار می‌کند. مثل اپ مشتری: تلاش API، fallback به نمونه.
 // ═══════════════════════════════════════════════════════════
 const API = {
-  base: '',
+  base: resolveApiBase(),            // '' = same-origin؛ قابلِ override با window.RZ_API_BASE یا <meta rz-api-base> (از api-core.js)
   timeout: 8000,
   _token: null,                      // توکن staff (بعد از ورود مدیر/کارمند)
   _refresh: null,                    // توکن تمدید staff
