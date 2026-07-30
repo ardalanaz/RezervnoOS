@@ -21,26 +21,18 @@ const API = {
   setRefresh(t){ this._refresh = t; try { if(t) localStorage.setItem('rz_co_refresh', t); else localStorage.removeItem('rz_co_refresh'); } catch {} },
   restoreSession(){ try { this._token = localStorage.getItem('rz_co_access')||null; this._refresh = localStorage.getItem('rz_co_refresh')||null; } catch {} return !!this._token; },
   async request(path, opts = {}, _retried = false){
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), this.timeout);
-    try {
-      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-      if (this._token) headers['Authorization'] = `Bearer ${this._token}`;
-      const res = await fetch(this.base + '/api/v1' + path, { ...opts, headers, signal: ctrl.signal });
-      clearTimeout(timer);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (res.status === 401 && this._refresh && !_retried && !path.startsWith('/auth/')) {
-          if (await this._doRefresh()) return this.request(path, opts, true);
-          this._onSessionExpired();
-        }
-        return { ok: false, status: res.status, error: data?.error || { message: `خطای ${res.status}` } };
-      }
-      return { ok: true, status: res.status, data };
-    } catch (e) {
-      clearTimeout(timer);
-      return { ok: false, offline: true, error: { message: 'اتصال به سرور برقرار نشد' } };
+    // transportِ خام به httpJsonِ مشترک (window.httpJson) واگذار می‌شود؛ منطقِ auth
+    // (Authorization، ۴۰۱→refresh→retry، session-expired) اینجا و بدونِ تغییر می‌ماند.
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (this._token) headers['Authorization'] = `Bearer ${this._token}`;
+    const r = await httpJson(this.base + '/api/v1' + path, { ...opts, headers }, this.timeout);
+    if (!r.ok && !r.offline && r.status === 401 && this._refresh && !_retried && !path.startsWith('/auth/')) {
+      if (await this._doRefresh()) return this.request(path, opts, true);
+      this._onSessionExpired();
     }
+    if (r.ok) return { ok: true, status: r.status, data: r.data };
+    if (r.offline) return { ok: false, offline: true, error: r.error };
+    return { ok: false, status: r.status, error: r.error || { message: `خطای ${r.status}` } };
   },
   async _doRefresh(){
     if (this._refreshing) return this._refreshing;

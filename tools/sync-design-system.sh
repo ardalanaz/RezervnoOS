@@ -44,6 +44,14 @@ make_global_icons() {
 # SID_KEY/Q_KEY) جای‌گذاری می‌شود. customer نسخه‌ی ESMِ جدا دارد (اینجا نمی‌آید).
 # نکته: business/company e2e ندارند؛ برای همین خروجی باید byte-identical با فایلِ
 # فعلی باشد (drift-check + cmp) تا هیچ تغییرِ رفتاری رخ ندهد.
+# نسخه‌ی global از api-core.js (export را برمی‌دارد + روی window می‌گذارد؛ برای <script> کلاسیک).
+make_global_apicore() {
+  sed \
+    -e 's/^export async function httpJson(/async function httpJson(/' \
+    "$SRC/js/api-core.js"
+  printf '\nif (typeof window !== "undefined") window.httpJson = httpJson;\n'
+}
+
 make_panel_analytics() { # $1=label $2=load-hint $3=source $4=sid-key $5=q-key
   sed \
     -e "s|__LABEL__|$1|" \
@@ -80,8 +88,12 @@ for app in $ESM_APPS; do
   place "$SRC/js/icons.js" "$ROOT/apps/$app/js/icons.js"
 done
 
-# api-core.js (هسته‌ی transport) — فعلاً فقط customer (ESM). پنل‌ها در قدمِ بعدی.
+# api-core.js (هسته‌ی transport) — customer نسخه‌ی ESM؛ پنل‌ها نسخه‌ی global.
 place "$SRC/js/api-core.js" "$ROOT/apps/customer/js/api-core.js"
+make_global_apicore > "$TMP/api-core.global.js"
+for app in $GLOBAL_APPS; do
+  place "$TMP/api-core.global.js" "$ROOT/apps/$app/js/api-core.js"
+done
 make_global_icons > "$TMP/icons.global.js"
 for app in $GLOBAL_APPS; do
   place "$TMP/icons.global.js" "$ROOT/apps/$app/js/icons.js"
