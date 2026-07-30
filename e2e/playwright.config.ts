@@ -52,11 +52,27 @@ export default defineConfig({
     },
   ],
 
-  // اگر BASE_URL محلی است، اپ استاتیک را خودکار serve کن
-  webServer: process.env.BASE_URL ? undefined : {
-    command: 'npx serve ../apps/customer -l 8080',
-    url: 'http://localhost:8080',
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  },
+  // اگر BASE_URL محلی است، هر سه اپ استاتیک را خودکار serve کن.
+  //   customer → 8080 (baseURL پیش‌فرض)، business → 8081، company → 8082
+  // پنل‌ها e2e نداشتند؛ این سرورها به اسموکِ پنل‌ها (panels-smoke.spec) اجازه‌ی لود می‌دهند.
+  webServer: process.env.BASE_URL ? undefined : [
+    {
+      command: 'npx serve ../apps/customer -l 8080',
+      url: 'http://localhost:8080',
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+    {
+      command: 'npx serve ../apps/business -l 8081',
+      url: 'http://localhost:8081',
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+    {
+      command: 'npx serve ../apps/company -l 8082',
+      url: 'http://localhost:8082',
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+  ],
 });
