@@ -106,28 +106,19 @@ const API = {
   setActiveRestaurant(id){ this._restaurantId = id||null; try { if(id) localStorage.setItem('rz_biz_restaurant_id', id); else localStorage.removeItem('rz_biz_restaurant_id'); } catch {} },
   getActiveRestaurant(){ return this._restaurantId; },
   async request(path, opts = {}, _retried = false){
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), this.timeout);
-    try {
-      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-      if (this._token) headers['Authorization'] = `Bearer ${this._token}`;
-      if (this._restaurantId) headers['X-Restaurant-Id'] = this._restaurantId;
-      const res = await fetch(this.base + '/api/v1' + path, { ...opts, headers, signal: ctrl.signal });
-      clearTimeout(timer);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        // ۴۰۱ روی توکن منقضی → یک‌بار refresh و تکرار درخواست
-        if (res.status === 401 && this._refresh && !_retried && !path.startsWith('/auth/')) {
-          if (await this._doRefresh()) return this.request(path, opts, true);
-          this._onSessionExpired();
-        }
-        return { ok: false, status: res.status, error: data?.error || { message: `خطای ${res.status}` } };
-      }
-      return { ok: true, status: res.status, data };
-    } catch (e) {
-      clearTimeout(timer);
-      return { ok: false, offline: true, error: { message: e.name === 'AbortError' ? 'زمان درخواست تمام شد' : 'اتصال به سرور برقرار نشد' } };
+    // transportِ خام به httpJsonِ مشترک (window.httpJson از api-core.js) واگذار می‌شود؛
+    // منطقِ auth (Authorization، X-Restaurant-Id، ۴۰۱→refresh→retry) اینجا و بدونِ تغییر می‌ماند.
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (this._token) headers['Authorization'] = `Bearer ${this._token}`;
+    if (this._restaurantId) headers['X-Restaurant-Id'] = this._restaurantId;
+    const r = await httpJson(this.base + '/api/v1' + path, { ...opts, headers }, this.timeout);
+    if (!r.ok && !r.offline && r.status === 401 && this._refresh && !_retried && !path.startsWith('/auth/')) {
+      if (await this._doRefresh()) return this.request(path, opts, true);
+      this._onSessionExpired();
     }
+    if (r.ok) return { ok: true, status: r.status, data: r.data };
+    if (r.offline) return { ok: false, offline: true, error: r.error };
+    return { ok: false, status: r.status, error: r.error || { message: `خطای ${r.status}` } };
   },
   async _doRefresh(){
     if (this._refreshing) return this._refreshing;
