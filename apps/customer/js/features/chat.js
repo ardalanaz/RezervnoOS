@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 import { API } from '../api.js';
 import { icon } from '../icons.js';
+import { esc } from '../auth.js';
 
 let _pollTimer = null;
 let _activeThreadId = null;
@@ -14,7 +15,7 @@ let _rendered = new Set(); // idهای پیامِ نمایش‌داده‌شده
 
 const POLL_MS = 4000;
 
-function esc(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+// esc از auth.js (منبعِ واحد) import می‌شود — نسخه‌ی محلیِ تکراری حذف شد.
 function faTime(iso){
   try { return new Date(iso).toLocaleTimeString('fa-IR', { hour:'2-digit', minute:'2-digit' }); }
   catch { return ''; }

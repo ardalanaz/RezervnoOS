@@ -10,7 +10,7 @@ import { R } from '../init.js';
 import { go } from '../data/discover.js';
 import { openRest } from '../data/detail.js';
 import { icon } from '../icons.js';
-import { esc } from '../auth.js';
+import { esc, faNum } from '../auth.js';
 import { API, isLoggedIn } from '../api.js';
 import { mapApiTrip } from '../reservation.js';
 
@@ -61,10 +61,10 @@ export function notifUnreadCount(){ const read=readSet(); return build().filter(
 export function updateNotifBadge(){
   const b = document.getElementById('notifBadge'); if(!b) return;
   const n = notifUnreadCount();
-  b.textContent = n>9 ? '۹+' : (n?fa(n):'');
+  b.textContent = n>9 ? '۹+' : (n?faNum(n):'');
   b.style.display = n ? '' : 'none';
 }
-function fa(n){ return String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]); }
+// faNum از auth.js (منبعِ واحد) import می‌شود — نسخه‌ی محلیِ تکراری حذف شد.
 
 function ensureEl(){
   let ov = document.getElementById('notif'); if(ov) return ov;
