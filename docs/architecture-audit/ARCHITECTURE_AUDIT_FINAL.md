@@ -66,7 +66,7 @@ graph TD
 |-----|------|------|
 | **بحرانی** | — (موردِ بحرانیِ کدمحور یافت نشد) | — |
 | **بالا** | نبودِ DR/backup runbook + restore-drill | تولید/عملیات |
-| بالا | تکرارِ کدِ فرانت (icons/analytics/api) → واگرایی/باگِ خزنده | فرانت/نگه‌داری |
+| بالا | تکرارِ کدِ فرانت (`analytics.js` + API client؛ `icons.js`/CSS از قبل تک‌منبع) → واگرایی/باگِ خزنده | فرانت/نگه‌داری |
 | متوسط | صفِ Postgres در >۱۰۰k همزمان | مقیاس |
 | متوسط | AI heuristic (نه مدلِ واقعی/versioned) | قابلیت |
 | متوسط | i18n/multi-currency ثابت (fa/IRR) برای «multi-country» | enterprise |
@@ -83,7 +83,7 @@ graph TD
 1. **عملیاتی-فوری (بدونِ کد):** DR runbook + restore-drill، alert rules (۵xx/DB-down/صفِ عقب‌افتاده)، load-test (k6).
 2. **تأییدِ runtime:** `pg_policies` برای RLS، مرورِ SSRF در webhookها، drift-check اسکیمای CI.
 3. **تمیزکاریِ کم‌ریسک (PRهای جدا):** تأیید و طبقه‌بندیِ ۳ endpointِ orphan؛ رفع/اتصالِ Orphan-UIها؛ حذفِ any/console.
-4. **ادغامِ فرانت (متوسط):** یک پکیجِ مشترکِ سبک برای icons/analytics/api-client (به CONSOLIDATION).
+4. **ادغامِ فرانت (متوسط):** `analytics.js` و API client به الگوی shared/sync (مثلِ `icons.js`/CSSِ از قبل‌ادغام‌شده) — به CONSOLIDATION.
 5. **مقیاسِ بلندمدت:** broker صف، AI Platformِ جدا با model-registry/feedback، i18n/currency abstraction.
 
 ## ۸) آمادگیِ رشدِ آینده

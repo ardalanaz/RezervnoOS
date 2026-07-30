@@ -10,7 +10,8 @@
 مونو-ریپو با **چهار deploy-unit**: سه فرانتِ استاتیکِ Vanilla-JS (`apps/customer`, `apps/business`,
 `apps/company`) و یک بک‌اندِ Next.js 14 (`api/`). جداسازیِ deploy تمیز است؛ بک‌اند لایه‌بندیِ
 Controller→Service→Data دارد. **دو ضعفِ ساختاریِ واقعی**: (۱) تکرارِ کدِ مشترک بینِ سه فرانت
-(icons/analytics/api-client) به‌خاطرِ نبودِ build/bundler، (۲) ناهمگونیِ الگوی ماژول (ES-module در
+(`analytics.js` و API client — توجه: `icons.js` و CSS از قبل از طریقِ `sync-design-system.sh`
+تک‌منبع‌اند) به‌خاطرِ نبودِ build/bundler، (۲) ناهمگونیِ الگوی ماژول (ES-module در
 customer، global-script در business/company).
 
 **نمره‌ی ساختارِ پروژه: ۷.۵ / ۱۰**
@@ -50,8 +51,8 @@ infra/          ← زیرساخت (docker/nginx/monitoring)
 ## ۴) تکرارِ کد (یافته‌ی کلیدی — شواهد)
 | فایل | customer | business | company | وضعیت |
 |------|----------|----------|---------|-------|
-| `icons.js` | ۹۷ خط | ۹۷ خط | ۹۷ خط | **تکرارِ محتمل (یکسان)** |
-| `analytics.js` | ۷۷ خط (ES) | ۷۰ خط | ۷۰ خط | business/company **یکسان**؛ customer نسخه‌ی ماژولی |
+| `icons.js` | ۹۷ خط | ۹۷ خط | ۹۷ خط | ✅ **از قبل single-source** (`shared/js/icons.js` + sync + drift-check) — نه تکرار |
+| `analytics.js` | ۷۷ خط (ES) | ۷۰ خط | ۷۰ خط | **duplicateِ واقعیِ پارامتریک** (خارج از sync؛ ثابت‌های per-app + فرمِ ES/IIFE) |
 | API client | `api.js` | داخلِ `data.js` | `api.js` | **۳ پیاده‌سازیِ جدا** |
 | `overview.js`/`waitlist.js`/`loyalty.js`/`chat.js` | — | ✓ | ✓/جزئی | همپوشانیِ منطق بینِ پنل‌ها |
 

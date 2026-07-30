@@ -24,8 +24,8 @@
 - **UI:** sidebar، topbar(search)، offlineBanner، modal، toast.
 
 ## مشترک / تکراری (به CONSOLIDATION)
-- `icons.js` (هر ۳ اپ، ۹۷ خط)، `analytics.js` (هر ۳)، API client (۳ نسخه)، `overview/waitlist/loyalty/chat` همپوشان.
-- توکن‌های CSS از قبل تک‌منبع (`shared/css` + sync).
+- **از قبل تک‌منبع (sync):** توکن‌های CSS (`shared/css`) **و** `icons.js` (`shared/js/icons.js`) — با drift-check.
+- **duplicateِ واقعیِ باقی‌مانده:** `analytics.js` (هر ۳، پارامتریک)، API client (۳ نسخه)، `overview/waitlist/loyalty/chat` همپوشان.
 
 ## غایب (framework-محور، طبقِ طراحیِ Vanilla)
 Hooks/Contexts/Stores به‌سبکِ React وجود ندارند (Vanilla JS)؛ Localization به‌صورتِ متنِ فارسیِ inline (بدونِ i18n framework — به SCALABILITY).
