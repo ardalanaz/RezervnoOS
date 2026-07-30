@@ -79,6 +79,9 @@ done
 for app in $ESM_APPS; do
   place "$SRC/js/icons.js" "$ROOT/apps/$app/js/icons.js"
 done
+
+# api-core.js (هسته‌ی transport) — فعلاً فقط customer (ESM). پنل‌ها در قدمِ بعدی.
+place "$SRC/js/api-core.js" "$ROOT/apps/customer/js/api-core.js"
 make_global_icons > "$TMP/icons.global.js"
 for app in $GLOBAL_APPS; do
   place "$TMP/icons.global.js" "$ROOT/apps/$app/js/icons.js"
