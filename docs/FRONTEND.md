@@ -93,13 +93,34 @@ skeleton placeholder (`div.rc`) is shown while data loads (real cards are
 
 ---
 
-## 5. Shared Components / Design System
+## 5. Shared Components / Design System (single source + sync tool)
 
-- Source: `shared/css/{tokens,foundation,ds-bridge}.css` and `shared/js/icons.js`.
-- Copied into `apps/*/css` and `apps/*/js` (and `demo-mvp/*`). **There is no
-  build step that syncs them** — changes must be propagated to each copy (a
-  known maintenance cost, see [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md)).
-- `icons.js` exposes `icon(name, opts)` returning inline SVG strings.
+`shared/` is the **single source of truth**; `tools/sync-design-system.sh`
+copies it into each app so there is exactly one canonical copy to edit.
+
+**Source (`shared/`):**
+- `css/{tokens,foundation,ds-bridge}.css` — synced byte-identical to all apps.
+- `js/icons.js` — `icon(name, opts)` → inline SVG. customer gets the ES-module
+  form; panels get a `global` form (`export` stripped) for classic `<script>`.
+- `js/api-core.js` — HTTP transport: `httpJson(url, opts, timeout)` (stateless
+  fetch + JSON + timeout + uniform `{ok,data}` / `{ok:false,status,error}` /
+  `{ok:false,offline}` envelope) and `resolveApiBase()` (reads
+  `window.RZ_API_BASE` or `<meta name="rz-api-base">`, defaults to `''` =
+  same-origin). Used by all three apps (customer imports it; panels get the
+  global form). **Auth/refresh logic is NOT here — it stays per-app.**
+- `js/format.js` — pure helpers `fa` (fa-IR number formatting) and `esc`
+  (HTML-escape / anti-XSS). Panels only (customer's `fa` differs on purpose).
+- `js/analytics.panel.js` — tokenized panel telemetry, synced to business/company.
+
+**Workflow (important):** never hand-edit the generated per-app copies. Edit
+`shared/…`, then run `sh tools/sync-design-system.sh` to regenerate every copy;
+commit `shared/` **and** the generated files together. CI runs
+`sh tools/sync-design-system.sh --check` and **fails on drift**. The panels'
+generated files (icons/api-core/format/analytics) are `global` variants — the
+tool strips `export` and, where needed, assigns to `window`.
+
+> This replaces the old "propagate by hand" maintenance cost noted in earlier
+> docs; the sync tool + CI drift-check now enforce a single source automatically.
 
 ---
 
@@ -125,8 +146,15 @@ skeleton placeholder (`div.rc`) is shown while data loads (real cards are
   `/auth/refresh`, retries once). `base` is `''` (same-origin) by default.
 - On load, `restoreSession()` (in `init.js`) calls `/me` if a token is stored.
 - **Demo mode**: when the backend is unavailable, requests fall back to
-  `seed.js` sample data and a demo OTP is accepted so the whole flow is testable
-  offline.
+  `seed.js` sample data and a demo OTP (`1234`) is accepted so the whole flow is
+  testable offline.
+- **Shared transport, per-app auth**: the raw fetch is delegated to `httpJson`
+  from `shared/js/api-core.js` (see §5) in all three apps; each app keeps its own
+  auth/refresh logic and token keys — customer `rz_access`/`rz_refresh`,
+  business `rz_biz_access`/`rz_biz_refresh` (+ `X-Restaurant-Id` header),
+  company `rz_co_access`/`rz_co_refresh`. The API base is resolved once via
+  `resolveApiBase()`, so a separate API domain can be wired without a build
+  (set `<meta name="rz-api-base">` or `window.RZ_API_BASE`).
 
 ```mermaid
 sequenceDiagram

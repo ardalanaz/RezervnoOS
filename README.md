@@ -101,20 +101,30 @@ production (dev mode is rejected in production).
 # Backend
 cd api && npm run dev                 # http://localhost:3000
 
-# Front-ends (static; assets use absolute /paths)
+# Front-ends (static; each app is its own site → root-absolute /css, /js paths)
 npx serve apps/customer -l 8080
 npx serve apps/business -l 8081
 npx serve apps/company  -l 8082
 
-# E2E (customer app, mocked API)
+# Design system: edit shared/, then regenerate the per-app copies (no build step)
+sh tools/sync-design-system.sh          # copy shared/ → apps/*
+sh tools/sync-design-system.sh --check  # CI drift-check (fails if apps/ ≠ shared/)
+
+# E2E (customer + panels, mocked API; 3 viewports: iPhone 13 / Pixel 5 / Desktop)
 cd e2e && npm install && npx playwright install --with-deps chromium webkit
-BASE_URL=http://localhost:8080 npm test
+npm test                 # auto-serves all 3 apps (customer:8080, business:8081, company:8082)
 ```
 
-**Conventions** (see [`docs/PROJECT_KNOWLEDGE.md`](./docs/PROJECT_KNOWLEDGE.md) §7):
-surgical changes; Persian commit messages stating *what / why / tested-vs-only-
-type-checked*; enums over free strings; domain errors via `Err`; bump
-`CACHE_VERSION` in `sw.js` when `js/`/`css/` change; never break demo mode.
+> Panel tests navigate via the app's `nav()` (not raw sidebar clicks) so they pass
+> on mobile viewports where the sidebar is off-canvas.
+
+**Conventions** (see [`docs/PROJECT_KNOWLEDGE.md`](./docs/PROJECT_KNOWLEDGE.md) §7
+and [`CLAUDE.md`](./CLAUDE.md)): surgical changes; Persian commit messages stating
+*what / why / tested-vs-only-type-checked*; enums over free strings; domain errors
+via `Err`; **edit `shared/` (never per-app copies) and run
+`tools/sync-design-system.sh`**; bump `CACHE_VERSION` in `apps/customer/sw.js` when
+its `js/`/`css/` change; preserve CRLF files (some HTML/JS are CRLF — see
+`CLAUDE.md`); never break demo mode (OTP `1234`); small PRs merged on green CI.
 
 ## Deployment
 
