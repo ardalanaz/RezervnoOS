@@ -33,7 +33,7 @@ export async function sendPush(userId: string, title: string, body: string): Pro
  * ارسال ایمیل.
  * Production: با SMTP یا سرویس‌هایی مثل SendGrid/Mailgun/Postmark.
  */
-export async function sendEmail(to: string, subject: string, body: string): Promise<void> {
+export async function sendEmail(to: string, subject: string, _body: string): Promise<void> {
   const apiKey = process.env.EMAIL_API_KEY;
   const from = process.env.EMAIL_FROM || 'noreply@rezervno.ir';
   if (!apiKey) {

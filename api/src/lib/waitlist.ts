@@ -95,7 +95,7 @@ export async function joinWaitlist(input: JoinWaitlistInput) {
   // autofill نام/تلفن از پروفایل
   let guestName = input.guest?.name ?? null;
   let guestPhone = input.guest?.phone ?? null;
-  let guestEmail = input.guest?.email ?? null;
+  const guestEmail = input.guest?.email ?? null;
   if (input.userId && !guestName) {
     const u = await db.user.findUnique({ where: { id: input.userId } });
     guestName = [u?.firstName, u?.lastName].filter(Boolean).join(' ') || null;
@@ -262,7 +262,7 @@ function assertOwnsEntry(entry: { userId: string | null }, callerUserId?: string
   if (callerUserId && entry.userId !== callerUserId) throw Err.notFound('ورودی لیست انتظار');
 }
 
-export async function acceptOffer(entryId: string, actor = 'customer', callerUserId?: string) {
+export async function acceptOffer(entryId: string, _actor = 'customer', callerUserId?: string) {
   const e = await db.waitlistEntry.findUnique({ where: { id: entryId } });
   if (!e) throw Err.notFound('ورودی لیست انتظار');
   assertOwnsEntry(e, callerUserId);
@@ -300,7 +300,7 @@ export async function acceptOffer(entryId: string, actor = 'customer', callerUse
 }
 
 // ── رد آفر توسط مشتری → آفر به نفر بعدی ──
-export async function declineOffer(entryId: string, actor = 'customer', callerUserId?: string) {
+export async function declineOffer(entryId: string, _actor = 'customer', callerUserId?: string) {
   const e = await db.waitlistEntry.findUnique({ where: { id: entryId } });
   if (!e) throw Err.notFound('ورودی لیست انتظار');
   assertOwnsEntry(e, callerUserId);

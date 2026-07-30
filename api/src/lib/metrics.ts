@@ -1,7 +1,3 @@
-import { createLogger } from './logger';
-
-const log = createLogger('metrics');
-
 // ═══════════════════════════════════════════════════════════════════════
 //  لایه‌ی Metrics (سازگار با Prometheus)
 //

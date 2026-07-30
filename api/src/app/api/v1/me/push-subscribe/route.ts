@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { authFromRequest } from '@/lib/jwt';
-import { db } from '@/lib/db';
 import { Err, errorResponse } from '@/lib/errors';
 import { parseBody, z } from '@/lib/schemas';
 

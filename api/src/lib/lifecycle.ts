@@ -59,8 +59,6 @@ const NOTIFY: Partial<Record<RStatus, { template: SmsJob['template']; label: str
   completed:      { template: 'booking_thanks', label: 'از حضور شما متشکریم' },
 };
 
-const isTerminal = (s: string) => (TRANSITIONS[s]?.length ?? 0) === 0;
-
 /** آیا انتقال از from به to مجاز است؟ */
 export function canTransition(from: RStatus, to: RStatus): boolean {
   return TRANSITIONS[from]?.includes(to) ?? false;
