@@ -16,15 +16,17 @@ const PAGE_SIZE = 24; // اندازه‌ی صفحه (مناسب grid موبای�
 
 const querySchema = z.object({
   vibe: z.string().min(1).max(50).optional(),
+  city: z.string().min(1).max(100).optional(),      // فیلترِ شهر (صفحاتِ SEO /city/{c})
+  cuisine: z.string().min(1).max(100).optional(),   // فیلترِ آشپزی (صفحاتِ SEO /cuisine/{c})
   cursor: zUuid.optional(),
 });
 
 export async function GET(req: Request) {
   try {
-    const { vibe, cursor } = parseQuery(req, querySchema);
+    const { vibe, city, cuisine, cursor } = parseQuery(req, querySchema);
 
-    // کلید cache بر اساس فیلتر و صفحه
-    const key = cacheKey('restaurants', vibe || 'all', cursor || 'first');
+    // کلید cache بر اساس فیلترها و صفحه
+    const key = cacheKey('restaurants', vibe || 'all', city || 'all', cuisine || 'all', cursor || 'first');
 
     // cache 60 ثانیه — لیست رستوران‌ها لحظه‌ای تغییر نمی‌کند
     // (تغییر وضعیت آنلاین/آفلاین حداکثر ظرف ۶۰ ثانیه در اپ مشتری دیده می‌شود)
@@ -35,6 +37,8 @@ export async function GET(req: Request) {
         where: {
           isOpen: true,
           ...(vibe ? { vibes: { has: vibe } } : {}),
+          ...(city ? { city } : {}),
+          ...(cuisine ? { cuisine } : {}),
           // اتصال: یا gating خاموش است، یا اخیراً heartbeat داشته (آنلاین است).
           // رستورانی که اینترنتش قطع شده از لیست مشتری پنهان می‌شود تا رزرو آنلاینِ
           // متضاد با ثبت حضوریِ آفلاین پیش نیاید.
@@ -43,7 +47,7 @@ export async function GET(req: Request) {
             { lastSeenAt: { gte: onlineThreshold } },
           ],
         },
-        select: { id: true, slug: true, name: true, cuisine: true, vibes: true, priceBand: true, cbBasePct: true },
+        select: { id: true, slug: true, name: true, cuisine: true, city: true, vibes: true, priceBand: true, cbBasePct: true },
         orderBy: { id: 'desc' },           // ترتیب پایدار برای cursor
         take: PAGE_SIZE + 1,                // یکی بیشتر بگیر تا بفهمی صفحه‌ی بعد هست
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

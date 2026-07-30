@@ -1,0 +1,41 @@
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { fetchRestaurantList } from '@/lib/api';
+import Listing from '@/components/Listing';
+
+export const revalidate = 300;
+
+const SITE = 'https://rezervno.ir';
+// گاردِ کیفیت: صفحه‌ی مکان با کمتر از این تعداد رستوران ساخته نمی‌شود (ضدِّ thin content).
+const MIN_LISTINGS = 1;
+
+function decode(s: string): string {
+  try { return decodeURIComponent(s); } catch { return s; }
+}
+
+export async function generateMetadata({ params }: { params: { city: string } }): Promise<Metadata> {
+  const city = decode(params.city);
+  const url = `${SITE}/city/${encodeURIComponent(city)}`;
+  return {
+    title: `بهترین رستوران‌های ${city}`,
+    description: `کشف و رزرو آنلاین میز در بهترین رستوران‌های ${city} — منو، امتیاز و قیمت.`,
+    alternates: { canonical: url },
+    openGraph: { type: 'website', title: `رستوران‌های ${city}`, url },
+  };
+}
+
+export default async function CityPage({ params }: { params: { city: string } }) {
+  const city = decode(params.city);
+  const items = await fetchRestaurantList({ city });
+  if (items.length < MIN_LISTINGS) notFound();
+
+  return (
+    <Listing
+      title={`بهترین رستوران‌های ${city}`}
+      description={`${items.length} رستوران در ${city} برای رزرو آنلاین.`}
+      pageUrl={`${SITE}/city/${encodeURIComponent(city)}`}
+      items={items}
+      crumbCity={city}
+    />
+  );
+}
