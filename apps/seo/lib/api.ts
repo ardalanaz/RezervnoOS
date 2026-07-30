@@ -81,3 +81,27 @@ export async function fetchRestaurantList(
     return [];
   }
 }
+
+export interface SitemapData {
+  restaurants: { slug: string; updated_at: string }[];
+  cities: string[];
+  cuisines: string[];
+}
+
+/** دادهٔ خامِ sitemap از API (GET /api/v1/seo/sitemap). نبودِ API → خالی. */
+export async function fetchSitemapData(revalidateSec = 3600): Promise<SitemapData> {
+  const empty: SitemapData = { restaurants: [], cities: [], cuisines: [] };
+  if (!API_BASE) return empty;
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/seo/sitemap`, { next: { revalidate: revalidateSec } });
+    if (!res.ok) return empty;
+    const d = (await res.json()) as Partial<SitemapData>;
+    return {
+      restaurants: Array.isArray(d.restaurants) ? d.restaurants : [],
+      cities: Array.isArray(d.cities) ? d.cities : [],
+      cuisines: Array.isArray(d.cuisines) ? d.cuisines : [],
+    };
+  } catch {
+    return empty;
+  }
+}
