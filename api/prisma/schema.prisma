@@ -98,6 +98,15 @@ model Restaurant {
   lateGraceMinutes Int @default(15) @map("late_grace_minutes") @db.SmallInt // مهلت تأخیر مهمان قبل از no_show
   holdMinutes      Int @default(10) @map("hold_minutes") @db.SmallInt    // مدت هولد رزرو pending تا انقضا
   timezone      String           @default("Asia/Tehran")
+  // ── دادهٔ مکانی برای Local/Restaurant SEO (ADR 0001, migration 030) — همه nullable،
+  //    backward-compatible؛ منبعِ schema.org PostalAddress + GeoCoordinates در apps/seo. ──
+  address       String?
+  city          String?
+  district      String?
+  postalCode    String?          @map("postal_code")
+  country       String           @default("IR")
+  latitude      Float?
+  longitude     Float?
   clubPrefix    String           @map("club_prefix")
   cbBasePct     Int              @default(5) @map("cb_base_pct") @db.SmallInt
   cbPreorderPct Int              @default(8) @map("cb_preorder_pct") @db.SmallInt
@@ -131,6 +140,7 @@ model Restaurant {
   smsTransactions  SmsTransaction[]
   closures         RestaurantClosure[]
   @@index([tenantId])
+  @@index([city], map: "idx_restaurants_city")
   chatThreads  ChatThread[]
   @@map("restaurants")
 }

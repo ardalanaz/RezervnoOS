@@ -22,10 +22,13 @@ async function main() {
 
   const data = [
     { slug: 'vista', name: 'کافه‌رستوران ویستا', cuisine: 'ایتالیایی - فیوژن', vibes: ['رمانتیک', 'آروم'], prefix: 'VIS', cb: 8,
+      loc: { city: 'تهران', district: 'زعفرانیه', address: '[دمو] تهران، زعفرانیه، خیابان نمونه، پلاک ۱', lat: 35.8100, lng: 51.4200 },
       menu: [['پاستا کربونارا', 185000, '🍝'], ['سالاد سزار', 85000, '🥗'], ['نوشیدنی ویژه', 45000, '🍷'], ['دسر شکلاتی', 65000, '🍮']] },
     { slug: 'geram', name: 'گرام برگر', cuisine: 'برگر مدرن', vibes: ['کژوال', 'سریع', 'ارزون'], prefix: 'GRM', cb: 5,
+      loc: { city: 'تهران', district: 'ونک', address: '[دمو] تهران، ونک، خیابان نمونه، پلاک ۲', lat: 35.7570, lng: 51.4100 },
       menu: [['کلاسیک برگر', 120000, '🍔'], ['اسپایسی برگر', 135000, '🌶'], ['سیب‌زمینی', 45000, '🍟']] },
     { slug: 'ava', name: 'آوا روف‌تاپ', cuisine: 'فیوژن - روف‌تاپ', vibes: ['ویو', 'رمانتیک', 'لوکس'], prefix: 'AVA', cb: 15,
+      loc: { city: 'تهران', district: 'ولنجک', address: '[دمو] تهران، ولنجک، خیابان نمونه، پلاک ۳', lat: 35.8080, lng: 51.3980 },
       menu: [['استیک واگیو', 350000, '🥩'], ['شامپاین', 120000, '🍾'], ['کیک تولد', 95000, '🎂']] },
   ] as const;
 
@@ -36,6 +39,8 @@ async function main() {
       data: {
         tenantId: tenant.id, slug: r.slug, name: r.name, cuisine: r.cuisine,
         vibes: [...r.vibes], clubPrefix: r.prefix, cbBasePct: r.cb,
+        city: r.loc.city, district: r.loc.district, address: r.loc.address,
+        latitude: r.loc.lat, longitude: r.loc.lng,
         tables: { create: Array.from({ length: 12 }, (_, i) => {
           const n = i + 1;
           const cap = i < 4 ? 2 : i < 9 ? 4 : i < 11 ? 6 : 8;
