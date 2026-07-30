@@ -1,6 +1,6 @@
 // ═══ رزرونو — پنل business: داده و پیکربندی (Vanilla JS، بدون build، scope مشترک) ═══
 // ═══════════ DATA ═══════════
-function fa(n){return n.toLocaleString('fa-IR')}
+// fa/esc از js/format.js (منبعِ واحدِ پنل‌ها) می‌آیند — قبل از این فایل لود می‌شود.
 // ── چرخه‌ی حیات کامل رزرو: برچسب فارسی، آیکون، و رنگ هر وضعیت ──
 const STATUS_META={
   pending:        {label:'در انتظار',     icon:'clock', bg:'#FEF3C7', fg:'#92400E'},
@@ -396,8 +396,6 @@ const Heartbeat = {
 function dataSourceNote(){
   return API.online ? '' : `<div style="font-size:11px;color:var(--amber-600);background:var(--amber-50);padding:6px 12px;border-radius:8px;margin-bottom:14px;text-align:center">${icon('info',{size:13})} داده‌ی نمونه (بک‌اند متصل نیست)</div>`;
 }
-// امنیت: escape کردن ورودی کاربر قبل از تزریق به HTML (جلوگیری از XSS)
-function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 const RES = [
   {t:'۱۸:۳۰',name:'نیلوفر رضایی',party:2,table:3,status:'arrived',seg:'vip',pre:true,note:'تولد همسر',phone:'۰۹۱۲۱۱۱۲۲۳۳',date:'today',dLabel:'امروز'},
   {t:'۱۹:۰۰',name:'امیر حسینی',party:4,table:7,status:'confirmed',seg:'new',pre:false,note:'',phone:'۰۹۱۲۲۲۲۳۳۴۴',date:'today',dLabel:'امروز'},
