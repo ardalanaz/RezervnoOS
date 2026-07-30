@@ -44,3 +44,40 @@ export async function fetchRestaurant(slug: string, revalidateSec = 300): Promis
     return null;
   }
 }
+
+export interface RestaurantListItem {
+  id: string;
+  slug: string;
+  name: string;
+  cuisine: string | null;
+  city: string | null;
+  vibes: string[];
+  price_band?: number;
+  priceBand?: number;
+  rating: number | null;
+  reviews_count: number;
+}
+
+/**
+ * لیستِ رستوران‌ها با فیلترِ اختیاریِ شهر/آشپزی (GET /api/v1/restaurants?city=&cuisine=).
+ * برای صفحاتِ /city/{c} و /cuisine/{c}. نبودِ API → آرایه‌ی خالی (صفحه گاردِ کیفیت را اعمال می‌کند).
+ */
+export async function fetchRestaurantList(
+  filter: { city?: string; cuisine?: string },
+  revalidateSec = 300,
+): Promise<RestaurantListItem[]> {
+  if (!API_BASE) return [];
+  const qs = new URLSearchParams();
+  if (filter.city) qs.set('city', filter.city);
+  if (filter.cuisine) qs.set('cuisine', filter.cuisine);
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/restaurants?${qs.toString()}`, {
+      next: { revalidate: revalidateSec },
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { items?: RestaurantListItem[] };
+    return Array.isArray(data.items) ? data.items : [];
+  } catch {
+    return [];
+  }
+}

@@ -1,8 +1,44 @@
 // ساختِ JSON-LD (schema.org) از دادهٔ واقعیِ رستوران — تابعِ خالص و قابل‌تست.
 // فقط فیلدهایی که داده دارند emit می‌شوند (بدونِ null/خالی → schemaِ معتبر).
-import type { RestaurantDetail } from './api';
+import type { RestaurantDetail, RestaurantListItem } from './api';
 
 const SITE = 'https://rezervno.ir';
+
+/**
+ * JSON-LD برای صفحاتِ لیست (شهر/آشپزی): CollectionPage + ItemList + BreadcrumbList.
+ * items با ترتیب در ItemList قرار می‌گیرند و هرکدام به صفحه‌ی رستوران لینک می‌شوند.
+ */
+export function listJsonLd(opts: {
+  name: string;
+  pageUrl: string;
+  items: RestaurantListItem[];
+  crumbCity?: string;
+}): object {
+  const collection = {
+    '@type': 'CollectionPage',
+    '@id': `${opts.pageUrl}#collection`,
+    name: opts.name,
+    url: opts.pageUrl,
+    mainEntity: {
+      '@type': 'ItemList',
+      numberOfItems: opts.items.length,
+      itemListElement: opts.items.map((r, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        url: `${SITE}/r/${encodeURIComponent(r.slug)}`,
+        name: r.name,
+      })),
+    },
+  };
+
+  const crumbs: object[] = [{ '@type': 'ListItem', position: 1, name: 'رزرونو', item: `${SITE}/` }];
+  crumbs.push({ '@type': 'ListItem', position: 2, name: opts.name, item: opts.pageUrl });
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [collection, { '@type': 'BreadcrumbList', itemListElement: crumbs }],
+  };
+}
 
 /** price_band (۱..۴) → رشته‌ی priceRange به‌سبکِ schema.org. */
 function priceRange(band: number): string {
