@@ -8,7 +8,7 @@ function toggleSidebar(){document.getElementById('sidebar').classList.toggle('op
 //  با بک‌اند → داده‌ی واقعی · بدون بک‌اند → نمونه (پنل نمی‌شکند)
 // ═══════════════════════════════════════════════════════════
 const API = {
-  base: '',
+  base: resolveApiBase(),            // '' = same-origin؛ قابلِ override با window.RZ_API_BASE یا <meta rz-api-base> (از api-core.js)
   timeout: 8000,
   _token: null,
   _refresh: null,

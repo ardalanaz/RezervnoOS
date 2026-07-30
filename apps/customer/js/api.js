@@ -17,19 +17,11 @@ import { toast } from './auth.js';
 import { go } from './data/discover.js';
 import { R_SAMPLE } from './data/seed.js';
 import { R } from './init.js';
-import { httpJson } from './api-core.js';
+import { httpJson, resolveApiBase } from './api-core.js';
 // آدرسِ پایه‌ی API — قابلِ تنظیم بدونِ build:
 //   ۱) window.RZ_API_BASE (اگر پیش از main.js ست شود)، یا
 //   ۲) <meta name="rz-api-base" content="https://..."> در index.html
 // پیش‌فرض '' یعنی same-origin (همان رفتارِ فعلی/دمو — بدونِ تغییر).
-function resolveApiBase(){
-  try{
-    if (typeof window !== 'undefined' && window.RZ_API_BASE) return String(window.RZ_API_BASE).replace(/\/$/, '');
-    const m = (typeof document !== 'undefined') && document.querySelector('meta[name="rz-api-base"]');
-    if (m && m.content) return String(m.content).trim().replace(/\/$/, '');
-  }catch{}
-  return '';
-}
 export const API = {
   base: resolveApiBase(),             // '' = same-origin؛ قابلِ override با window.RZ_API_BASE یا <meta rz-api-base>
   timeout: 8000,                     // سقف انتظار هر درخواست (ms)

@@ -48,8 +48,9 @@ make_global_icons() {
 make_global_apicore() {
   sed \
     -e 's/^export async function httpJson(/async function httpJson(/' \
+    -e 's/^export function resolveApiBase(/function resolveApiBase(/' \
     "$SRC/js/api-core.js"
-  printf '\nif (typeof window !== "undefined") window.httpJson = httpJson;\n'
+  printf '\nif (typeof window !== "undefined") { window.httpJson = httpJson; window.resolveApiBase = resolveApiBase; }\n'
 }
 
 # نسخه‌ی global از format.js (export را برمی‌دارد؛ برای <script> کلاسیک — توابعِ

@@ -10,6 +10,18 @@
      ناموفق → { ok:false, status, data, error }
      خطا/timeout → { ok:false, offline:true, error }
    ═══════════════════════════════════════════════════════════ */
+// آدرسِ پایه‌ی API — قابلِ تنظیم بدونِ build: window.RZ_API_BASE یا
+// <meta name="rz-api-base" content="https://...">. پیش‌فرض '' = same-origin
+// (رفتارِ فعلی/دمو بدونِ تغییر). منبعِ واحد برای هر سه اپ.
+function resolveApiBase() {
+  try {
+    if (typeof window !== 'undefined' && window.RZ_API_BASE) return String(window.RZ_API_BASE).replace(/\/$/, '');
+    const m = (typeof document !== 'undefined') && document.querySelector('meta[name="rz-api-base"]');
+    if (m && m.content) return String(m.content).trim().replace(/\/$/, '');
+  } catch { /* noop */ }
+  return '';
+}
+
 async function httpJson(url, opts = {}, timeoutMs = 8000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -27,4 +39,4 @@ async function httpJson(url, opts = {}, timeoutMs = 8000) {
   }
 }
 
-if (typeof window !== "undefined") window.httpJson = httpJson;
+if (typeof window !== "undefined") { window.httpJson = httpJson; window.resolveApiBase = resolveApiBase; }
