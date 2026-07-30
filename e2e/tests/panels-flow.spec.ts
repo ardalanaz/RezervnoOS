@@ -9,6 +9,7 @@ import { test, expect, type Page } from '@playwright/test';
 // ═══════════════════════════════════════════════════════════
 
 const BIZ = 'http://localhost:8081/';
+const CO = 'http://localhost:8082/';
 
 // mockِ سطحِ پنل: فقط staff-auth را واقعی جواب می‌دهد؛ بقیه‌ی /api پاسخِ خالیِ موفق
 // تا viewها بدونِ خطا رندر شوند (دادهٔ نمونه/خالی).
@@ -57,5 +58,32 @@ test('پنلِ کسب‌وکار: ورودِ staff (شماره → کد) پنل 
   await expect(page.locator('.sb-brand').first()).toBeVisible();
 
   // بدونِ خطای اجرا-نشده‌ی JS در کلِ جریان
+  expect(errors, `خطاهای JS: ${errors.join(' | ')}`).toEqual([]);
+});
+
+test('پنلِ شرکت: ورودِ مدیرِ پلتفرم (شماره → کد) پنل را باز و داشبورد را فعال می‌کند', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await mockPanelApi(page); // همان mockِ staff-auth (company هم /auth/staff/* را صدا می‌زند)
+
+  await page.goto(CO);
+
+  // مرحله‌ی ۱: شماره‌ی موبایلِ مدیر
+  const phone = page.locator('#adminPhone');
+  await expect(phone).toBeVisible();
+  await phone.fill('09123456789');
+  await page.locator('#adminSendBtn').click();
+
+  // مرحله‌ی ۲: کدِ ورود (دمو: ۱۲۳۴)
+  const code = page.locator('#adminCode');
+  await expect(code).toBeVisible();
+  await code.fill('1234');
+  await page.locator('#adminVerifyBtn').click();
+
+  // نتیجه: overlayِ ورود مخفی و داشبورد فعال
+  await expect(page.locator('#loginOverlay')).toHaveClass(/hidden/);
+  await expect(page.locator('#v-overview')).toHaveClass(/active/);
+  await expect(page.locator('.sb-brand').first()).toBeVisible();
+
   expect(errors, `خطاهای JS: ${errors.join(' | ')}`).toEqual([]);
 });
