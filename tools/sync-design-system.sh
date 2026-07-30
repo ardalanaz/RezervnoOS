@@ -52,6 +52,15 @@ make_global_apicore() {
   printf '\nif (typeof window !== "undefined") window.httpJson = httpJson;\n'
 }
 
+# نسخه‌ی global از format.js (export را برمی‌دارد؛ برای <script> کلاسیک — توابعِ
+# سطحِ بالا خودبه‌خود global می‌شوند). فقط پنل‌ها؛ customer از این استفاده نمی‌کند.
+make_global_format() {
+  sed \
+    -e 's/^export function fa(/function fa(/' \
+    -e 's/^export function esc(/function esc(/' \
+    "$SRC/js/format.js"
+}
+
 make_panel_analytics() { # $1=label $2=load-hint $3=source $4=sid-key $5=q-key
   sed \
     -e "s|__LABEL__|$1|" \
@@ -97,6 +106,12 @@ done
 make_global_icons > "$TMP/icons.global.js"
 for app in $GLOBAL_APPS; do
   place "$TMP/icons.global.js" "$ROOT/apps/$app/js/icons.js"
+done
+
+# format.js (fa/esc) — فقط پنل‌ها نسخه‌ی global (customer عمداً مستثنا).
+make_global_format > "$TMP/format.global.js"
+for app in $GLOBAL_APPS; do
+  place "$TMP/format.global.js" "$ROOT/apps/$app/js/format.js"
 done
 
 # analytics.js پنل‌ها (business/company) — از منبعِ واحدِ shared/js/analytics.panel.js
