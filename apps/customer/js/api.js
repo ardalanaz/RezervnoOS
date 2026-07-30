@@ -17,6 +17,7 @@ import { toast } from './auth.js';
 import { go } from './data/discover.js';
 import { R_SAMPLE } from './data/seed.js';
 import { R } from './init.js';
+import { httpJson } from './api-core.js';
 // آدرسِ پایه‌ی API — قابلِ تنظیم بدونِ build:
 //   ۱) window.RZ_API_BASE (اگر پیش از main.js ست شود)، یا
 //   ۲) <meta name="rz-api-base" content="https://..."> در index.html
@@ -57,32 +58,22 @@ export const API = {
     return !!this._token;
   },
 
-  // درخواست پایه با مدیریت خطا، timeout، و تمدید خودکار توکن روی ۴۰۱
+  // درخواست پایه — fetchِ خام به httpJsonِ مشترک واگذار می‌شود؛ منطقِ auth/refresh
+  // (Authorization، ۴۰۱→refresh→retry، session-expired) اینجا و بدونِ تغییر می‌ماند.
   async request(path, opts = {}, _retried = false){
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), this.timeout);
-    try {
-      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
-      if (this._token) headers['Authorization'] = `Bearer ${this._token}`;
-      const res = await fetch(this.base + '/api/v1' + path, { ...opts, headers, signal: ctrl.signal });
-      clearTimeout(timer);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        // ۴۰۱ روی توکن منقضی → یک‌بار refresh کن و درخواست را تکرار کن
-        if (res.status === 401 && this._refresh && !_retried && !path.startsWith('/auth/')) {
-          const refreshed = await this._doRefresh();
-          if (refreshed) return this.request(path, opts, true);
-          // refresh هم شکست خورد → نشست تمام است
-          this._onSessionExpired();
-        }
-        const msg = data?.error?.message || `خطای ${res.status}`;
-        return { ok: false, status: res.status, error: data?.error || { message: msg } };
-      }
-      return { ok: true, status: res.status, data };
-    } catch (e) {
-      clearTimeout(timer);
-      return { ok: false, offline: true, error: { message: e.name === 'AbortError' ? 'زمان درخواست تمام شد' : 'اتصال به سرور برقرار نشد' } };
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (this._token) headers['Authorization'] = `Bearer ${this._token}`;
+    const r = await httpJson(this.base + '/api/v1' + path, { ...opts, headers }, this.timeout);
+    if (!r.ok && !r.offline && r.status === 401 && this._refresh && !_retried && !path.startsWith('/auth/')) {
+      // ۴۰۱ روی توکن منقضی → یک‌بار refresh کن و درخواست را تکرار کن
+      const refreshed = await this._doRefresh();
+      if (refreshed) return this.request(path, opts, true);
+      this._onSessionExpired(); // refresh هم شکست خورد → نشست تمام است
     }
+    if (r.ok) return { ok: true, status: r.status, data: r.data };
+    if (r.offline) return { ok: false, offline: true, error: r.error };
+    const msg = r.error?.message || `خطای ${r.status}`;
+    return { ok: false, status: r.status, error: r.error || { message: msg } };
   },
 
   // تمدید توکن — چند فراخوان همزمان یک Promise مشترک می‌گیرند (بدون رقابت)
