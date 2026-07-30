@@ -2,11 +2,12 @@
 
 > این فایل را به‌همراه **آخرین zip کامل پروژه** آپلود کن. این سند «چرا»هاست؛ zip منبع واقعیِ کد است.
 > با این دو، هر مکالمه‌ی جدید بدون کاوشِ دوباره‌ی کل کدبیس شروع می‌شود.
-> **آخرین به‌روزرسانی:** ۲۰۲۶-۰۷-۱۹ (پس از حسابرسی و رفعِ ۴ رگرسیون + افزودنِ favicon/sitemap).
+> **آخرین به‌روزرسانی:** ۲۰۲۶-۰۷-۳۰ (پس از ادغامِ تک‌منبعِ فرانت + پوششِ e2e پنل‌ها +
+> پاک‌سازیِ lint بک‌اند؛ تاریخچه‌ی قبلی: ۲۰۲۶-۰۷-۱۹ حسابرسی + رفعِ ۴ رگرسیون).
 
 ---
 
-## ۱. معماری (این نسخه: pre-monorepo)
+## ۱. معماری
 
 ```
 api/          ← بک‌اند Next.js 14 (App Router) + Prisma + PostgreSQL(Supabase) + Redis
@@ -14,6 +15,8 @@ apps/
   customer/   ← اپ مشتری — vanilla JS، ES modules، SPA تک‌URL (بدون router واقعی)
   business/   ← پنل رستوران‌دار — vanilla JS کلاسیک (global scope)
   company/    ← پنل ادمین پلتفرم — همان الگوی business
+shared/       ← منبعِ واحدِ دارایی‌های مشترکِ فرانت (css توکن‌ها + js: icons/api-core/format/analytics.panel)
+tools/        ← sync-design-system.sh (کپیِ shared→apps + drift-check) و build-standalone.py
 deploy/       ← nginx, caddy
 observability/← Prometheus + Grafana + exporterها
 cron/ backup/ ← job پس‌زمینه + بک‌آپ خودکار DB
@@ -21,8 +24,14 @@ docs/         ← مستندات (شامل ۵ سند حسابرسیِ HANDOFF)
 e2e/ loadtest/← Playwright + k6
 ```
 
-- سه اپ فرانت هیچ build step ندارند — مستقیم static سرو می‌شوند (nginx bind-mount به `apps/*`).
+- سه اپ فرانت هیچ build step ندارند — مستقیم static سرو می‌شوند. هر اپ یک سایتِ جداست
+  (روی Vercel هرکدام یک پروژه با Root Directory خودش)، پس مسیرهای asset **root-absolute**‌اند (`/css`,`/js`).
 - درختِ فرانتِ تکراری در ریشه (business/, company/, js/, css/) **حذف شده** — فقط `apps/*` سرو می‌شود.
+- **تک‌منبعِ حقیقت (`shared/` → `apps/`):** دارایی‌های مشترک فقط در `shared/` ویرایش می‌شوند؛
+  `tools/sync-design-system.sh` آن‌ها را به هر اپ می‌سازد (customer نسخه‌ی ESM؛ business/company
+  نسخه‌ی global با `export` حذف‌شده). CI با `--check` روی هر drift می‌شکند. شاملِ:
+  css توکن‌ها/foundation/bridge، `icons.js`، `api-core.js` (transportِ `httpJson` + `resolveApiBase`)،
+  `format.js` (`fa`/`esc`)، `analytics.panel.js`. **منطقِ auth/refresh در `shared/` نیست — per-app می‌ماند.**
 - توجه: یک نسخه‌ی مونوریپو (`apps/api` + `infra/`) هم از این پروژه وجود دارد؛ این نسخه‌ی pre-monorepo است.
 
 ## ۲. Supabase — پروژه‌ی فعال واقعی
@@ -118,7 +127,11 @@ Supabase فقط **host مدیریت‌شده‌ی Postgres** است — نه cli
 
 ## ۱۰. چک‌لیستِ لانچ (باقی‌مانده)
 
-- ❌ تستِ خودکار — صفرِ اجراشده/تأییدشده (اسکریپت e2e/load هست، تست واقعی نوشته/اجرا نشده)
+- ✅ تستِ خودکار — **دیگر صفر نیست**: بک‌اند ۱۰۲ تستِ واحد (`npm test`) + `tsc --noEmit` + `eslint`
+  همه پاک؛ e2e (Playwright) برای customer و پنل‌ها روی ۳ viewport (iPhone 13 / Pixel 5 / Desktop)،
+  همه در CI (`.github/workflows/ci.yml`: build/design-system/test/e2e/security). load-test (k6) هنوز فقط اسکریپت است.
+- ⚠️ **API روی Vercel هنوز ۴۰۴ می‌دهد** — باگِ کد نیست (بک‌اند سالم)، تنظیمِ داشبورد است:
+  Root Directory=`api` + متغیرهای env + خاموش‌بودنِ Deployment Protection. راهنمای گام‌به‌گام: `docs/DEPLOY_API_VERCEL.md`.
 - ❌ merchant ID واقعیِ زرین‌پال + قالبِ پیامکِ کاوه‌نگار
 - ❌ کلیدِ واقعیِ `KAVENEGAR_API_KEY` (بدونش SMS واقعی ارسال نمی‌شود، فقط لاگ)
 - ⚠️ HA — تک‌instance Postgres/Redis، بدون replica
@@ -137,5 +150,7 @@ Supabase فقط **host مدیریت‌شده‌ی Postgres** است — نه cli
 - کامنت‌های فارسی که باگ‌ها را با «باگ (رفع‌شده)» علامت می‌زنند.
 - Migrationها idempotent.
 - فرانت: business/company اسکریپتِ کلاسیک با singletonِ `API` و helperهای `openModal`/`toast`/`esc`/`fa`؛ customer از ES modules با exportهای `window.X`.
+- **دارایی‌های مشترک را فقط در `shared/` ویرایش کن، بعد `sh tools/sync-design-system.sh` را اجرا کن** و هر دو را با هم commit کن (وگرنه CI drift می‌شکند).
 - چک سینتکس: `node --check` (کلاسیک) / `node --input-type=module --check` (ESM) / شمارشِ brace برای `.ts`.
-- خطوطِ فایل‌های این نسخه **CRLF** است — موقعِ ویرایش حفظ کن.
+- خطوطِ بعضی فایل‌ها **CRLF** است (`apps/customer/{index.html,api.js,sw.js}`، `apps/business/index.html`، `apps/company/{index.html,js/api.js}`) — موقعِ ویرایش با byte-level حفظ کن؛ بقیه LF.
+- تست‌های پنل با `nav()` مستقیم ناوبری می‌کنند (نه کلیکِ نوارِ کناری) تا روی موبایل هم پایدار باشند.
