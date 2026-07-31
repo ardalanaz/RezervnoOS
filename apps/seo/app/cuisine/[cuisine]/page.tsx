@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { fetchRestaurantList } from '@/lib/api';
 import Listing from '@/components/Listing';
+import { alternates } from '@/lib/i18n';
 
 export const revalidate = 300;
 
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: { params: { cuisine: string }
   return {
     title: `رستوران‌های ${cuisine}`,
     description: `کشف و رزرو آنلاین بهترین رستوران‌های ${cuisine} — منو، امتیاز و قیمت.`,
-    alternates: { canonical: url },
+    alternates: alternates(`/cuisine/${encodeURIComponent(cuisine)}`),
     openGraph: { type: 'website', title: `رستوران‌های ${cuisine}`, url },
   };
 }

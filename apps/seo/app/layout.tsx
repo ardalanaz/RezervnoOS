@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { alternates } from '@/lib/i18n';
 
 // اپِ عمومیِ SEO رزرونو — لِی‌اوتِ ریشه. RTL/فارسی، مطابقِ برندِ رزرونو.
 export const metadata: Metadata = {
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
   },
   description:
     'رزرونو — کشف و رزرو آنلاین میز در بهترین رستوران‌های شهر. رستوران‌ها بر اساس شهر، آشپزی و حال‌وهوا.',
-  alternates: { canonical: '/' },
+  alternates: alternates('/'),
   openGraph: { type: 'website', siteName: 'رزرونو', locale: 'fa_IR' },
   robots: { index: true, follow: true },
 };

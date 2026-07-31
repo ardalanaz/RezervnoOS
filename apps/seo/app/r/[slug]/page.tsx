@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { fetchRestaurant, fetchRestaurantList } from '@/lib/api';
 import { restaurantJsonLd, faqJsonLd, type FaqItem } from '@/lib/schema';
+import { alternates } from '@/lib/i18n';
 
 // ISR: صفحه هر ۵ دقیقه در پس‌زمینه تازه می‌شود (کاتالوگِ بزرگ بدونِ rebuildِ کامل).
 export const revalidate = 300;
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: `${r.name} — رزرو آنلاین`,
     description,
-    alternates: { canonical: url },
+    alternates: alternates(`/r/${encodeURIComponent(params.slug)}`),
     openGraph: {
       type: 'website', title: r.name, description, url,
       images: r.photos[0]?.url ? [r.photos[0].url] : undefined,
