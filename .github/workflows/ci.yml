@@ -190,5 +190,7 @@ jobs:
           cache-dependency-path: apps/seo/package-lock.json
       - name: Install dependencies
         run: npm ci || npm install
+      - name: Schema unit tests (JSON-LD sanity — پایشِ خودکار)
+        run: npm test
       - name: Build (Next.js — typecheck + lint + build)
         run: npm run build
