@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { fetchRestaurant } from '@/lib/api';
+import { fetchRestaurant, fetchRestaurantList } from '@/lib/api';
 import { restaurantJsonLd } from '@/lib/schema';
 
 // ISR: صفحه هر ۵ دقیقه در پس‌زمینه تازه می‌شود (کاتالوگِ بزرگ بدونِ rebuildِ کامل).
@@ -35,6 +35,14 @@ export default async function RestaurantPage({ params }: { params: { slug: strin
   const url = pageUrl(params.slug);
   const jsonLd = restaurantJsonLd(r, url);
   const locLine = [r.location.district, r.location.city].filter(Boolean).join('، ');
+
+  // لینک‌سازیِ داخلی: رستوران‌های هم‌شهری (یا اگر شهر نبود، هم‌آشپزی)، بدونِ خودِ این رستوران.
+  const relatedRaw = r.location.city
+    ? await fetchRestaurantList({ city: r.location.city })
+    : r.cuisine
+      ? await fetchRestaurantList({ cuisine: r.cuisine })
+      : [];
+  const related = relatedRaw.filter((x) => x.slug !== r.slug).slice(0, 4);
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '24px 20px', lineHeight: 1.9 }}>
@@ -76,6 +84,24 @@ export default async function RestaurantPage({ params }: { params: { slug: strin
           <ul>
             {r.menu.map((m, i) => (
               <li key={i}>{m.emoji ? `${m.emoji} ` : ''}{m.name} — {m.price_toman.toLocaleString('fa-IR')} تومان</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {related.length ? (
+        <section aria-label="رستوران‌های مشابه">
+          <h2>{r.location.city ? `رستوران‌های دیگر در ${r.location.city}` : 'رستوران‌های مشابه'}</h2>
+          <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: 8 }}>
+            {related.map((x) => (
+              <li key={x.id}>
+                <a href={`${SITE}/r/${encodeURIComponent(x.slug)}`} style={{ fontWeight: 600, textDecoration: 'none', color: '#111' }}>
+                  {x.name}
+                </a>
+                {[x.cuisine, x.city].filter(Boolean).length ? (
+                  <span style={{ color: '#666', fontSize: 13 }}> — {[x.cuisine, x.city].filter(Boolean).join(' · ')}</span>
+                ) : null}
+              </li>
             ))}
           </ul>
         </section>
