@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { fetchRestaurant, fetchRestaurantList } from '@/lib/api';
-import { restaurantJsonLd } from '@/lib/schema';
+import { restaurantJsonLd, faqJsonLd, type FaqItem } from '@/lib/schema';
 
 // ISR: صفحه هر ۵ دقیقه در پس‌زمینه تازه می‌شود (کاتالوگِ بزرگ بدونِ rebuildِ کامل).
 export const revalidate = 300;
@@ -43,6 +43,21 @@ export default async function RestaurantPage({ params }: { params: { slug: strin
       ? await fetchRestaurantList({ cuisine: r.cuisine })
       : [];
   const related = relatedRaw.filter((x) => x.slug !== r.slug).slice(0, 4);
+
+  // FAQ (AI-search/GEO): پاسخ‌های factual مشتق از دادهٔ واقعی — بدونِ جعل.
+  const band = BAND[Math.min(4, Math.max(1, r.price_band))];
+  const faq: FaqItem[] = [
+    { q: `آیا ${r.name} رزرو آنلاین دارد؟`, a: `بله، از طریقِ رزرونو می‌توانید در ${r.name} به‌صورتِ آنلاین میز رزرو کنید.` },
+  ];
+  if (r.cuisine) faq.push({ q: `نوعِ آشپزیِ ${r.name} چیست؟`, a: `${r.name} در سبکِ ${r.cuisine} غذا سرو می‌کند.` });
+  if (r.location.address || r.location.city) {
+    const where = [r.location.address, r.location.district, r.location.city].filter(Boolean).join('، ');
+    faq.push({ q: `${r.name} کجاست؟`, a: `${r.name} در ${where} قرار دارد.` });
+  }
+  if (band) faq.push({ q: `بازه‌ی قیمتِ ${r.name} چطور است؟`, a: `بازه‌ی قیمتِ ${r.name} «${band}» است.` });
+  if (r.rating != null && r.reviews_count > 0) {
+    faq.push({ q: `امتیازِ ${r.name} چند است؟`, a: `${r.name} امتیازِ ${r.rating} از ۵ را بر اساسِ ${r.reviews_count} نظر دارد.` });
+  }
 
   return (
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '24px 20px', lineHeight: 1.9 }}>
@@ -86,6 +101,19 @@ export default async function RestaurantPage({ params }: { params: { slug: strin
               <li key={i}>{m.emoji ? `${m.emoji} ` : ''}{m.name} — {m.price_toman.toLocaleString('fa-IR')} تومان</li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {faq.length ? (
+        <section aria-label="پرسش‌های متداول">
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(faq)) }} />
+          <h2>پرسش‌های متداول</h2>
+          {faq.map((f, i) => (
+            <details key={i} style={{ borderBottom: '1px solid #eee', padding: '8px 0' }}>
+              <summary style={{ fontWeight: 600, cursor: 'pointer' }}>{f.q}</summary>
+              <p style={{ margin: '6px 0 0', color: '#444' }}>{f.a}</p>
+            </details>
+          ))}
         </section>
       ) : null}
 
