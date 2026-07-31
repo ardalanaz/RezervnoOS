@@ -9,18 +9,22 @@ function rProfile(){
       <button class="itab ${profTab==='gallery'?'active':''}" onclick="setProfTab('gallery')">${icon('image',{size:14})} عکس‌های مجموعه</button>
       <button class="itab ${profTab==='reviews'?'active':''}" onclick="setProfTab('reviews')">${icon('star',{size:14,fill:true})} نظرات مشتری‌ها</button>
       <button class="itab ${profTab==='hours'?'active':''}" onclick="setProfTab('hours')">${icon('clock',{size:14})} ساعات کاری</button>
+      <button class="itab ${profTab==='location'?'active':''}" onclick="setProfTab('location')">${icon('mapPin',{size:14})} مکان و آدرس</button>
     </div>
     <div id="pt-gallery" class="isub ${profTab==='gallery'?'active':''}"></div>
     <div id="pt-reviews" class="isub ${profTab==='reviews'?'active':''}"></div>
-    <div id="pt-hours" class="isub ${profTab==='hours'?'active':''}"></div>`;
+    <div id="pt-hours" class="isub ${profTab==='hours'?'active':''}"></div>
+    <div id="pt-location" class="isub ${profTab==='location'?'active':''}"></div>`;
   profRenderGallery();
   profRenderReviews();
   profRenderHours();
+  profRenderLocation();
   // داده‌ی واقعی را در پس‌زمینه بکش و دوباره رندر کن
   if(API.getToken()){
     loadGallery().then(()=>{ if(profTab==='gallery') profRenderGallery(); });
     loadReviews().then(()=>{ if(profTab==='reviews') profRenderReviews(); });
     loadHours().then(()=>{ if(profTab==='hours') profRenderHours(); });
+    loadLocation().then(()=>{ if(profTab==='location') profRenderLocation(); });
   }
 }
 // بارگذاری گالری واقعی از /restaurant/photos
@@ -47,7 +51,7 @@ async function loadReviews(){
 }
 function setProfTab(t){
   profTab=t;
-  document.querySelectorAll('#v-profile .itab').forEach((b,i)=>b.classList.toggle('active',['gallery','reviews','hours'][i]===t));
+  document.querySelectorAll('#v-profile .itab').forEach((b,i)=>b.classList.toggle('active',['gallery','reviews','hours','location'][i]===t));
   document.querySelectorAll('#v-profile .isub').forEach(s=>s.classList.toggle('active',s.id==='pt-'+t));
 }
 
@@ -607,6 +611,68 @@ async function saveHours(){
   if(!API.getToken()){ toast('','برای ذخیره باید وارد شده باشی'); return; }
   const res=await API.hoursSave({opening_hours:HOURS_STATE.opening_hours, closures:HOURS_STATE.closures});
   if(res.ok){ _hoursDirty=false; toast('','ساعات کاری ذخیره شد'); }
+  else{ toast('', res.error?.message||'ذخیره ناموفق بود'); }
+}
+
+// ─── تب مکان و آدرس (وصل به GET/PUT /restaurant/location واقعی) ───
+// این داده‌ها منبعِ schema.org PostalAddress + GeoCoordinates صفحاتِ SEO (apps/seo) هستند.
+let LOCATION_STATE={address:null,city:null,district:null,postal_code:null,country:'IR',latitude:null,longitude:null};
+async function loadLocation(){
+  if(!API.getToken()) return;
+  const res=await API.locationGet();
+  if(res.ok && res.data){
+    LOCATION_STATE={
+      address:res.data.address||'', city:res.data.city||'', district:res.data.district||'',
+      postal_code:res.data.postal_code||'', country:res.data.country||'IR',
+      latitude:res.data.latitude??'', longitude:res.data.longitude??'',
+    };
+  }
+}
+function profRenderLocation(){
+  const el=document.getElementById('pt-location'); if(!el) return;
+  if(!API.getToken()){ el.innerHTML=`<div class="panel" style="text-align:center;padding:40px;color:var(--t2)">برای ویرایش مکان وارد شو.</div>`; return; }
+  const s=LOCATION_STATE;
+  el.innerHTML=`
+    <div class="ai-box" style="margin-bottom:18px">
+      <div class="ai-box-head"><div class="icn">${icon('mapPin',{size:16})}</div><div class="ttl">مکان و آدرس رستوران</div></div>
+      <div style="font-size:13px;color:var(--t1);line-height:1.6">این آدرس و مختصات، هم در اپ مشتری و هم در صفحه‌ی عمومیِ رستوران (برای موتورهای جست‌وجو) استفاده می‌شود. مختصات دقیق باعث می‌شود رستوران روی نقشه و در نتایج «نزدیک من» درست دیده شود.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><div class="panel-title">اطلاعات مکانی</div><div class="panel-sub">همه‌ی فیلدها اختیاری‌اند؛ هرچه کامل‌تر، دیده‌شدنِ بهتر</div></div>
+        <button class="btn btn-primary btn-sm" onclick="saveLocation()">ذخیره</button></div>
+      <div class="field-label">آدرس کامل</div>
+      <input class="inp" id="locAddress" value="${esc(s.address||'')}" placeholder="مثلاً تهران، زعفرانیه، خیابان مقدس اردبیلی، پلاک ۱۲">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <div style="flex:1;min-width:140px"><div class="field-label">شهر</div>
+          <input class="inp" id="locCity" value="${esc(s.city||'')}" placeholder="تهران"></div>
+        <div style="flex:1;min-width:140px"><div class="field-label">منطقه / محله</div>
+          <input class="inp" id="locDistrict" value="${esc(s.district||'')}" placeholder="زعفرانیه"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <div style="flex:1;min-width:140px"><div class="field-label">کد پستی</div>
+          <input class="inp" id="locPostal" value="${esc(s.postal_code||'')}" inputmode="numeric" placeholder="۱۹۸۵۷۳۳۱۱۱"></div>
+        <div style="flex:1;min-width:140px"><div class="field-label">کشور</div>
+          <input class="inp" id="locCountry" value="${esc(s.country||'IR')}" placeholder="IR" disabled style="opacity:.7"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <div style="flex:1;min-width:140px"><div class="field-label">عرض جغرافیایی (Latitude)</div>
+          <input class="inp" id="locLat" value="${esc(String(s.latitude??''))}" inputmode="decimal" placeholder="35.8100"></div>
+        <div style="flex:1;min-width:140px"><div class="field-label">طول جغرافیایی (Longitude)</div>
+          <input class="inp" id="locLng" value="${esc(String(s.longitude??''))}" inputmode="decimal" placeholder="51.4200"></div>
+      </div>
+      <div style="font-size:12px;color:var(--t3);margin-top:10px;line-height:1.7">مختصات را می‌توانی از گوگل‌مپ کپی کنی: روی محل رستوران راست‌کلیک کن و عدد اول را در «عرض» و عدد دوم را در «طول» بگذار.</div>
+    </div>`;
+}
+async function saveLocation(){
+  if(!API.getToken()){ toast('','برای ذخیره باید وارد شده باشی'); return; }
+  const val=id=>{ const e=document.getElementById(id); return e?e.value.trim():''; };
+  const num=v=>{ if(v==='') return null; const n=Number(v); return Number.isFinite(n)?n:v; };
+  const body={
+    address:val('locAddress')||null, city:val('locCity')||null, district:val('locDistrict')||null,
+    postal_code:val('locPostal')||null, latitude:num(val('locLat')), longitude:num(val('locLng')),
+  };
+  const res=await API.locationSave(body);
+  if(res.ok){ LOCATION_STATE={...LOCATION_STATE,...body}; toast('','مکان ذخیره شد'); }
   else{ toast('', res.error?.message||'ذخیره ناموفق بود'); }
 }
 
