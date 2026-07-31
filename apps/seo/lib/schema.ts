@@ -40,6 +40,21 @@ export function listJsonLd(opts: {
   };
 }
 
+export interface FaqItem { q: string; a: string; }
+
+/** JSON-LD برای بخشِ پرسش‌های متداول (schema.org FAQPage) — از پاسخ‌های factual. */
+export function faqJsonLd(items: FaqItem[]): object {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  };
+}
+
 /** price_band (۱..۴) → رشته‌ی priceRange به‌سبکِ schema.org. */
 function priceRange(band: number): string {
   const n = Math.min(4, Math.max(1, band || 2));
