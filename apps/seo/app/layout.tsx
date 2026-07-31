@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   alternates: alternates('/'),
   openGraph: { type: 'website', siteName: 'رزرونو', locale: 'fa_IR' },
   robots: { index: true, follow: true },
+  // تأییدِ Google Search Console از env (اگر تنظیم نشود، متا اصلاً رندر نمی‌شود).
+  ...(process.env.SEO_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.SEO_GOOGLE_SITE_VERIFICATION } }
+    : {}),
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
