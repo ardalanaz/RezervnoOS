@@ -220,6 +220,9 @@ const API = {
   // ── ساعات کاری + تعطیلات (وصل به /restaurant/hours واقعی) ──
   hoursGet(){ return this.get('/restaurant/hours'); },
   hoursSave(body){ return this.request('/restaurant/hours', { method:'PUT', body: JSON.stringify(body||{}) }); },
+  // ── مکان (آدرس/مختصات — منبعِ صفحاتِ SEO) وصل به /restaurant/location ──
+  locationGet(){ return this.get('/restaurant/location'); },
+  locationSave(body){ return this.request('/restaurant/location', { method:'PUT', body: JSON.stringify(body||{}) }); },
   // ── چندشعبه‌ای: لیست شعبه‌ها + ساخت شعبه‌ی جدید ──
   branchesList(){ return this.get('/restaurant/branches'); },
   branchCreate(body){ return this.post('/restaurant/branches', body); },
