@@ -425,13 +425,18 @@ let TABLES = [];
 function mapApiTable(t){
   return { id:t.id, n:t.number, c:t.capacity, name:t.name||undefined, s:BK2UI_STATE[t.state]||'free', _raw:t };
 }
+// نکته: فقط در صورتِ موفقیت «لودشده» علامت می‌خورد. اگر این را بی‌قید true کنیم،
+// یک خطای گذرا (۴۰۱/۴۰۳/قطعیِ شبکه) باعث می‌شود TABLES خالی بماند و دیگر هرگز
+// دوباره تلاش نشود؛ آن‌وقت شماره‌ی میزِ بعدی از ۱ حساب می‌شود و سرور
+// «میز شماره ۱ از قبل وجود دارد» برمی‌گرداند.
 async function loadTables(){
   const res = await API.listTables();
   if (res.ok && Array.isArray(res.data?.items)) {
     TABLES = res.data.items.map(mapApiTable);
+    _tablesLoaded = true;
+    return TABLES;
   }
-  _tablesLoaded = true;
-  return TABLES;
+  return null;   // ناموفق — وضعیتِ قبلی دست‌نخورده می‌ماند و دفعه‌ی بعد دوباره تلاش می‌شود
 }
 const GUESTS=[
   {name:'کیان موسوی',ava:'',seg:'vip',visits:18,last:'۳ روز پیش',spent:'۶.۲م',vip:95,ret:92,churn:8,phone:'۰۹۱۲۵۵۵۶۶۷۷',birthday:'۱۵ خرداد',points:3400},
