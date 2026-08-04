@@ -96,7 +96,9 @@ async function removeWL(id){
 }
 let _tablesLoaded=false;
 async function rFloor(){
-  if(!_tablesLoaded && API.getToken()){ await loadTables(); _tablesLoaded=true; }
+  // _tablesLoaded را خودِ loadTables فقط در صورتِ موفقیت ست می‌کند (نه اینجا)،
+  // وگرنه یک خطای گذرا برای همیشه لیستِ میزها را خالی نگه می‌دارد.
+  if(!_tablesLoaded && API.getToken()){ await loadTables(); }
   syncTablesFromReservations();
   const occ={free:0,reserved:0,seated:0};
   TABLES.forEach(t=>occ[t.s]++);
@@ -138,7 +140,7 @@ function tableLabel(t){ return t.name && t.name.trim() ? t.name.trim() : 'میز
 
 // افزودن میز — با انتخاب ظرفیت و اسم دلخواه اختیاری
 function addTable(){
-  const nextNum=TABLES.length?Math.max(...TABLES.map(t=>t.n))+1:1;
+  const nextNum=nextTableNumber();
   openModal(`
     <div class="modal-title">افزودن میز جدید</div>
     <div class="modal-sub">ظرفیت و (در صورت تمایل) یک اسم دلخواه بذار</div>
@@ -153,10 +155,25 @@ function addTable(){
   `);
   setTimeout(()=>document.getElementById('newTableName')?.focus(),150);
 }
+// شماره‌ی میزِ بعدی بر اساسِ وضعیتِ فعلیِ کلاینت
+function nextTableNumber(){ return TABLES.length?Math.max(...TABLES.map(t=>t.n))+1:1; }
+
 async function confirmAddTable(num){
   const cap=parseInt(document.querySelector('#capPick .opt.sel')?.dataset.cap||4);
   const name=(document.getElementById('newTableName')?.value||'').trim();
-  const res = await API.createTable({ number: num, capacity: cap, name: name||undefined });
+
+  let res = await API.createTable({ number: num, capacity: cap, name: name||undefined });
+
+  // شماره‌ی تکراری: یا لیستِ میزهای کلاینت قدیمی/خالی بوده، یا همکارِ دیگری هم‌زمان
+  // میز اضافه کرده. یک‌بار از سرور تازه‌سازی کن و با شماره‌ی درست دوباره تلاش کن.
+  if(!res.ok && (res.status===422||res.status===409||res.status===400)){
+    const reloaded = await loadTables();
+    if(reloaded){
+      const retryNum = nextTableNumber();
+      if(retryNum !== num){ num = retryNum; res = await API.createTable({ number: num, capacity: cap, name: name||undefined }); }
+    }
+  }
+
   if(!res.ok){ toast('', res.error?.message||'افزودن میز ناموفق بود'); return; }
   await loadTables();
   closeModal();rFloor();
